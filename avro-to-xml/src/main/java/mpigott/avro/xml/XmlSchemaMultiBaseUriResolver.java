@@ -16,6 +16,7 @@
 package mpigott.avro.xml;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
@@ -49,19 +50,41 @@ class XmlSchemaMultiBaseUriResolver extends DefaultURIResolver {
             baseUris.add(baseUri);
         }
 
-        // Confirm the schema location is valid before adding it.
+        /* Confirm the schema location is a fully-qualified
+         * path before adding it to the set of base URIs.
+         */
         try {
             new URL(schemaLocation);
             baseUris.add(schemaLocation);
         } catch (MalformedURLException e) {
         }
 
+        /* When we receive a scheam location, it may only be a partial path.
+         * That partial path may come from one of many different base URIs
+         * that we've seen already, most likely from one we recently tried.
+         * So, in order to determine which base URI the partial schema comes
+         * from, we must try them all and see which one resolves.
+         *
+         * We check in reverse order because a schema is likely tied to a
+         * recent base URI we have already seen.
+         */
         ListIterator<String> iter = baseUris.listIterator(baseUris.size() - 1);
         while (iter.hasPrevious()) {
             try {
                 String newBaseUri = iter.previous();
                 source = super.resolveEntity(namespace, schemaLocation, newBaseUri);
-                new URL(source.getSystemId()).openStream();
+                InputStream urlStream = null;
+                try {
+                    urlStream = new URL(source.getSystemId()).openStream();
+                } finally {
+                    if (urlStream != null) {
+                	try {
+                	    urlStream.close();
+                	} catch (IOException ioe) {
+                	    // No error for failure to close.
+                	}
+                    }
+                }
                 break;
             } catch (IOException ioe) {
                 /* If we reach here, we were unable to open a
