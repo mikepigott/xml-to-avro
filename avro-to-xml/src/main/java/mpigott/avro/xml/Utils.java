@@ -20,6 +20,8 @@ import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 
+import org.xml.sax.InputSource;
+
 /**
  * A set of utilities for encoding and
  * decoding XML Documents and Avro data.
@@ -71,5 +73,17 @@ class Utils {
 	}
 
 	return namespace.toString();
+    }
+
+    static InputSource getSchema(String docBaseUri, String schemaLocation) throws java.io.IOException {
+	URL schemaUrl = null;
+	if (schemaLocation.contains("://")) {
+	    schemaUrl = new URL(schemaLocation);
+	} else if (docBaseUri.endsWith("/")) {
+	    schemaUrl = new URL(docBaseUri + schemaLocation);
+	} else {
+	    schemaUrl = new URL(docBaseUri + "/" + schemaLocation);
+	}
+	return new InputSource( schemaUrl.openStream() );
     }
 }

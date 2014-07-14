@@ -22,7 +22,9 @@ import org.apache.avro.Schema;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 
 /**
  * Reads an XML {@link Document} and writes it to an {@link Encoder}.
@@ -32,17 +34,17 @@ import org.w3c.dom.Document;
 public class XmlDatumWriter implements DatumWriter<Document> {
 
     public XmlDatumWriter() {
-	xmlSchemaCollection = null;
-	schema = null;
+        xmlSchemaCollection = null;
+        schema = null;
     }
 
     public XmlDatumWriter(XmlSchemaCollection xmlSchemaCollection) {
-	this.xmlSchemaCollection = xmlSchemaCollection;
-	this.schema = null;
+        this.xmlSchemaCollection = xmlSchemaCollection;
+        this.schema = null;
     }
 
     public Schema getSchema() {
-	return schema;
+        return schema;
     }
 
     /**
@@ -59,9 +61,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
      */
     @Override
     public void setSchema(Schema schema) {
-	if (xmlSchemaCollection != null) {
-	    // TODO: Validate against the XML schema.
-	}
+        if (xmlSchemaCollection != null) {
+            // TODO: Validate against the XML schema.
+        }
 	this.schema = schema;
     }
 
@@ -78,9 +80,21 @@ public class XmlDatumWriter implements DatumWriter<Document> {
      * @see org.apache.avro.io.DatumWriter#write(java.lang.Object, org.apache.avro.io.Encoder)
      */
     @Override
-    public void write(Document datum, Encoder out) throws IOException {
-	// TODO Auto-generated method stub
+    public void write(Document doc, Encoder out) throws IOException {
+        Attr schemaAttr = doc.getDocumentElement().getAttributeNodeNS("http://www.w3.org/2001/XMLSchema-instance", "schemaLocation");
+        if (schemaAttr != null) {
+            write(doc, Utils.getSchema(doc.getBaseURI(), schemaAttr.getValue()), out);
 
+        } else if (schema != null) {
+            // Parse against the provided schema
+
+        } else {
+            // Do the best you can.  Everything's a string, after all.
+        }
+    }
+
+    public void write(Document doc, InputSource schema, Encoder out) throws IOException {
+        
     }
 
     private XmlSchemaCollection xmlSchemaCollection;
