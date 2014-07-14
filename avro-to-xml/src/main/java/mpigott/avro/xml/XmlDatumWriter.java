@@ -43,10 +43,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         this.schema = null;
     }
 
-    public Schema getSchema() {
-        return schema;
-    }
-
     /**
      * Sets the schema to use when writing the XML
      * {@link Document} to the {@link Encoder}.
@@ -81,20 +77,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
      */
     @Override
     public void write(Document doc, Encoder out) throws IOException {
-        Attr schemaAttr = doc.getDocumentElement().getAttributeNodeNS("http://www.w3.org/2001/XMLSchema-instance", "schemaLocation");
-        if (schemaAttr != null) {
-            write(doc, Utils.getSchema(doc.getBaseURI(), schemaAttr.getValue()), out);
-
-        } else if (schema != null) {
-            // Parse against the provided schema
-
-        } else {
-            // Do the best you can.  Everything's a string, after all.
-        }
-    }
-
-    public void write(Document doc, InputSource schema, Encoder out) throws IOException {
-        
     }
 
     private XmlSchemaCollection xmlSchemaCollection;
