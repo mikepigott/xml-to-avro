@@ -45,7 +45,9 @@ class Utils {
 	if (host != null) {
 	    String[] hostParts = host.split("\\.");
 	    for (int hpIdx = hostParts.length - 1; hpIdx >= 0; --hpIdx) {
-		components.add(hostParts[hpIdx]);
+		if ( !hostParts[hpIdx].isEmpty() ) {
+		    components.add(hostParts[hpIdx]);
+		}
 	    }
 	}
 
@@ -54,7 +56,9 @@ class Utils {
 	if (path != null) {
 	    String[] pathParts = path.split("/");
 	    for (String pathPart : pathParts) {
-		components.add(pathPart);
+		if ( !pathPart.isEmpty() ) {
+		    components.add(pathPart);
+		}
 	    }
 	}
 
