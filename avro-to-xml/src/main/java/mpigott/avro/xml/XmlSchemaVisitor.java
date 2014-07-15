@@ -30,14 +30,17 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
 interface XmlSchemaVisitor {
 
   void onEnterElement(
-      XmlSchemaElement element,
-      XmlSchemaTypeInfo typeInfo,
-      List<XmlSchemaAttribute> attributes);
+      XmlSchemaElement element);
 
   void onExitElement(
       XmlSchemaElement element,
-      XmlSchemaTypeInfo typeInfo,
-      List<XmlSchemaAttribute> attributes);
+      XmlSchemaTypeInfo typeInfo);
+
+  void onVisitAttribute(
+      XmlSchemaElement element,
+      XmlSchemaAttribute attribute,
+      XmlSchemaTypeInfo attributeType);
+
 
   void onEnterSubstitutionGroup(XmlSchemaElement base);
   void onExitSubstitutionGroup(XmlSchemaElement base);

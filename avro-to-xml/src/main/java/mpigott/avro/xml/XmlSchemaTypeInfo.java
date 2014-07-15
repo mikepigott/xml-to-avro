@@ -16,8 +16,15 @@
 
 package mpigott.avro.xml;
 
+import java.util.List;
+
+import javax.xml.namespace.QName;
+
 import org.apache.avro.Schema;
+import org.apache.ws.commons.schema.XmlSchemaFacet;
 import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.JsonNodeFactory;
+import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * Represents the an Avro {@link Schema.Type} and its corresponding
@@ -32,6 +39,35 @@ import org.codehaus.jackson.JsonNode;
  * @author  Mike Pigott
  */
 final class XmlSchemaTypeInfo {
-  private Schema.Type avroSchemaType;
+
+  XmlSchemaTypeInfo(Schema avroType, JsonNode xmlType) {
+    this.avroSchemaType = avroType;
+    this.xmlSchemaType = xmlType;
+    this.facets = null;
+  }
+
+  XmlSchemaTypeInfo(
+      Schema avroType,
+      JsonNode xmlType,
+      List<XmlSchemaFacet> facets) {
+
+    this(avroType, xmlType);
+    this.facets = facets;
+  }
+
+  Schema getAvroType() {
+    return avroSchemaType;
+  }
+
+  JsonNode getXmlSchemaType() {
+    return xmlSchemaType;
+  }
+
+  List<XmlSchemaFacet> getFacets() {
+    return facets;
+  }
+
+  private Schema avroSchemaType;
   private JsonNode xmlSchemaType;
+  private List<XmlSchemaFacet> facets;
 }

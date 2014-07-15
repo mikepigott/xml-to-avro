@@ -16,7 +16,10 @@
 
 package mpigott.avro.xml;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +29,21 @@ import javax.xml.namespace.QName;
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
+import org.apache.ws.commons.schema.XmlSchemaComplexType;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.XmlSchemaFacet;
+import org.apache.ws.commons.schema.XmlSchemaParticle;
+import org.apache.ws.commons.schema.XmlSchemaSimpleType;
+import org.apache.ws.commons.schema.XmlSchemaSimpleTypeContent;
+import org.apache.ws.commons.schema.XmlSchemaSimpleTypeList;
+import org.apache.ws.commons.schema.XmlSchemaSimpleTypeRestriction;
+import org.apache.ws.commons.schema.XmlSchemaSimpleTypeUnion;
+import org.apache.ws.commons.schema.XmlSchemaType;
+import org.apache.ws.commons.schema.utils.XmlSchemaNamed;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.JsonNodeFactory;
+import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * The scope represents the set of types, attributes, and
@@ -34,26 +51,15 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
  *
  * @author  Mike Pigott
  */
-class XmlSchemaScope {
+final class XmlSchemaScope {
 
-  /**
-   * Initializes a new {@link XmlSchemaScope} with a base
-   * {@link XmlSchemaElement}.  The element type and
-   * attributes will be traversed, and attribute lists
-   * and element children will be retrieved.
-   *
-   * @param element The base element to build the scope from.
-   * @param substitutions The master list of substitution groups to pull from.
-   */
-  XmlSchemaScope(
-      XmlSchemaElement element,
-      Map<String, XmlSchema> xmlSchemasByNamespace,
-      Map<QName, List<XmlSchemaElement>> substitutions) {
+  private static final String URI_2001_SCHEMA_XSD = "http://www.w3.org/2001/XMLSchema";
+  private static final QName QNAME_ID = new QName(URI_2001_SCHEMA_XSD, "ID");
 
-    schemasByNamespace = xmlSchemasByNamespace; 
-    substitutes = substitutions;
+  private static final Map<QName, Schema.Type> xmlToAvroTypeMap =
+      new HashMap<QName, Schema.Type>();
 
-    xmlToAvroTypeMap = new HashMap<QName, Schema.Type>(); 
+  static {
     xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "anyType"),       Schema.Type.STRING);
     xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "boolean"),       Schema.Type.BOOLEAN);
     xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "decimal"),       Schema.Type.DOUBLE);
@@ -68,19 +74,214 @@ class XmlSchemaScope {
     xmlToAvroTypeMap.put(QNAME_ID, Schema.Type.STRING);
   }
 
-  XmlSchemaScope(XmlSchemaScope child) {
-	  this.xmlToAvroTypeMap = child.xmlToAvroTypeMap; // Prevents duplication.
-	  this.substitutes = child.substitutes;
-	  this.schemasByNamespace = child.schemasByNamespace;
+  /**
+   * Initialization of members to be filled in during the walk.
+   */
+  private XmlSchemaScope() {
+    typeInfo = null;
+    attributes = null;
+    children = null;
   }
 
-  private static final String URI_2001_SCHEMA_XSD = "http://www.w3.org/2001/XMLSchema";
-  private static final QName QNAME_ID = new QName(URI_2001_SCHEMA_XSD, "ID");
+  /**
+   * Initializes a new {@link XmlSchemaScope} with a base
+   * {@link XmlSchemaElement}.  The element type and
+   * attributes will be traversed, and attribute lists
+   * and element children will be retrieved.
+   *
+   * @param element The base element to build the scope from.
+   * @param substitutions The master list of substitution groups to pull from.
+   */
+  XmlSchemaScope(
+      XmlSchemaType type,
+      Map<String, XmlSchema> xmlSchemasByNamespace,
+      Map<QName, List<XmlSchemaElement>> substitutions) {
 
-  private Map<QName, Schema.Type> xmlToAvroTypeMap;
+    this();
+
+    schemasByNamespace = xmlSchemasByNamespace; 
+    substitutes = substitutions;
+
+    walk(type);
+  }
+
+  XmlSchemaScope(XmlSchemaScope child, XmlSchemaType type) {
+    this();
+    this.substitutes = child.substitutes;
+	  this.schemasByNamespace = child.schemasByNamespace;
+
+	  walk(type);
+  }
+
+  XmlSchemaTypeInfo getTypeInfo() {
+    return typeInfo;
+  }
+
+  Collection<XmlSchemaAttribute> getAttributesInScope() {
+    if (attributes == null) {
+      return null;
+    }
+    return attributes.values();
+  }
+
+  List<XmlSchemaParticle> getChildren() {
+    return children;
+  }
+
+  private void walk(XmlSchemaType type) {
+    if (type instanceof XmlSchemaSimpleType) {
+      walk((XmlSchemaSimpleType) type);
+    } else if (type instanceof XmlSchemaComplexType) {
+      walk((XmlSchemaComplexType) type);
+    } else {
+      throw new IllegalArgumentException("Unrecognized XmlSchemaType of type " + type.getClass().getName());
+    }
+  }
+
+  private void walk(XmlSchemaSimpleType simpleType) {
+    XmlSchemaSimpleTypeContent content = simpleType.getContent();
+
+    if (content == null) {
+      /* Only anyType contains no content. We
+       * reached the root of the type hierarchy.
+       */
+      typeInfo =
+          new XmlSchemaTypeInfo(
+              Schema.create(xmlToAvroTypeMap.get(simpleType.getQName())),
+              createJsonNodeFor(simpleType.getQName()));
+
+    } else if ( xmlToAvroTypeMap.containsKey(simpleType.getQName()) ) {
+      // This is a recognized Avro type.  Use it!
+      typeInfo =
+          new XmlSchemaTypeInfo(
+              Schema.create(xmlToAvroTypeMap.get(simpleType.getQName())),
+              createJsonNodeFor(simpleType.getQName()));
+
+    } else if (content instanceof XmlSchemaSimpleTypeList) {
+        XmlSchemaSimpleTypeList list = (XmlSchemaSimpleTypeList) content;
+        XmlSchemaSimpleType listType = list.getItemType();
+        if (listType == null) {
+            XmlSchema schema = schemasByNamespace.get( list.getItemTypeName().getNamespaceURI() );
+            listType = (XmlSchemaSimpleType) schema.getTypeByName(list.getItemTypeName());
+        }
+        if (listType == null) {
+            throw new IllegalArgumentException("Unrecognized schema type for list " + getName(simpleType, "{Anonymous List Type}"));
+        }
+
+        XmlSchemaScope parentScope = new XmlSchemaScope(this, listType);
+        typeInfo =
+            new XmlSchemaTypeInfo(
+                Schema.createArray( parentScope.getTypeInfo().getAvroType() ),
+                createJsonNodeForList( parentScope.getTypeInfo().getXmlSchemaType() ));
+
+    } else if (content instanceof XmlSchemaSimpleTypeUnion) {
+        XmlSchemaSimpleTypeUnion union = (XmlSchemaSimpleTypeUnion) content;
+        QName[] namedBaseTypes = union.getMemberTypesQNames();
+
+        List<XmlSchemaSimpleType> baseTypes = union.getBaseTypes();
+
+        if (namedBaseTypes != null) {
+          if (baseTypes == null) {
+            baseTypes = new ArrayList<XmlSchemaSimpleType>(namedBaseTypes.length);
+          }
+
+          for (QName namedBaseType : namedBaseTypes) {
+            XmlSchema schema = schemasByNamespace.get( namedBaseType.getNamespaceURI() );
+            XmlSchemaSimpleType baseType = (XmlSchemaSimpleType) schema.getTypeByName(namedBaseType);
+            if (baseType != null) {
+                baseTypes.add(baseType);
+            }
+          }
+        }
+
+        // baseTypes cannot be null at this point; there must be a union of types.
+        if ((baseTypes == null) || baseTypes.isEmpty()) {
+          throw new IllegalArgumentException("Unrecognized base types for union " + getName(simpleType, "{Anonymous Union Type}"));
+        }
+
+        ArrayList<Schema> unionSchemas = new ArrayList<Schema>( baseTypes.size() );
+        ArrayList<JsonNode> unionNodes = new ArrayList<JsonNode>( baseTypes.size() );
+        for (XmlSchemaSimpleType baseType : baseTypes) {
+          XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+          unionSchemas.add( parentScope.getTypeInfo().getAvroType() );
+          unionNodes.add( parentScope.getTypeInfo().getXmlSchemaType() );
+        }
+
+        typeInfo =
+            new XmlSchemaTypeInfo(
+                Schema.createUnion(unionSchemas),
+                createJsonNodeForUnion(unionNodes));
+
+    } else if (content instanceof XmlSchemaSimpleTypeRestriction) {
+        XmlSchemaSimpleTypeRestriction restr = (XmlSchemaSimpleTypeRestriction) content;
+
+        XmlSchemaSimpleType baseType = restr.getBaseType();
+        if (baseType == null) {
+            XmlSchema schema = schemasByNamespace.get( restr.getBaseTypeName().getNamespaceURI() );
+            baseType = (XmlSchemaSimpleType) schema.getTypeByName(restr.getBaseTypeName());
+        }
+
+        List<XmlSchemaFacet> facets = restr.getFacets();
+
+        if (baseType != null) {
+          XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+          List<XmlSchemaFacet> parentFacets = parentScope.getTypeInfo().getFacets();
+
+          // TODO: Merge facets.
+
+          typeInfo =
+              new XmlSchemaTypeInfo(
+                  parentScope.getTypeInfo().getAvroType(),
+                  simpleType.isAnonymous()
+                    ? parentScope.getTypeInfo().getXmlSchemaType()
+                      : createJsonNodeFor(simpleType.getQName()));
+        } else {
+            throw new IllegalArgumentException("Unrecognized base type for " + getName(simpleType, "{Anonymous Simple Type}"));
+        }
+    } else {
+        throw new IllegalArgumentException("XmlSchemaSimpleType " + getName(simpleType, "{Anonymous Simple Type}") + "contains unrecognized XmlSchemaSimpleTypeContent " + content.getClass().getName());
+    }
+  }
+
+  private void walk(XmlSchemaComplexType complexType) {
+    
+  }
+
+  private static String getName(XmlSchemaNamed name, String defaultName) {
+    if (name.isAnonymous()) {
+      return defaultName;
+    } else {
+      return name.getName();
+    }
+  }
+
+  private static JsonNode createJsonNodeFor(QName baseType) {
+    ObjectNode object = JsonNodeFactory.instance.objectNode();
+    object.put("namespace", baseType.getNamespaceURI());
+    object.put("localPart", baseType.getLocalPart());
+    return object;
+  }
+
+  private static JsonNode createJsonNodeForList(JsonNode child) {
+    ObjectNode object = JsonNodeFactory.instance.objectNode();
+    object.put("type", "list");
+    object.put("value", child);
+    return object;
+  }
+
+  private static JsonNode createJsonNodeForUnion(List<JsonNode> unionTypes) {
+    ObjectNode object = JsonNodeFactory.instance.objectNode();
+    object.put("type", "union");
+    ArrayNode arrayNode = JsonNodeFactory.instance.arrayNode();
+    arrayNode.addAll(unionTypes);
+    object.put("value", arrayNode);
+    return object;
+  }
+
   private Map<QName, List<XmlSchemaElement>> substitutes;
   private Map<String, XmlSchema> schemasByNamespace;
 
+  private XmlSchemaTypeInfo typeInfo;
   private Map<QName, XmlSchemaAttribute> attributes;
-  private Set<XmlSchemaElement> children;
+  private List<XmlSchemaParticle> children;
 }

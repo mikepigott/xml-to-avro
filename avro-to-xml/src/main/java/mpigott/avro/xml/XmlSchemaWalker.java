@@ -117,20 +117,20 @@ final class XmlSchemaWalker {
     }
 
     XmlSchemaScope scope =
-      new XmlSchemaScope(element, schemasByNamespace, elemsBySubstGroup);
+      new XmlSchemaScope(schemaType, schemasByNamespace, elemsBySubstGroup);
 
     // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
 
     // 2. for each visitor, call visitor.startElement(element, type, attributes);
     for (XmlSchemaVisitor visitor : visitors) {
-      visitor.onEnterElement(element, null, null);
+      visitor.onEnterElement(element);
     }
 
-    // 3. Walk the child groups and elements (if any), either breadth-first or depth-first.
+    // 3. Walk the child groups and elements (if any), depth-first.
 
     // 4. On the way back up, call visitor.endElement(element, type, attributes);
     for (XmlSchemaVisitor visitor : visitors) {
-      visitor.onExitElement(element, null, null);
+      visitor.onExitElement(element, null);
     }
 
     // Now handle substitute elements, if any.
