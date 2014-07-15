@@ -16,6 +16,11 @@
 
 package mpigott.avro.xml;
 
+import java.util.List;
+
+import org.apache.ws.commons.schema.XmlSchemaAttribute;
+import org.apache.ws.commons.schema.XmlSchemaElement;
+
 /**
  * Defines a visitor interface for notifications when walking
  * an {@link XmlSchema} using the {@link XmlSchemaWalker}.
@@ -24,4 +29,16 @@ package mpigott.avro.xml;
  */
 interface XmlSchemaVisitor {
 
+  void onEnterElement(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo typeInfo,
+      List<XmlSchemaAttribute> attributes);
+
+  void onExitElement(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo typeInfo,
+      List<XmlSchemaAttribute> attributes);
+
+  void onEnterSubstitutionGroup(XmlSchemaElement base);
+  void onExitSubstitutionGroup(XmlSchemaElement base);
 }

@@ -53,7 +53,7 @@ final class XmlSchemaWalker {
     }
 
     schemas = xmlSchemas;
-    visitors = null;
+    visitors = new ArrayList<XmlSchemaVisitor>(1);
 
     schemasByNamespace = new HashMap<String, XmlSchema>();
     elemsBySubstGroup = new HashMap<QName, List<XmlSchemaElement>>();
@@ -77,21 +77,17 @@ final class XmlSchemaWalker {
   XmlSchemaWalker(XmlSchemaCollection xmlSchemas, XmlSchemaVisitor visitor) {
     this(xmlSchemas);
     if (visitor != null) {
-      visitors = new ArrayList<XmlSchemaVisitor>(1);
       visitors.add(visitor);
     }
   }
 
   XmlSchemaWalker addVisitor(XmlSchemaVisitor visitor) {
-    if (visitors == null) {
-      visitors = new ArrayList<XmlSchemaVisitor>(1);
-    }
     visitors.add(visitor);
     return this;
   }
 
   XmlSchemaWalker removeVisitor(XmlSchemaVisitor visitor) {
-    if (visitors != null) {
+    if (visitor != null) {
       visitors.remove(visitor);
     }
     return this;
@@ -99,13 +95,17 @@ final class XmlSchemaWalker {
 
   // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
   void walk(XmlSchemaElement element) {
-    if ( element.isRef() ) {
-      if (element.getRef().getTarget() != null) {
-        element = element.getRef().getTarget();
-      } else {
-        final QName elemQName = element.getRefBase().getTargetQName();
-        XmlSchema schema = schemasByNamespace.get( elemQName.getNamespaceURI() );
-        element = schema.getElementByName(elemQName);
+    element = getElement(element);
+
+    /* If this element is the root of a
+     * substitution group, notify the visitors.
+     */
+    List<XmlSchemaElement> substitutes = null;
+    if ( elemsBySubstGroup.containsKey(element.getQName()) ) {
+      substitutes = elemsBySubstGroup.get( element.getQName() );
+
+      for (XmlSchemaVisitor visitor : visitors) {
+        visitor.onEnterSubstitutionGroup(element);
       }
     }
 
@@ -120,9 +120,29 @@ final class XmlSchemaWalker {
       new XmlSchemaScope(element, schemasByNamespace, elemsBySubstGroup);
 
     // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
+
     // 2. for each visitor, call visitor.startElement(element, type, attributes);
+    for (XmlSchemaVisitor visitor : visitors) {
+      visitor.onEnterElement(element, null, null);
+    }
+
     // 3. Walk the child groups and elements (if any), either breadth-first or depth-first.
+
     // 4. On the way back up, call visitor.endElement(element, type, attributes);
+    for (XmlSchemaVisitor visitor : visitors) {
+      visitor.onExitElement(element, null, null);
+    }
+
+    // Now handle substitute elements, if any.
+    if (substitutes != null) {
+      for (XmlSchemaElement substitute : substitutes) {
+        walk(substitute);
+      }
+
+      for (XmlSchemaVisitor visitor : visitors) {
+        visitor.onExitSubstitutionGroup(element);
+      }
+    }
   }
 
   private void walk(XmlSchemaAll allGroup) {
@@ -137,6 +157,26 @@ final class XmlSchemaWalker {
 
   private void walk(XmlSchemaChoice choice) {
     
+  }
+
+  /**
+   * If the provided {@link XmlSchemaElement} is a reference, track down the
+   * original.  Otherwise, just return the provided <code>element</code>.
+   *
+   * @param element The element to get the definition of.
+   * @return The real {@link XmlSchemaElement}.
+   */
+  private XmlSchemaElement getElement(XmlSchemaElement element) {
+    if ( element.isRef() ) {
+      if (element.getRef().getTarget() != null) {
+        element = element.getRef().getTarget();
+      } else {
+        final QName elemQName = element.getRefBase().getTargetQName();
+        XmlSchema schema = schemasByNamespace.get( elemQName.getNamespaceURI() );
+        element = schema.getElementByName(elemQName);
+      }
+    }
+    return element;
   }
 
   private XmlSchemaCollection schemas;
