@@ -21,13 +21,13 @@ package mpigott.avro.xml;
  *
  * @author  Mike Pigott
  */
-class XmlSchemaValidator {
+class XmlSchemaValidator /* implements Visitor */ {
 
     /**
      * 
      */
     public XmlSchemaValidator() {
-	// TODO Auto-generated constructor stub
+        // TODO Auto-generated constructor stub
     }
 
 }

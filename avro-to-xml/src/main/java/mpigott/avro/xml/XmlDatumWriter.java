@@ -29,7 +29,7 @@ import org.xml.sax.InputSource;
 /**
  * Reads an XML {@link Document} and writes it to an {@link Encoder}.
  *
- * @author  Mike Pigott (mpigott.subscriptions@gmail.com)
+ * @author  Mike Pigott
  */
 public class XmlDatumWriter implements DatumWriter<Document> {
 

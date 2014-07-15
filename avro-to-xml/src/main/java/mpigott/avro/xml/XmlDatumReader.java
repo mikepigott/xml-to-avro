@@ -28,7 +28,7 @@ import org.w3c.dom.Document;
  * Reads an XML {@link Document} from a {@link Decoder}.
  * If the {@link Schema} can be conformed to, it will be.
  *
- * @author  Mike Pigott (mpigott.subscriptions@gmail.com)
+ * @author  Mike Pigott
  */
 public class XmlDatumReader implements DatumReader<Document> {
 

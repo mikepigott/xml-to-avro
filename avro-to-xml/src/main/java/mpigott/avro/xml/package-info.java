@@ -17,6 +17,6 @@
 /**
  * This package is used to convert XML schemas to Avro files, and back.
  *
- * @author Mike Pigott (mpigott.subscriptions@gmail.com)
+ * @author Mike Pigott
  */
 package mpigott.avro.xml;

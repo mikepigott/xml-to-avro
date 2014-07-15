@@ -26,7 +26,7 @@ import org.xml.sax.InputSource;
  * A set of utilities for encoding and
  * decoding XML Documents and Avro data.
  *
- * @author  Mike Pigott (mpigott.subscriptions@gmail.com)
+ * @author  Mike Pigott
  */
 class Utils {
 

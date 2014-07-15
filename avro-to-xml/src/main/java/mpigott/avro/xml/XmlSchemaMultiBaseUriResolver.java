@@ -29,7 +29,7 @@ import org.xml.sax.InputSource;
  * This class is used by {@link org.apache.ws.commons.schema.XmlSchemaCollection}
  * to resolve schemas from multiple base URIs.
  *
- * @author  Mike Pigott (mpigott.subscriptions@gmail.com)
+ * @author  Mike Pigott
  * @version 1.0
  */
 class XmlSchemaMultiBaseUriResolver extends DefaultURIResolver {
