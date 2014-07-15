@@ -30,60 +30,60 @@ import org.xml.sax.InputSource;
  */
 class Utils {
 
-    static String getAvroNamespaceFor(String xmlSchemaNamespace) throws URISyntaxException {
-	return getAvroNamespaceFor(new URI(xmlSchemaNamespace));
-    }
+  static String getAvroNamespaceFor(String xmlSchemaNamespace) throws URISyntaxException {
+	  return getAvroNamespaceFor(new URI(xmlSchemaNamespace));
+  }
 
-    static String getAvroNamespaceFor(URL xmlSchemaNamespace) throws URISyntaxException {
-	return getAvroNamespaceFor( xmlSchemaNamespace.toURI() );
-    }
+  static String getAvroNamespaceFor(URL xmlSchemaNamespace) throws URISyntaxException {
+	  return getAvroNamespaceFor( xmlSchemaNamespace.toURI() );
+  }
 
-    static String getAvroNamespaceFor(java.net.URI uri) {
-	ArrayList<String> components = new ArrayList<String>();
+  static String getAvroNamespaceFor(java.net.URI uri) {
+	  ArrayList<String> components = new ArrayList<String>();
 
-	// xsd.example.org -> org.example.xsd
-	final String host = uri.getHost();
-	if (host != null) {
+	  // xsd.example.org -> org.example.xsd
+	  final String host = uri.getHost();
+	  if (host != null) {
 	    String[] hostParts = host.split("\\.");
 	    for (int hpIdx = hostParts.length - 1; hpIdx >= 0; --hpIdx) {
-		if ( !hostParts[hpIdx].isEmpty() ) {
-		    components.add(hostParts[hpIdx]);
-		}
+		    if ( !hostParts[hpIdx].isEmpty() ) {
+		      components.add(hostParts[hpIdx]);
+		    }
 	    }
-	}
+	  }
 
-	// path/to/schema.xsd -> path.to.schema.xsd
-	final String path = uri.getPath();
-	if (path != null) {
+	  // path/to/schema.xsd -> path.to.schema.xsd
+	  final String path = uri.getPath();
+	  if (path != null) {
 	    String[] pathParts = path.split("/");
 	    for (String pathPart : pathParts) {
-		if ( !pathPart.isEmpty() ) {
-		    components.add(pathPart);
-		}
+		    if ( !pathPart.isEmpty() ) {
+		      components.add(pathPart);
+		    }
 	    }
-	}
+	  }
 
-	if ( components.isEmpty() ) {
+	  if ( components.isEmpty() ) {
 	    throw new IllegalArgumentException("URI provided without enough content to create a namespace for.");
-	}
+	  }
 
-	StringBuilder namespace = new StringBuilder(components.get(0));
-	for (int c = 1; c < components.size(); ++c) {
+	  StringBuilder namespace = new StringBuilder(components.get(0));
+	  for (int c = 1; c < components.size(); ++c) {
 	    namespace.append('.').append( components.get(c) );
-	}
+	  }
 
-	return namespace.toString();
-    }
+	  return namespace.toString();
+  }
 
-    static InputSource getSchema(String docBaseUri, String schemaLocation) throws java.io.IOException {
-	URL schemaUrl = null;
-	if (schemaLocation.contains("://")) {
+  static InputSource getSchema(String docBaseUri, String schemaLocation) throws java.io.IOException {
+	  URL schemaUrl = null;
+	  if (schemaLocation.contains("://")) {
 	    schemaUrl = new URL(schemaLocation);
-	} else if (docBaseUri.endsWith("/")) {
+	  } else if (docBaseUri.endsWith("/")) {
 	    schemaUrl = new URL(docBaseUri + schemaLocation);
-	} else {
+	  } else {
 	    schemaUrl = new URL(docBaseUri + "/" + schemaLocation);
-	}
-	return new InputSource( schemaUrl.openStream() );
-    }
+	  }
+	  return new InputSource( schemaUrl.openStream() );
+  }
 }

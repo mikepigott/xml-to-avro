@@ -30,7 +30,9 @@ import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.XmlSchemaParticle;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
+import org.apache.ws.commons.schema.XmlSchemaType;
 
 /**
  * Walks an {@link XmlSchema} from a starting {@link XmlSchemaElement},
@@ -41,83 +43,104 @@ import org.apache.ws.commons.schema.XmlSchemaSequence;
  */
 final class XmlSchemaWalker {
 
-    /**
-     * Initializes the {@link XmlSchemaWalker} with the {@link XmlScheamCollection}
-     * to reference when following an {@link XmlSchemaElement}.
-     */
-    XmlSchemaWalker(XmlSchemaCollection xmlSchemas) {
-        if (xmlSchemas == null) {
-            throw new IllegalArgumentException("Input XmlSchemaCollection cannot be null.");
+  /**
+   * Initializes the {@link XmlSchemaWalker} with the {@link XmlScheamCollection}
+   * to reference when following an {@link XmlSchemaElement}.
+   */
+  XmlSchemaWalker(XmlSchemaCollection xmlSchemas) {
+    if (xmlSchemas == null) {
+      throw new IllegalArgumentException("Input XmlSchemaCollection cannot be null.");
+    }
+
+    schemas = xmlSchemas;
+    visitors = null;
+
+    schemasByNamespace = new HashMap<String, XmlSchema>();
+    elemsBySubstGroup = new HashMap<QName, List<XmlSchemaElement>>();
+
+    for (XmlSchema schema : schemas.getXmlSchemas()) {
+      schemasByNamespace.put(schema.getTargetNamespace(), schema);
+
+      for (XmlSchemaElement elem : schema.getElements().values()) {
+        if (elem.getSubstitutionGroup() != null) {
+          List<XmlSchemaElement> elems = elemsBySubstGroup.get( elem.getSubstitutionGroup() );
+          if (elems == null) {
+            elems = new ArrayList<XmlSchemaElement>();
+            elemsBySubstGroup.put(elem.getSubstitutionGroup(), elems);
+          }
+          elems.add(elem);
         }
+      }
+    }
+  }
 
-        schemas = xmlSchemas;
-        visitors = null;
+  XmlSchemaWalker(XmlSchemaCollection xmlSchemas, XmlSchemaVisitor visitor) {
+    this(xmlSchemas);
+    if (visitor != null) {
+      visitors = new ArrayList<XmlSchemaVisitor>(1);
+      visitors.add(visitor);
+    }
+  }
 
-        elemsBySubstGroup = new HashMap<QName, List<XmlSchemaElement>>();
-        for (XmlSchema schema : schemas.getXmlSchemas()) {
-            for (XmlSchemaElement elem : schema.getElements().values()) {
-                if (elem.getSubstitutionGroup() != null) {
-                    List<XmlSchemaElement> elems = elemsBySubstGroup.get( elem.getSubstitutionGroup() );
-                    if (elems == null) {
-                        elems = new ArrayList<XmlSchemaElement>();
-                        elemsBySubstGroup.put(elem.getSubstitutionGroup(), elems);
-                    }
-                    elems.add(elem);
-                }
-            }
-        }
+  XmlSchemaWalker addVisitor(XmlSchemaVisitor visitor) {
+    if (visitors == null) {
+      visitors = new ArrayList<XmlSchemaVisitor>(1);
+    }
+    visitors.add(visitor);
+    return this;
+  }
+
+  XmlSchemaWalker removeVisitor(XmlSchemaVisitor visitor) {
+    if (visitors != null) {
+      visitors.remove(visitor);
+    }
+    return this;
+  }
+
+  // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
+  void walk(XmlSchemaElement element) {
+    if ( element.isRef() ) {
+      if (element.getRef().getTarget() != null) {
+        element = element.getRef().getTarget();
+      } else {
+        final QName elemQName = element.getRefBase().getTargetQName();
+        XmlSchema schema = schemasByNamespace.get( elemQName.getNamespaceURI() );
+        element = schema.getElementByName(elemQName);
+      }
     }
 
-    XmlSchemaWalker(XmlSchemaCollection xmlSchemas, XmlSchemaVisitor visitor) {
-        this(xmlSchemas);
-        if (visitor != null) {
-            visitors = new ArrayList<XmlSchemaVisitor>(1);
-            visitors.add(visitor);
-        }
+    XmlSchemaType schemaType = element.getSchemaType();
+    if (schemaType == null) {
+      final QName typeQName = element.getSchemaTypeName();
+      XmlSchema schema = schemasByNamespace.get( typeQName.getNamespaceURI() );
+      schemaType = schema.getTypeByName(typeQName);
     }
 
-    XmlSchemaWalker addVisitor(XmlSchemaVisitor visitor) {
-        if (visitors == null) {
-            visitors = new ArrayList<XmlSchemaVisitor>(1);
-        }
-        visitors.add(visitor);
-        return this;
-    }
+    XmlSchemaScope scope =
+      new XmlSchemaScope(element, schemasByNamespace, elemsBySubstGroup);
 
-    XmlSchemaWalker removeVisitor(XmlSchemaVisitor visitor) {
-        if (visitors != null) {
-            visitors.remove(visitor);
-        }
-        return this;
-    }
+    // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
+    // 2. for each visitor, call visitor.startElement(element, type, attributes);
+    // 3. Walk the child groups and elements (if any), either breadth-first or depth-first.
+    // 4. On the way back up, call visitor.endElement(element, type, attributes);
+  }
 
-    // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
-    void walk(XmlSchemaElement element) {
-        XmlSchemaScope scope =
-            new XmlSchemaScope(element, schemasByNamespace, elemsBySubstGroup);
+  private void walk(XmlSchemaAll allGroup) {
+    // For each visitor, call visitor.startAll(allGroup)
+    // Walk the child elements.
+    // On the way back up, call visitor.endAll(allGroup)
+  }
 
-        // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
-        // 2. for each visitor, call visitor.startElement(element, type, attributes);
-        // 3. Walk the child groups and elements (if any), either breadth-first or depth-first.
-        // 4. On the way back up, call visitor.endElement(element, type, attributes);
-    }
+  private void walk(XmlSchemaSequence seq) {
+    
+  }
 
-    private void walk(XmlSchemaAll allGroup) {
-        // For each visitor, call visitor.startAll(allGroup)
-        // Walk the child elements.
-        // On the way back up, call visitor.endAll(allGroup)
-    }
+  private void walk(XmlSchemaChoice choice) {
+    
+  }
 
-    private void walk(XmlSchemaSequence seq) {
-        
-    }
-
-    private void walk(XmlSchemaChoice choice) {
-        
-    }
-
-    private XmlSchemaCollection schemas;
-    private ArrayList<XmlSchemaVisitor> visitors;
-    private Map<QName, List<XmlSchemaElement>> elemsBySubstGroup;
-    private Map<String, XmlSchema> schemasByNamespace;
+  private XmlSchemaCollection schemas;
+  private ArrayList<XmlSchemaVisitor> visitors;
+  private Map<QName, List<XmlSchemaElement>> elemsBySubstGroup;
+  private Map<String, XmlSchema> schemasByNamespace;
 }

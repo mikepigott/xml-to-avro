@@ -33,52 +33,53 @@ import org.xml.sax.InputSource;
  */
 public class XmlDatumWriter implements DatumWriter<Document> {
 
-    public XmlDatumWriter() {
-        xmlSchemaCollection = null;
-        schema = null;
+  public XmlDatumWriter() {
+    xmlSchemaCollection = null;
+    schema = null;
+  }
+
+  public XmlDatumWriter(XmlSchemaCollection xmlSchemaCollection) {
+    this.xmlSchemaCollection = xmlSchemaCollection;
+    this.schema = null;
+  }
+
+  /**
+   * Sets the schema to use when writing the XML
+   * {@link Document} to the {@link Encoder}.
+   *
+   * <p>
+   * If the {@link Schema} is <code>null</code>, generates one on the fly
+   * from the document itself.  That {@link Schema can be retrieved by
+   * calling {@link #getSchema()}.
+   * </p>
+   *
+   * @see org.apache.avro.io.DatumWriter#setSchema(org.apache.avro.Schema)
+   */
+  @Override
+  public void setSchema(Schema schema) {
+    if (xmlSchemaCollection != null) {
+      // TODO: Validate against the XML schema.
     }
 
-    public XmlDatumWriter(XmlSchemaCollection xmlSchemaCollection) {
-        this.xmlSchemaCollection = xmlSchemaCollection;
-        this.schema = null;
-    }
+    this.schema = schema;
+  }
 
-    /**
-     * Sets the schema to use when writing the XML
-     * {@link Document} to the {@link Encoder}.
-     *
-     * <p>
-     * If the {@link Schema} is <code>null</code>, generates one on the fly
-     * from the document itself.  That {@link Schema can be retrieved by
-     * calling {@link #getSchema()}.
-     * </p>
-     *
-     * @see org.apache.avro.io.DatumWriter#setSchema(org.apache.avro.Schema)
-     */
-    @Override
-    public void setSchema(Schema schema) {
-        if (xmlSchemaCollection != null) {
-            // TODO: Validate against the XML schema.
-        }
-	this.schema = schema;
-    }
+  /**
+   * Writes the {@link Document} to the {@link Encoder} in accordance
+   * with the {@link Schema} set in {@link #setSchema(Schema)}.
+   *
+   * <p>
+   * If no {@link Schema} was provided, builds one from the {@link Document}
+   * and its {@link XmlSchemaCollection}.  The schema can then be retrieved
+   * from {@link #getSchema()}.
+   * </p>
+   *
+   * @see org.apache.avro.io.DatumWriter#write(java.lang.Object, org.apache.avro.io.Encoder)
+   */
+  @Override
+  public void write(Document doc, Encoder out) throws IOException {
+  }
 
-    /**
-     * Writes the {@link Document} to the {@link Encoder} in accordance
-     * with the {@link Schema} set in {@link #setSchema(Schema)}.
-     *
-     * <p>
-     * If no {@link Schema} was provided, builds one from the {@link Document}
-     * and its {@link XmlSchemaCollection}.  The schema can then be retrieved
-     * from {@link #getSchema()}.
-     * </p>
-     *
-     * @see org.apache.avro.io.DatumWriter#write(java.lang.Object, org.apache.avro.io.Encoder)
-     */
-    @Override
-    public void write(Document doc, Encoder out) throws IOException {
-    }
-
-    private XmlSchemaCollection xmlSchemaCollection;
-    private Schema schema;
+  private XmlSchemaCollection xmlSchemaCollection;
+  private Schema schema;
 }

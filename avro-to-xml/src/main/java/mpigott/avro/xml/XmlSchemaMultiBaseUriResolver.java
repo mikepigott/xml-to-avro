@@ -34,80 +34,82 @@ import org.xml.sax.InputSource;
  */
 class XmlSchemaMultiBaseUriResolver extends DefaultURIResolver {
 
-    public XmlSchemaMultiBaseUriResolver() {
-        baseUris = new java.util.ArrayList<String>();
+  public XmlSchemaMultiBaseUriResolver() {
+    baseUris = new java.util.ArrayList<String>();
+  }
+
+  /**
+   * Resolves the schema at the provided location
+   * with the specified input namespace and base URI.
+   *
+   * @see org.apache.ws.commons.schema.resolver.URIResolver#resolveEntity(String, String, String)
+   */
+  public InputSource resolveEntity(String namespace, String schemaLocation, String baseUri) {
+    InputSource source = null;
+    if ((baseUri != null) && !baseUri.isEmpty()) {
+      baseUris.add(baseUri);
     }
 
-    /**
-     * Resolves the schema at the provided location
-     * with the specified input namespace and base URI.
+    /* Confirm the schema location is a fully-qualified
+     * path before adding it to the set of base URIs.
+     */
+    try {
+      new URL(schemaLocation);
+      baseUris.add(schemaLocation);
+    } catch (MalformedURLException e) {
+    }
+
+    /* When we receive a schema location, it may only be a partial path.
+     * That partial path may come from one of many different base URIs
+     * that we've seen already, most likely from one we recently tried.
+     * So, in order to determine which base URI the partial schema comes
+     * from, we must try them all and see which one resolves.
      *
-     * @see org.apache.ws.commons.schema.resolver.URIResolver#resolveEntity(String, String, String)
+     * We check in reverse order because a schema is likely tied to a
+     * recent base URI we have already seen.
      */
-    public InputSource resolveEntity(String namespace, String schemaLocation, String baseUri) {
-        InputSource source = null;
-        if ((baseUri != null) && !baseUri.isEmpty()) {
-            baseUris.add(baseUri);
-        }
-
-        /* Confirm the schema location is a fully-qualified
-         * path before adding it to the set of base URIs.
-         */
+    ListIterator<String> iter = baseUris.listIterator(baseUris.size() - 1);
+    while (iter.hasPrevious()) {
+      try {
+        String newBaseUri = iter.previous();
+        source = super.resolveEntity(namespace, schemaLocation, newBaseUri);
+        InputStream urlStream = null;
         try {
-            new URL(schemaLocation);
-            baseUris.add(schemaLocation);
-        } catch (MalformedURLException e) {
-        }
-
-        /* When we receive a scheam location, it may only be a partial path.
-         * That partial path may come from one of many different base URIs
-         * that we've seen already, most likely from one we recently tried.
-         * So, in order to determine which base URI the partial schema comes
-         * from, we must try them all and see which one resolves.
-         *
-         * We check in reverse order because a schema is likely tied to a
-         * recent base URI we have already seen.
-         */
-        ListIterator<String> iter = baseUris.listIterator(baseUris.size() - 1);
-        while (iter.hasPrevious()) {
-            try {
-                String newBaseUri = iter.previous();
-                source = super.resolveEntity(namespace, schemaLocation, newBaseUri);
-                InputStream urlStream = null;
-                try {
-                    urlStream = new URL(source.getSystemId()).openStream();
-                } finally {
-                    if (urlStream != null) {
-                	try {
-                	    urlStream.close();
-                	} catch (IOException ioe) {
-                	    // No error for failure to close.
-                	}
-                    }
-                }
-                break;
+          urlStream = new URL(source.getSystemId()).openStream();
+        } finally {
+          if (urlStream != null) {
+         	  try {
+              urlStream.close();
             } catch (IOException ioe) {
-                /* If we reach here, we were unable to open a
-                 * connection to the source.  Try the next one.
-                 */
+              // No error for failure to close.
             }
+          }
         }
-        return source;
+        break;
+      } catch (IOException ioe) {
+        /* If we reach here, we were unable to open a
+         * connection to the source.  Try the next one.
+         */
+      }
     }
+    return source;
+  }
 
-    /**
-     * Returns one of the base URIs provided earlier.
-     */
-    public String getCollectionBaseURI() {
-        return baseUris.isEmpty() ? null : baseUris.get(0);
-    }
+  /**
+   * Returns one of the base URIs provided earlier.
+   */
+  @Override
+  public String getCollectionBaseURI() {
+    return baseUris.isEmpty() ? null : baseUris.get(0);
+  }
 
-    /**
-     * Adds the provided URI to the set of base URIs to check.
-     */
-    public void setCollectionBaseURI(String uri) {
-        baseUris.add(uri);
-    }
+  /**
+   * Adds the provided URI to the set of base URIs to check.
+   */
+  @Override
+  public void setCollectionBaseURI(String uri) {
+    baseUris.add(uri);
+  }
 
-    private List<String> baseUris;
+  private List<String> baseUris;
 }

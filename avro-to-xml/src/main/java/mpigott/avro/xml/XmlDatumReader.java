@@ -32,55 +32,55 @@ import org.w3c.dom.Document;
  */
 public class XmlDatumReader implements DatumReader<Document> {
 
-    /**
-     * Creates an {@link XmlDatumReader} with the {@link XmlSchemaCollection}
-     * to use when decoding XML {@link Document}s from {@link Decoder}s.
-     */
-    public XmlDatumReader(XmlSchemaCollection xmlSchemaCollection) {
-	this.xmlSchemaCollection = xmlSchemaCollection;
-    }
+  /**
+   * Creates an {@link XmlDatumReader} with the {@link XmlSchemaCollection}
+   * to use when decoding XML {@link Document}s from {@link Decoder}s.
+   */
+  public XmlDatumReader(XmlSchemaCollection xmlSchemaCollection) {
+	  this.xmlSchemaCollection = xmlSchemaCollection;
+  }
 
-    /**
-     * Sets the {@link Schema} that defines how data will be read from the
-     * {@link Decoder} when {@link #read(Document, Decoder)} is called.
-     *
-     * <p>
-     * Checks the input {@link Schema} conforms with the provided
-     * {@link XmlSchemaCollection}.  If <code>schema</code> does not conform,
-     * an {@link IllegalArgumentException} is thrown.
-     * </p>
-     *
-     * @throws IllegalArgumentException if the schema is <code>null</code> or
-     *                                  does not conform to the corresponding
-     *                                  XML schema.
-     *
-     * @see org.apache.avro.io.DatumReader#setSchema(org.apache.avro.Schema)
-     */
-    @Override
-    public void setSchema(Schema schema) {
-	if (schema == null) {
+  /**
+   * Sets the {@link Schema} that defines how data will be read from the
+   * {@link Decoder} when {@link #read(Document, Decoder)} is called.
+   *
+   * <p>
+   * Checks the input {@link Schema} conforms with the provided
+   * {@link XmlSchemaCollection}.  If <code>schema</code> does not conform,
+   * an {@link IllegalArgumentException} is thrown.
+   * </p>
+   *
+   * @throws IllegalArgumentException if the schema is <code>null</code> or
+   *                                  does not conform to the corresponding
+   *                                  XML schema.
+   *
+   * @see org.apache.avro.io.DatumReader#setSchema(org.apache.avro.Schema)
+   */
+  @Override
+  public void setSchema(Schema schema) {
+	  if (schema == null) {
 	    throw new IllegalArgumentException("Input schema cannot be null.");
-	}
+	  }
 
-	if (xmlSchemaCollection != null) {
+	  if (xmlSchemaCollection != null) {
 	    // TODO: Confirm the schema validates against xmlSchemaCollection.
-	}
+	  }
 
-	inputSchema = schema;
-    }
+	  inputSchema = schema;
+  }
 
-    /**
-     * Reads the XML {@link Document} from the input {@link Decoder} and
-     * returns it, transformed.  The <code>reuse</code> {@link Document}
-     * will not be used, as {@link Document} re-use is difficult.
-     *
-     * @see org.apache.avro.io.DatumReader#read(java.lang.Object, org.apache.avro.io.Decoder)
-     */
-    @Override
-    public Document read(Document reuse, Decoder in) throws IOException {
-	return null;
-    }
+  /**
+   * Reads the XML {@link Document} from the input {@link Decoder} and
+   * returns it, transformed.  The <code>reuse</code> {@link Document}
+   * will not be used, as {@link Document} re-use is difficult.
+   *
+   * @see org.apache.avro.io.DatumReader#read(java.lang.Object, org.apache.avro.io.Decoder)
+   */
+  @Override
+  public Document read(Document reuse, Decoder in) throws IOException {
+	  return null;
+  }
 
-    private Schema inputSchema;
-    private XmlSchemaCollection xmlSchemaCollection;
+  private Schema inputSchema;
+  private XmlSchemaCollection xmlSchemaCollection;
 }
