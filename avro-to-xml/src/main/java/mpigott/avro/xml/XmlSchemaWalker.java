@@ -19,14 +19,18 @@ package mpigott.avro.xml;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.XmlSchema;
+import org.apache.ws.commons.schema.XmlSchemaAll;
+import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.XmlSchemaSequence;
 
 /**
  * Walks an {@link XmlSchema} from a starting {@link XmlSchemaElement},
@@ -80,13 +84,36 @@ final class XmlSchemaWalker {
         return this;
     }
 
-    void walk(XmlSchemaElement element, boolean depthFirstWalk) {
+    XmlSchemaWalker removeVisitor(XmlSchemaVisitor visitor) {
+        if (visitors != null) {
+            visitors.remove(visitor);
+        }
+        return this;
+    }
+
+    // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
+    void walk(XmlSchemaElement element) {
         XmlSchemaScope scope =
             new XmlSchemaScope(element, schemasByNamespace, elemsBySubstGroup);
 
         // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
-        // 2. for each visitor, call visitor.startElement(element, attributes);
-        // 3. Walk the child groups and elements, either breadth-first or depth-first.
+        // 2. for each visitor, call visitor.startElement(element, type, attributes);
+        // 3. Walk the child groups and elements (if any), either breadth-first or depth-first.
+        // 4. On the way back up, call visitor.endElement(element, type, attributes);
+    }
+
+    private void walk(XmlSchemaAll allGroup) {
+        // For each visitor, call visitor.startAll(allGroup)
+        // Walk the child elements.
+        // On the way back up, call visitor.endAll(allGroup)
+    }
+
+    private void walk(XmlSchemaSequence seq) {
+        
+    }
+
+    private void walk(XmlSchemaChoice choice) {
+        
     }
 
     private XmlSchemaCollection schemas;
