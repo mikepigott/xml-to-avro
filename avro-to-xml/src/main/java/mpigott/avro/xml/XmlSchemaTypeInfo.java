@@ -49,7 +49,7 @@ final class XmlSchemaTypeInfo {
   XmlSchemaTypeInfo(
       Schema avroType,
       JsonNode xmlType,
-      List<XmlSchemaFacet> facets) {
+      List<XmlSchemaRestriction> facets) {
 
     this(avroType, xmlType);
     this.facets = facets;
@@ -63,11 +63,11 @@ final class XmlSchemaTypeInfo {
     return xmlSchemaType;
   }
 
-  List<XmlSchemaFacet> getFacets() {
+  List<XmlSchemaRestriction> getFacets() {
     return facets;
   }
 
   private Schema avroSchemaType;
   private JsonNode xmlSchemaType;
-  private List<XmlSchemaFacet> facets;
+  private List<XmlSchemaRestriction> facets;
 }
