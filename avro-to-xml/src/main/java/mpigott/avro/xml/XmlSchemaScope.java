@@ -29,7 +29,12 @@ import javax.xml.namespace.QName;
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
+import org.apache.ws.commons.schema.XmlSchemaAttributeGroup;
+import org.apache.ws.commons.schema.XmlSchemaAttributeGroupMember;
+import org.apache.ws.commons.schema.XmlSchemaAttributeGroupRef;
+import org.apache.ws.commons.schema.XmlSchemaAttributeOrGroupRef;
 import org.apache.ws.commons.schema.XmlSchemaComplexType;
+import org.apache.ws.commons.schema.XmlSchemaContent;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaFacet;
 import org.apache.ws.commons.schema.XmlSchemaParticle;
@@ -245,7 +250,147 @@ final class XmlSchemaScope {
   }
 
   private void walk(XmlSchemaComplexType complexType) {
-    
+    XmlSchemaContent complexContent =
+        (complexType.getContentModel() != null)
+        ? complexType.getContentModel().getContent()
+        : null;
+
+    /* Process the type of the ComplexType.
+     * If there is no type, the content should be defined by the particle.
+     * Content: (annotation?, 
+     *           (simpleContent    -> getContentModel().getContent()
+     *            | complexContent -> getContentModel().getContent()
+     *            | (openContent?,
+     *               (group | all | choice | sequence)?, -> getParticle()
+     *               ((attribute | attributeGroup)*, anyAttribute?), assert*
+     *              )
+     *           )
+     *          )
+     */
+    XmlSchemaParticle particle = null;
+
+    if (complexContent != null) {
+        /*
+        ComplexContentScope scope = buildScopeFor(complexContent, schemasByNamespace);
+
+        for (Attribute attribute : scope.getAttributesInScope()) { 
+          element.addAttribute(attribute);
+        }
+
+        element.addChild( scope.getElementChild() );
+        */
+
+    } else {
+      // Process the child elements.
+      if (complexType.getParticle() != null) {
+        /*
+        ElementChild child = getElementChildOf(complexType.getParticle(), schemasByNamespace);
+        if (child != null) {
+          element.addChild(child);
+         }
+          */
+      }
+
+      // Process the attributes.
+      if (complexType.getAttributes() != null) {
+        attributes = new HashMap<QName, XmlSchemaAttribute>();
+        for (XmlSchemaAttributeOrGroupRef attr : complexType.getAttributes()) {
+          if (attr instanceof XmlSchemaAttribute) {
+            XmlSchemaAttribute attribute = getAttribute((XmlSchemaAttribute) attr);
+            attributes.put(attribute.getQName(), attribute);
+          } else if (attr instanceof XmlSchemaAttributeGroupRef) {
+            final List<XmlSchemaAttribute> attrList =
+                getAttributesOf((XmlSchemaAttributeGroupRef) attr);
+            for (XmlSchemaAttribute attribute : attrList) {
+              attributes.put(attribute.getQName(), attribute);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private ArrayList<XmlSchemaAttribute> getAttributesOf(XmlSchemaAttributeGroupRef groupRef) {
+    XmlSchemaAttributeGroup attrGroup = groupRef.getRef().getTarget();
+    if (attrGroup == null) {
+      XmlSchema schema = schemasByNamespace.get(groupRef.getTargetQName().getNamespaceURI());
+      attrGroup = schema.getAttributeGroupByName(groupRef.getTargetQName());
+    }
+    return getAttributesOf(attrGroup);
+  }
+
+  private ArrayList<XmlSchemaAttribute> getAttributesOf(XmlSchemaAttributeGroup attrGroup) {
+    ArrayList<XmlSchemaAttribute> attrs = new ArrayList<XmlSchemaAttribute>( attrGroup.getAttributes().size() );
+
+    for (XmlSchemaAttributeGroupMember member : attrGroup.getAttributes()) {
+      if (member instanceof XmlSchemaAttribute) {
+        attrs.add( getAttribute((XmlSchemaAttribute) member) );
+
+      } else if (member instanceof XmlSchemaAttributeGroup) {
+        attrs.addAll( getAttributesOf((XmlSchemaAttributeGroup) member) );
+
+      } else if (member instanceof XmlSchemaAttributeGroupRef) {
+        attrs.addAll( getAttributesOf((XmlSchemaAttributeGroupRef) member) );
+
+      } else {
+        throw new IllegalArgumentException("Attribute Group " + getName(attrGroup, "{Anonymous Attribute Group}") + " contains unrecognized attribute group memeber type " + member.getClass().getName());
+      }
+    }
+
+    return attrs;
+  }
+
+  private XmlSchemaAttribute getAttribute(XmlSchemaAttribute attribute) {
+    if (!attribute.isRef()) {
+      return attribute;
+    }
+
+    final QName attrQName = attribute.getRefBase().getTargetQName();
+    final XmlSchema schema = schemasByNamespace.get( attrQName.getNamespaceURI() );
+
+    XmlSchemaAttribute globalAttr = null;
+    if (attribute.getRef().getTarget() != null) {
+      globalAttr = attribute.getRef().getTarget();
+    } else {
+      globalAttr = schema.getAttributeByName(attrQName);
+    }
+
+    /* The attribute reference defines the attribute use and overrides the ID,
+     * default, and fixed fields.  Everything else is defined by the global
+     * attribute.
+     */
+    String fixedValue = attribute.getFixedValue();
+    if (fixedValue != null) {
+      fixedValue = globalAttr.getFixedValue();
+    }
+
+    String defaultValue = attribute.getDefaultValue();
+    if ((defaultValue == null) && (fixedValue == null)) {
+      defaultValue = globalAttr.getDefaultValue();
+    }
+
+    String id = attribute.getId();
+    if (id == null) {
+      id = globalAttr.getId();
+    }
+
+    final XmlSchemaAttribute copy = new XmlSchemaAttribute(schema, false);
+    copy.setAnnotation( globalAttr.getAnnotation() );
+    copy.setDefaultValue(defaultValue);
+    copy.setFixedValue(fixedValue);
+    copy.setForm( globalAttr.getForm() );
+    copy.setId(id);
+    copy.setLineNumber( attribute.getLineNumber() );
+    copy.setLinePosition( attribute.getLinePosition() );
+    copy.setMetaInfoMap( globalAttr.getMetaInfoMap() );
+    copy.setName( globalAttr.getName() );
+    copy.setSchemaType( globalAttr.getSchemaType() );
+    copy.setSchemaTypeName( globalAttr.getSchemaTypeName() );
+    copy.setSourceURI( globalAttr.getSourceURI() );
+    copy.setUnhandledAttributes( globalAttr.getUnhandledAttributes() );
+    copy.setUse( attribute.getUse() );
+
+    return copy;
   }
 
   private static String getName(XmlSchemaNamed name, String defaultName) {

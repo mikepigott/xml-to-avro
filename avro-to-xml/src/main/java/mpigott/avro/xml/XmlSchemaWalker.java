@@ -161,22 +161,59 @@ final class XmlSchemaWalker {
 
   /**
    * If the provided {@link XmlSchemaElement} is a reference, track down the
-   * original.  Otherwise, just return the provided <code>element</code>.
+   * original and add the minimum and maximum occurrence fields.  Otherwise,
+   * just return the provided <code>element</code>.
    *
    * @param element The element to get the definition of.
    * @return The real {@link XmlSchemaElement}.
    */
   private XmlSchemaElement getElement(XmlSchemaElement element) {
-    if ( element.isRef() ) {
-      if (element.getRef().getTarget() != null) {
-        element = element.getRef().getTarget();
-      } else {
-        final QName elemQName = element.getRefBase().getTargetQName();
-        XmlSchema schema = schemasByNamespace.get( elemQName.getNamespaceURI() );
-        element = schema.getElementByName(elemQName);
-      }
+    if ( !element.isRef() ) {
+      return element;
     }
-    return element;
+
+    final QName elemQName = element.getRefBase().getTargetQName();
+    final XmlSchema schema = schemasByNamespace.get( elemQName.getNamespaceURI() );
+
+    XmlSchemaElement globalElem = null;
+    if (element.getRef().getTarget() != null) {
+      globalElem = element.getRef().getTarget();
+    } else {
+      globalElem = schema.getElementByName(elemQName);
+    }
+
+    /* An XML Schema element reference defines the id, minOccurs, and maxOccurs
+     * attributes, while the global element definition defines id and all other
+     * attributes.  This combines the two together.
+     */
+    String id = element.getId();
+    if (id == null) {
+      id = globalElem.getId();
+    }
+
+    final XmlSchemaElement copy = new XmlSchemaElement(schema, false);
+    copy.setAbstract( globalElem.isAbstract() );
+    copy.setAnnotation( globalElem.getAnnotation() );
+    copy.setBlock( globalElem.getBlock() );
+    copy.setDefaultValue( globalElem.getDefaultValue() );
+    copy.setFinal( globalElem.getFinal() );
+    copy.setFixedValue( globalElem.getFixedValue() );
+    copy.setForm( globalElem.getForm() );
+    copy.setId(id);
+    copy.setLineNumber( element.getLineNumber() );
+    copy.setLinePosition( element.getLinePosition() );
+    copy.setMaxOccurs( element.getMaxOccurs() );
+    copy.setMinOccurs( element.getMinOccurs() );
+    copy.setMetaInfoMap( globalElem.getMetaInfoMap() );
+    copy.setName( globalElem.getName() );
+    copy.setNillable( globalElem.isNillable() );
+    copy.setType( globalElem.getSchemaType() );
+    copy.setSchemaTypeName( globalElem.getSchemaTypeName() );
+    copy.setSourceURI( globalElem.getSourceURI() );
+    copy.setSubstitutionGroup( globalElem.getSubstitutionGroup() );
+    copy.setUnhandledAttributes( globalElem.getUnhandledAttributes() );
+
+    return copy;
   }
 
   private XmlSchemaCollection schemas;
