@@ -270,7 +270,6 @@ final class XmlSchemaScope {
 
   private XmlSchemaScope(XmlSchemaScope child, XmlSchemaType type) {
     this();
-    this.substitutes = child.substitutes;
     this.schemasByNamespace = child.schemasByNamespace;
 
     walk(type);
@@ -287,13 +286,11 @@ final class XmlSchemaScope {
    */
   XmlSchemaScope(
       XmlSchemaType type,
-      Map<String, XmlSchema> xmlSchemasByNamespace,
-      Map<QName, List<XmlSchemaElement>> substitutions) {
+      Map<String, XmlSchema> xmlSchemasByNamespace) {
 
     this();
 
     schemasByNamespace = xmlSchemasByNamespace; 
-    substitutes = substitutions;
 
     walk(type);
   }
@@ -763,7 +760,6 @@ final class XmlSchemaScope {
     return parentAttrs;
   }
 
-  private Map<QName, List<XmlSchemaElement>> substitutes;
   private Map<String, XmlSchema> schemasByNamespace;
 
   private XmlSchemaTypeInfo typeInfo;

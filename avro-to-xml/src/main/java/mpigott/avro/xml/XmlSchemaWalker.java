@@ -27,6 +27,7 @@ import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAll;
+import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
@@ -116,21 +117,36 @@ final class XmlSchemaWalker {
       schemaType = schema.getTypeByName(typeQName);
     }
 
-    XmlSchemaScope scope =
-      new XmlSchemaScope(schemaType, schemasByNamespace, elemsBySubstGroup);
+    XmlSchemaScope scope = new XmlSchemaScope(schemaType, schemasByNamespace);
 
     // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
+    final Collection<XmlSchemaAttribute> attrs = scope.getAttributesInScope();
+    final XmlSchemaTypeInfo typeInfo = scope.getTypeInfo();
 
-    // 2. for each visitor, call visitor.startElement(element, type, attributes);
+    // 2. for each visitor, call visitor.startElement(element, type);
     for (XmlSchemaVisitor visitor : visitors) {
-      visitor.onEnterElement(element);
+      visitor.onEnterElement(element, typeInfo);
     }
 
-    // 3. Walk the child groups and elements (if any), depth-first.
+    // 3. Walk the attributes in the element, retrieving type information.
+    if (attrs != null) {
+      for (XmlSchemaAttribute attr : attrs) {
+        final XmlSchemaScope attrScope =
+            new XmlSchemaScope(attr.getSchemaType(), schemasByNamespace);
+        final XmlSchemaTypeInfo attrTypeInfo = attrScope.getTypeInfo();
+  
+        for (XmlSchemaVisitor visitor : visitors) {
+          visitor.onVisitAttribute(element, attr, attrTypeInfo);
+        }
+      }
+    }
 
-    // 4. On the way back up, call visitor.endElement(element, type, attributes);
+    // 4. Walk the child groups and elements (if any), depth-first.
+    final XmlSchemaParticle child = scope.getParticle();
+
+    // 5. On the way back up, call visitor.endElement(element, type, attributes);
     for (XmlSchemaVisitor visitor : visitors) {
-      visitor.onExitElement(element, null);
+      visitor.onExitElement(element, typeInfo);
     }
 
     // Now handle substitute elements, if any.

@@ -16,6 +16,7 @@
 
 package mpigott.avro.xml;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
@@ -30,7 +31,8 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
 interface XmlSchemaVisitor {
 
   void onEnterElement(
-      XmlSchemaElement element);
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo typeInfo);
 
   void onExitElement(
       XmlSchemaElement element,
