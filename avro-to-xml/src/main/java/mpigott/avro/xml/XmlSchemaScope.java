@@ -225,14 +225,16 @@ final class XmlSchemaScope {
 
         if (baseType != null) {
           XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
-          List<XmlSchemaRestriction> parentFacets = parentScope.getTypeInfo().getFacets();
 
+          /* We need to track the original type as well as the set of facets
+           * imposed on that type.  Once the recursion ends, and we make it
+           * all the way back to the first scope, we can create a JSON node
+           * that represents the derived type and all of its imposed facets.
+           */
           typeInfo =
               new XmlSchemaTypeInfo(
                   parentScope.getTypeInfo().getAvroType(),
-                  simpleType.isAnonymous()
-                    ? parentScope.getTypeInfo().getXmlSchemaType()
-                      : createJsonNodeFor(simpleType.getQName()),
+                  parentScope.getTypeInfo().getXmlSchemaType(),
                   mergeFacets(parentScope.getTypeInfo().getFacets(), facets));
         } else {
             throw new IllegalArgumentException("Unrecognized base type for " + getName(simpleType, "{Anonymous Simple Type}"));
@@ -277,43 +279,39 @@ final class XmlSchemaScope {
     return object;
   }
 
-  private static List<XmlSchemaRestriction> mergeFacets(List<XmlSchemaRestriction> parent, List<XmlSchemaFacet> child) {
-    HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> parentFacets =
-        new HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>( parent.size() );
-    for (XmlSchemaRestriction restriction : parent) {
-      List<XmlSchemaRestriction> rstrList = parentFacets.get( restriction.getType() );
-      if (rstrList == null) {
-        // Only enumerations can have more than one entry.
-        rstrList = new ArrayList<XmlSchemaRestriction>(1);
-        parentFacets.put(restriction.getType(), rstrList);
-      }
-      rstrList.add(restriction);
+  private static Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> mergeFacets(Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> parentFacets, List<XmlSchemaFacet> child) {
+    if ((child == null) || child.isEmpty()) {
+      return parentFacets;
     }
 
     HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> childFacets =
         new  HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>( child.size() );
+
     for (XmlSchemaFacet facet : child) {
       XmlSchemaRestriction rstr = new XmlSchemaRestriction(facet);
       List<XmlSchemaRestriction> rstrList = childFacets.get( rstr.getType() );
       if (rstrList == null) {
-        rstrList = new ArrayList<XmlSchemaRestriction>(1);
+        // Only enumerations may have more than one value.
+        if (rstr.getType() == XmlSchemaRestriction.Type.ENUMERATION) {
+          rstrList = new ArrayList<XmlSchemaRestriction>(5);
+        } else {
+          rstrList = new ArrayList<XmlSchemaRestriction>(1);
+        }
         childFacets.put(rstr.getType(), rstrList);
       }
       rstrList.add(rstr);
     }
 
-    List<XmlSchemaRestriction> restrictions = new ArrayList<XmlSchemaRestriction>();
+    if (parentFacets == null) {
+      return childFacets;
+    }
+
+    // Child facets override parent facets
     for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> rstrEntry : childFacets.entrySet()) {
-      // Child facets override parent facets
-      parentFacets.remove( rstrEntry.getKey() );
-      restrictions.addAll( rstrEntry.getValue() );
+      parentFacets.put(rstrEntry.getKey(), rstrEntry.getValue());
     }
 
-    for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> rstrEntry : parentFacets.entrySet()) {
-      restrictions.addAll( rstrEntry.getValue() );
-    }
-
-    return restrictions;
+    return parentFacets;
   }
 
   private Map<QName, List<XmlSchemaElement>> substitutes;
