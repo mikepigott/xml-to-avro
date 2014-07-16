@@ -35,6 +35,8 @@ import org.apache.ws.commons.schema.XmlSchemaAttributeGroup;
 import org.apache.ws.commons.schema.XmlSchemaAttributeGroupMember;
 import org.apache.ws.commons.schema.XmlSchemaAttributeGroupRef;
 import org.apache.ws.commons.schema.XmlSchemaAttributeOrGroupRef;
+import org.apache.ws.commons.schema.XmlSchemaComplexContentExtension;
+import org.apache.ws.commons.schema.XmlSchemaComplexContentRestriction;
 import org.apache.ws.commons.schema.XmlSchemaComplexType;
 import org.apache.ws.commons.schema.XmlSchemaContent;
 import org.apache.ws.commons.schema.XmlSchemaElement;
@@ -44,12 +46,17 @@ import org.apache.ws.commons.schema.XmlSchemaMaxInclusiveFacet;
 import org.apache.ws.commons.schema.XmlSchemaMinInclusiveFacet;
 import org.apache.ws.commons.schema.XmlSchemaParticle;
 import org.apache.ws.commons.schema.XmlSchemaPatternFacet;
+import org.apache.ws.commons.schema.XmlSchemaSequence;
+import org.apache.ws.commons.schema.XmlSchemaSequenceMember;
+import org.apache.ws.commons.schema.XmlSchemaSimpleContentExtension;
+import org.apache.ws.commons.schema.XmlSchemaSimpleContentRestriction;
 import org.apache.ws.commons.schema.XmlSchemaSimpleType;
 import org.apache.ws.commons.schema.XmlSchemaSimpleTypeContent;
 import org.apache.ws.commons.schema.XmlSchemaSimpleTypeList;
 import org.apache.ws.commons.schema.XmlSchemaSimpleTypeRestriction;
 import org.apache.ws.commons.schema.XmlSchemaSimpleTypeUnion;
 import org.apache.ws.commons.schema.XmlSchemaType;
+import org.apache.ws.commons.schema.XmlSchemaUse;
 import org.apache.ws.commons.schema.XmlSchemaWhiteSpaceFacet;
 import org.apache.ws.commons.schema.constants.Constants;
 import org.apache.ws.commons.schema.utils.XmlSchemaNamed;
@@ -258,7 +265,7 @@ final class XmlSchemaScope {
   private XmlSchemaScope() {
     typeInfo = null;
     attributes = null;
-    children = null;
+    child = null;
   }
 
   private XmlSchemaScope(XmlSchemaScope child, XmlSchemaType type) {
@@ -302,8 +309,8 @@ final class XmlSchemaScope {
     return attributes.values();
   }
 
-  List<XmlSchemaParticle> getChildren() {
-    return children;
+  XmlSchemaParticle getParticle() {
+    return child;
   }
 
   private void walk(XmlSchemaType type) {
@@ -432,57 +439,120 @@ final class XmlSchemaScope {
         ? complexType.getContentModel().getContent()
         : null;
 
-    /* Process the type of the ComplexType.
-     * If there is no type, the content is be defined by the particle.
-     * Content: (annotation?, 
-     *           (simpleContent    -> getContentModel().getContent()
-     *            | complexContent -> getContentModel().getContent()
-     *            | (openContent?,
-     *               (group | all | choice | sequence)?, -> getParticle()
-     *               ((attribute | attributeGroup)*, anyAttribute?), assert*
-     *              )
-     *           )
-     *          )
+    /* Process the complex type extensions and restrictions.
+     * If there aren't any, the content is be defined by the particle.
      */
-    XmlSchemaParticle particle = null;
-
     if (complexContent != null) {
-        /*
-        ComplexContentScope scope = buildScopeFor(complexContent, schemasByNamespace);
-
-        for (Attribute attribute : scope.getAttributesInScope()) { 
-          element.addAttribute(attribute);
-        }
-
-        element.addChild( scope.getElementChild() );
-        */
+      walk(complexContent);
 
     } else {
-      // Process the child elements.
-      if (complexType.getParticle() != null) {
-        /*
-        ElementChild child = getElementChildOf(complexType.getParticle(), schemasByNamespace);
-        if (child != null) {
-          element.addChild(child);
-         }
-          */
+      child = complexType.getParticle();
+      attributes = createAttributeMap( complexType.getAttributes() );
+    }
+  }
+
+  private void walk(XmlSchemaContent content) {
+
+    if (content instanceof XmlSchemaComplexContentExtension) {
+      XmlSchemaComplexContentExtension ext = (XmlSchemaComplexContentExtension) content;
+
+      XmlSchema schema = schemasByNamespace.get( ext.getBaseTypeName().getNamespaceURI() );
+      XmlSchemaType baseType = schema.getTypeByName( ext.getBaseTypeName() );
+
+      XmlSchemaParticle baseParticle = null;
+
+      if (baseType != null) {
+        /* Complex content extensions add attributes and elements
+         * in addition to what was retrieved from the parent. Since
+         * there will be no collisions, it is safe to perform a
+         * straight add.
+         */
+        XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+        Collection<XmlSchemaAttribute> parentAttrs = parentScope.getAttributesInScope();
+
+        attributes = createAttributeMap( ext.getAttributes() );
+        for (XmlSchemaAttribute parentAttr : parentAttrs) {
+          attributes.put(parentAttr.getQName(), parentAttr);
+        }
+
+        baseParticle = parentScope.getParticle();
       }
 
-      // Process the attributes.
-      if (complexType.getAttributes() != null) {
-        attributes = new HashMap<QName, XmlSchemaAttribute>();
-        for (XmlSchemaAttributeOrGroupRef attr : complexType.getAttributes()) {
-          if (attr instanceof XmlSchemaAttribute) {
-            XmlSchemaAttribute attribute = getAttribute((XmlSchemaAttribute) attr);
-            attributes.put(attribute.getQName(), attribute);
-          } else if (attr instanceof XmlSchemaAttributeGroupRef) {
-            final List<XmlSchemaAttribute> attrList =
-                getAttributesOf((XmlSchemaAttributeGroupRef) attr);
-            for (XmlSchemaAttribute attribute : attrList) {
-              attributes.put(attribute.getQName(), attribute);
-            }
-          }
-        }
+      /* An extension of a complex type is equivalent to creating a sequence of
+       * two particles: the parent particle followed by the child particle.
+       */
+      if (ext.getParticle() == null) {
+        child = baseParticle;
+      } else if (baseParticle == null) {
+        child = ext.getParticle();
+      } else {
+        XmlSchemaSequence seq = new XmlSchemaSequence();
+        seq.getItems().add((XmlSchemaSequenceMember) baseParticle);
+        seq.getItems().add((XmlSchemaSequenceMember) ext.getParticle());
+        child = seq;
+      }
+
+    } else if (content instanceof XmlSchemaComplexContentRestriction) {
+      XmlSchemaComplexContentRestriction rstr = (XmlSchemaComplexContentRestriction) content;
+      XmlSchema schema = schemasByNamespace.get( rstr.getBaseTypeName().getNamespaceURI() );
+      XmlSchemaType baseType = schema.getTypeByName( rstr.getBaseTypeName() );
+      Map<QName, XmlSchemaAttribute> parentAttrs = null;
+
+      if (baseType != null) {
+        XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+
+        attributes =
+            mergeAttributes(
+                parentScope.attributes,
+                createAttributeMap( rstr.getAttributes() ));
+
+        child = parentScope.getParticle();
+      }
+
+      /* There is no inheritance when restricting particles.  If the schema
+       * writer wishes to include elements in the parent type, (s)he must
+       * redefine them in the child.
+       */
+      if (rstr.getParticle() != null) {
+        child = rstr.getParticle();
+      }
+
+    } else if (content instanceof XmlSchemaSimpleContentExtension) {
+      XmlSchemaSimpleContentExtension ext = (XmlSchemaSimpleContentExtension) content;
+      attributes = createAttributeMap( ext.getAttributes() );
+
+      XmlSchema schema = schemasByNamespace.get( ext.getBaseTypeName().getNamespaceURI() );
+      XmlSchemaSimpleType baseType = (XmlSchemaSimpleType) schema.getTypeByName( ext.getBaseTypeName() );
+
+      if (baseType != null) {
+        XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+
+        typeInfo =
+            new XmlSchemaTypeInfo(
+                parentScope.getTypeInfo().getAvroType(),
+                parentScope.getTypeInfo().getXmlSchemaType(),
+                parentScope.getTypeInfo().getFacets());
+      }
+
+    } else if (content instanceof XmlSchemaSimpleContentRestriction) {
+      XmlSchemaSimpleContentRestriction rstr = (XmlSchemaSimpleContentRestriction) content;
+      attributes = createAttributeMap( rstr.getAttributes() );
+
+      XmlSchemaSimpleType baseType = null;
+      if (rstr.getBaseType() != null) {
+        baseType = rstr.getBaseType();
+      } else {
+        XmlSchema schema = schemasByNamespace.get( rstr.getBaseTypeName().getNamespaceURI() );
+        baseType = (XmlSchemaSimpleType) schema.getTypeByName( rstr.getBaseTypeName() );
+      }
+
+      if (baseType != null) {
+        XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+        typeInfo =
+            new XmlSchemaTypeInfo(
+                parentScope.getTypeInfo().getAvroType(),
+                parentScope.getTypeInfo().getXmlSchemaType(),
+                mergeFacets(parentScope.getTypeInfo().getFacets(), rstr.getFacets()));
       }
     }
   }
@@ -570,6 +640,28 @@ final class XmlSchemaScope {
     return copy;
   }
 
+  private Map<QName, XmlSchemaAttribute> createAttributeMap(List<XmlSchemaAttributeOrGroupRef> attrs) {
+    if ((attrs == null) || attrs.isEmpty()) {
+      return null;
+    }
+
+    Map<QName, XmlSchemaAttribute >attributes = new HashMap<QName, XmlSchemaAttribute>();
+    for (XmlSchemaAttributeOrGroupRef attr : attrs) {
+      if (attr instanceof XmlSchemaAttribute) {
+        XmlSchemaAttribute attribute = getAttribute((XmlSchemaAttribute) attr);
+        attributes.put(attribute.getQName(), attribute);
+      } else if (attr instanceof XmlSchemaAttributeGroupRef) {
+        final List<XmlSchemaAttribute> attrList =
+            getAttributesOf((XmlSchemaAttributeGroupRef) attr);
+        for (XmlSchemaAttribute attribute : attrList) {
+          attributes.put(attribute.getQName(), attribute);
+        }
+      }
+    }
+
+    return attributes;
+  }
+
   private static String getName(XmlSchemaNamed name, String defaultName) {
     if (name.isAnonymous()) {
       return defaultName;
@@ -636,10 +728,45 @@ final class XmlSchemaScope {
     return parentFacets;
   }
 
+  private static Map<QName, XmlSchemaAttribute> mergeAttributes(Map<QName, XmlSchemaAttribute> parentAttrs, Map<QName, XmlSchemaAttribute> childAttrs) {
+    if (parentAttrs == null) {
+      return childAttrs;
+    } else if (childAttrs == null) {
+      return parentAttrs;
+    }
+
+    /* Child attributes inherit all parent attributes, but may
+     * change the type, usage, default value, or fixed value.
+     */
+    for (Map.Entry<QName, XmlSchemaAttribute> parentAttrEntry : parentAttrs.entrySet()) {
+      XmlSchemaAttribute parentAttr = parentAttrEntry.getValue();
+      XmlSchemaAttribute childAttr = childAttrs.get( parentAttrEntry.getKey() );
+      if (childAttr != null) {
+        if (childAttr.getSchemaType() != null) {
+          parentAttr.setSchemaType( childAttr.getSchemaType() );
+        }
+        if (childAttr.getUse() != XmlSchemaUse.NONE) {
+          parentAttr.setUse( childAttr.getUse() );
+        }
+
+        // Attribute values may be defaulted or fixed, but not both.
+        if (childAttr.getDefaultValue() != null) {
+          parentAttr.setDefaultValue( childAttr.getDefaultValue() );
+          parentAttr.setFixedValue(null);
+        } else if (childAttr.getFixedValue() != null) {
+          parentAttr.setFixedValue( childAttr.getFixedValue() );
+          parentAttr.setDefaultValue(null);
+        }
+      }
+    }
+
+    return parentAttrs;
+  }
+
   private Map<QName, List<XmlSchemaElement>> substitutes;
   private Map<String, XmlSchema> schemasByNamespace;
 
   private XmlSchemaTypeInfo typeInfo;
   private Map<QName, XmlSchemaAttribute> attributes;
-  private List<XmlSchemaParticle> children;
+  private XmlSchemaParticle child;
 }
