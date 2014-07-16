@@ -16,7 +16,9 @@
 
 package mpigott.avro.xml;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,13 +39,19 @@ import org.apache.ws.commons.schema.XmlSchemaComplexType;
 import org.apache.ws.commons.schema.XmlSchemaContent;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaFacet;
+import org.apache.ws.commons.schema.XmlSchemaFractionDigitsFacet;
+import org.apache.ws.commons.schema.XmlSchemaMaxInclusiveFacet;
+import org.apache.ws.commons.schema.XmlSchemaMinInclusiveFacet;
 import org.apache.ws.commons.schema.XmlSchemaParticle;
+import org.apache.ws.commons.schema.XmlSchemaPatternFacet;
 import org.apache.ws.commons.schema.XmlSchemaSimpleType;
 import org.apache.ws.commons.schema.XmlSchemaSimpleTypeContent;
 import org.apache.ws.commons.schema.XmlSchemaSimpleTypeList;
 import org.apache.ws.commons.schema.XmlSchemaSimpleTypeRestriction;
 import org.apache.ws.commons.schema.XmlSchemaSimpleTypeUnion;
 import org.apache.ws.commons.schema.XmlSchemaType;
+import org.apache.ws.commons.schema.XmlSchemaWhiteSpaceFacet;
+import org.apache.ws.commons.schema.constants.Constants;
 import org.apache.ws.commons.schema.utils.XmlSchemaNamed;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
@@ -52,31 +60,196 @@ import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * The scope represents the set of types, attributes, and
- * child groups & elements that the current type derives.
+ * child groups & elements that the current type represents.
  *
  * @author  Mike Pigott
  */
 final class XmlSchemaScope {
 
-  private static final String URI_2001_SCHEMA_XSD = "http://www.w3.org/2001/XMLSchema";
-  private static final QName QNAME_ID = new QName(URI_2001_SCHEMA_XSD, "ID");
-
   private static final Map<QName, Schema.Type> xmlToAvroTypeMap =
       new HashMap<QName, Schema.Type>();
 
+  private static final Map<QName, List<XmlSchemaFacet>> facetsOfSchemaTypes =
+      new HashMap<QName, List<XmlSchemaFacet>>();
+
   static {
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "anyType"),       Schema.Type.STRING);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "boolean"),       Schema.Type.BOOLEAN);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "decimal"),       Schema.Type.DOUBLE);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "double"),        Schema.Type.DOUBLE);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "float"),         Schema.Type.FLOAT);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "base64Binary"),  Schema.Type.BYTES);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "hexBinary"),     Schema.Type.BYTES);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "long"),          Schema.Type.LONG);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "int"),           Schema.Type.INT);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "unsignedInt"),   Schema.Type.LONG);
-    xmlToAvroTypeMap.put(new QName(URI_2001_SCHEMA_XSD, "unsignedShort"), Schema.Type.INT);
-    xmlToAvroTypeMap.put(QNAME_ID, Schema.Type.STRING);
+    xmlToAvroTypeMap.put(Constants.XSD_ANYTYPE,       Schema.Type.STRING);
+    xmlToAvroTypeMap.put(Constants.XSD_BOOLEAN,       Schema.Type.BOOLEAN);
+    xmlToAvroTypeMap.put(Constants.XSD_DECIMAL,       Schema.Type.DOUBLE);
+    xmlToAvroTypeMap.put(Constants.XSD_DOUBLE,        Schema.Type.DOUBLE);
+    xmlToAvroTypeMap.put(Constants.XSD_FLOAT,         Schema.Type.FLOAT);
+    xmlToAvroTypeMap.put(Constants.XSD_BASE64,        Schema.Type.BYTES);
+    xmlToAvroTypeMap.put(Constants.XSD_HEXBIN,        Schema.Type.BYTES);
+    xmlToAvroTypeMap.put(Constants.XSD_LONG,          Schema.Type.LONG);
+    xmlToAvroTypeMap.put(Constants.XSD_ID,            Schema.Type.STRING);
+    xmlToAvroTypeMap.put(Constants.XSD_INT,           Schema.Type.INT);
+    xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDINT,   Schema.Type.LONG);
+    xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDSHORT, Schema.Type.INT);
+
+    /* Until https://issues.apache.org/jira/browse/XMLSCHEMA-33
+     * makes it to the next release of Apache XML Schema (2.1.1).
+     */
+    facetsOfSchemaTypes.put(
+        Constants.XSD_DURATION,
+        Arrays.asList( new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_DATETIME,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_TIME,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_DATE,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_YEARMONTH,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_YEAR,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_MONTHDAY,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_DAY,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_MONTH,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_MONTH,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_BOOLEAN,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_BASE64,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_HEXBIN,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_FLOAT,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_DOUBLE,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_ANYURI,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_QNAME,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_DECIMAL,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", true) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_INTEGER,
+        Arrays.asList(new XmlSchemaFacet[] {
+            new XmlSchemaFractionDigitsFacet(new Integer(0), true),
+            new XmlSchemaPatternFacet("[\\-+]?[0-9]+", false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_NONPOSITIVEINTEGER,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaMaxInclusiveFacet(new Integer(0), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_NEGATIVEINTEGER,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaMaxInclusiveFacet(new Integer(-1), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_LONG,
+        Arrays.asList(new XmlSchemaFacet[] {
+            new XmlSchemaMinInclusiveFacet(new Long(-9223372036854775808L), false),
+            new XmlSchemaMaxInclusiveFacet(new Long(9223372036854775807L), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_INT,
+        Arrays.asList(new XmlSchemaFacet[] {
+            new XmlSchemaMinInclusiveFacet(new Integer(-2147483648), false),
+            new XmlSchemaMaxInclusiveFacet(2147483647, false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_SHORT,
+        Arrays.asList(new XmlSchemaFacet[] {
+            new XmlSchemaMinInclusiveFacet(new Short((short) -32768), false),
+            new XmlSchemaMaxInclusiveFacet(new Short((short) 32767), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_BYTE,
+        Arrays.asList(new XmlSchemaFacet[] {
+            new XmlSchemaMinInclusiveFacet(new Byte((byte) -128), false),
+            new XmlSchemaMaxInclusiveFacet(new Byte((byte) 127), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_NONNEGATIVEINTEGER,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaMinInclusiveFacet(new Integer(0), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_POSITIVEINTEGER,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaMinInclusiveFacet(new Integer(1), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_UNSIGNEDLONG,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaMaxInclusiveFacet(new BigInteger("18446744073709551615"), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_UNSIGNEDINT,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaMaxInclusiveFacet(new Long(4294967295L), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_UNSIGNEDSHORT,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaMaxInclusiveFacet(new Integer(65535), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_UNSIGNEDBYTE,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaMaxInclusiveFacet(new Short((short) 255), false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_STRING,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("preserve", false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_NORMALIZEDSTRING,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("replace", false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_TOKEN,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaWhiteSpaceFacet("collapse", false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_LANGUAGE,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaPatternFacet("[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*", false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_NMTOKEN,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaPatternFacet("\\c+", false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_NAME,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaPatternFacet("\\i\\c*", false) }));
+
+    facetsOfSchemaTypes.put(
+        Constants.XSD_NCNAME,
+        Arrays.asList(new XmlSchemaFacet[] { new XmlSchemaPatternFacet("[\\i-[:]][\\c-[:]]*", false) }));
   }
 
   /**
@@ -86,6 +259,14 @@ final class XmlSchemaScope {
     typeInfo = null;
     attributes = null;
     children = null;
+  }
+
+  private XmlSchemaScope(XmlSchemaScope child, XmlSchemaType type) {
+    this();
+    this.substitutes = child.substitutes;
+    this.schemasByNamespace = child.schemasByNamespace;
+
+    walk(type);
   }
 
   /**
@@ -108,14 +289,6 @@ final class XmlSchemaScope {
     substitutes = substitutions;
 
     walk(type);
-  }
-
-  XmlSchemaScope(XmlSchemaScope child, XmlSchemaType type) {
-    this();
-    this.substitutes = child.substitutes;
-	  this.schemasByNamespace = child.schemasByNamespace;
-
-	  walk(type);
   }
 
   XmlSchemaTypeInfo getTypeInfo() {
@@ -227,6 +400,10 @@ final class XmlSchemaScope {
         }
 
         List<XmlSchemaFacet> facets = restr.getFacets();
+        if ((facets == null) || facets.isEmpty()) {
+          // Needed until XMLSCHEMA-33 becomes available.
+          facets = facetsOfSchemaTypes.get( simpleType.getQName() );
+        }
 
         if (baseType != null) {
           XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
@@ -256,7 +433,7 @@ final class XmlSchemaScope {
         : null;
 
     /* Process the type of the ComplexType.
-     * If there is no type, the content should be defined by the particle.
+     * If there is no type, the content is be defined by the particle.
      * Content: (annotation?, 
      *           (simpleContent    -> getContentModel().getContent()
      *            | complexContent -> getContentModel().getContent()
