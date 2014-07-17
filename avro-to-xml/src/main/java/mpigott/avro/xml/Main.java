@@ -1,31 +1,49 @@
 package mpigott.avro.xml;
 
+import java.io.BufferedReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.List;
+import java.net.URLClassLoader;
 
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.ws.commons.schema.XmlSchema;
-import org.apache.ws.commons.schema.XmlSchemaAttribute;
-import org.apache.ws.commons.schema.XmlSchemaAttributeOrGroupRef;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
-import org.apache.ws.commons.schema.XmlSchemaComplexType;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.junit.Assert;
-import org.junit.Test;
 
-import junit.framework.TestCase;
+public class Main {
 
-public class GraphVisTest extends TestCase {
+  public String getClasspathString() {
+    StringBuffer classpath = new StringBuffer();
+    ClassLoader applicationClassLoader = this.getClass().getClassLoader();
+    if (applicationClassLoader == null) {
+        applicationClassLoader = ClassLoader.getSystemClassLoader();
+    }
+    URL[] urls = ((URLClassLoader)applicationClassLoader).getURLs();
+     for(int i=0; i < urls.length; i++) {
+         classpath.append(urls[i].getFile()).append("\r\n");
+     }    
+    
+     return classpath.toString();
+ }
 
-  @Test
-  public void test() throws IOException {
+  /**
+   * @param args
+   * @throws IOException 
+   */
+  public static void main(String[] args) throws IOException {
+    Main main = new Main();
+    System.out.println( main.getClasspathString() );
+
+    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+    reader.readLine();
+    System.out.println("Hello World");
+
     GraphGenerationVisitor visitor = new GraphGenerationVisitor();
-
     NullVisitor nullVisitor = new NullVisitor();
 
     long startResolve = System.currentTimeMillis();
@@ -45,7 +63,7 @@ public class GraphVisTest extends TestCase {
       System.out.println("Schema resolution required " + (endResolve - startResolve) + " milliseconds.");
     }
 
-    XmlSchemaWalker walker = new XmlSchemaWalker(collection, nullVisitor);
+    XmlSchemaWalker walker = new XmlSchemaWalker(collection, visitor);
 
     long startContextWalk = System.currentTimeMillis();
     try {
@@ -76,11 +94,9 @@ public class GraphVisTest extends TestCase {
       long endXbrlWalk = System.currentTimeMillis();
       System.out.println("Walking the xbrl node took " + (endXbrlWalk - startXbrlWalk) + " milliseconds.");
     }
-
-    //checkContextElem(context);
   }
 
-  private XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
+  private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
     XmlSchemaElement elem = null;
     for (XmlSchema schema : collection.getXmlSchemas()) {
       elem = schema.getElementByName(name);
@@ -91,9 +107,8 @@ public class GraphVisTest extends TestCase {
     return elem;
   }
 
-  private void walk(XmlSchemaWalker walker, GraphGenerationVisitor visitor, XmlSchemaElement elem, String outFileName) throws IOException {
+  private static void walk(XmlSchemaWalker walker, GraphGenerationVisitor visitor, XmlSchemaElement elem, String outFileName) throws IOException {
     walker.walk(elem);
-    Assert.assertTrue( visitor.clear() );
 
     FileWriter writer = null;
     try {
@@ -108,14 +123,7 @@ public class GraphVisTest extends TestCase {
         }
       }
     }
-  }
 
-  private void checkContextElem(XmlSchemaElement context) {
-    XmlSchemaComplexType type = (XmlSchemaComplexType) context.getSchemaType();
-    List<XmlSchemaAttributeOrGroupRef> attributes = type.getAttributes();
-    Assert.assertEquals(1, attributes.size());
-    XmlSchemaAttribute attr = (XmlSchemaAttribute) attributes.get(0);
-    Assert.assertEquals("id", attr.getName());
-    Assert.assertNotNull( attr.getSchemaType() );
+    visitor.clear();
   }
 }

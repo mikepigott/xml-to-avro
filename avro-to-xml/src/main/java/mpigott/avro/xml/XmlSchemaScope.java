@@ -271,6 +271,7 @@ final class XmlSchemaScope {
   private XmlSchemaScope(XmlSchemaScope child, XmlSchemaType type) {
     this();
     this.schemasByNamespace = child.schemasByNamespace;
+    this.scopeCache = child.scopeCache;
 
     walk(type);
   }
@@ -286,11 +287,13 @@ final class XmlSchemaScope {
    */
   XmlSchemaScope(
       XmlSchemaType type,
-      Map<String, XmlSchema> xmlSchemasByNamespace) {
+      Map<String, XmlSchema> xmlSchemasByNamespace,
+      Map<QName, XmlSchemaScope> scopeCache) {
 
     this();
 
-    schemasByNamespace = xmlSchemasByNamespace; 
+    schemasByNamespace = xmlSchemasByNamespace;
+    this.scopeCache = scopeCache;
 
     walk(type);
   }
@@ -350,7 +353,7 @@ final class XmlSchemaScope {
             throw new IllegalArgumentException("Unrecognized schema type for list " + getName(simpleType, "{Anonymous List Type}"));
         }
 
-        XmlSchemaScope parentScope = new XmlSchemaScope(this, listType);
+        XmlSchemaScope parentScope = getScope(listType);
         typeInfo =
             new XmlSchemaTypeInfo(
                 Schema.createArray( parentScope.getTypeInfo().getAvroType() ),
@@ -384,7 +387,7 @@ final class XmlSchemaScope {
         HashSet<Schema> unionSchemas = new HashSet<Schema>( baseTypes.size() );
         ArrayList<JsonNode> unionNodes = new ArrayList<JsonNode>( baseTypes.size() );
         for (XmlSchemaSimpleType baseType : baseTypes) {
-          XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+          XmlSchemaScope parentScope = getScope(baseType);
           unionSchemas.add( parentScope.getTypeInfo().getAvroType() );
           unionNodes.add( parentScope.getTypeInfo().getXmlSchemaAsJson() );
         }
@@ -410,7 +413,7 @@ final class XmlSchemaScope {
         }
 
         if (baseType != null) {
-          XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+          XmlSchemaScope parentScope = getScope(baseType);
 
           /* We need to track the original type as well as the set of facets
            * imposed on that type.  Once the recursion ends, and we make it
@@ -464,7 +467,7 @@ final class XmlSchemaScope {
          * there will be no collisions, it is safe to perform a
          * straight add.
          */
-        XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+        XmlSchemaScope parentScope = getScope(baseType);
         Collection<XmlSchemaAttribute> parentAttrs = parentScope.getAttributesInScope();
 
         attributes = createAttributeMap( ext.getAttributes() );
@@ -503,7 +506,7 @@ final class XmlSchemaScope {
       Map<QName, XmlSchemaAttribute> parentAttrs = null;
 
       if (baseType != null) {
-        XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+        XmlSchemaScope parentScope = getScope(baseType);
 
         attributes =
             mergeAttributes(
@@ -529,7 +532,7 @@ final class XmlSchemaScope {
       XmlSchemaType baseType = schema.getTypeByName( ext.getBaseTypeName() );
 
       if (baseType != null) {
-        XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+        XmlSchemaScope parentScope = getScope(baseType);
 
         typeInfo =
             new XmlSchemaTypeInfo(
@@ -551,7 +554,7 @@ final class XmlSchemaScope {
       }
 
       if (baseType != null) {
-        XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
+        XmlSchemaScope parentScope = getScope(baseType);
         typeInfo =
             new XmlSchemaTypeInfo(
                 parentScope.getTypeInfo().getAvroType(),
@@ -745,6 +748,18 @@ final class XmlSchemaScope {
     return newAttrs;
   }
 
+  private XmlSchemaScope getScope(XmlSchemaType type) {
+    if ((type.getQName() != null) && scopeCache.containsKey(type.getQName())) {
+      return scopeCache.get(type.getQName());
+    } else {
+      XmlSchemaScope scope = new XmlSchemaScope(this, type);
+      if (type.getQName() != null) {
+        scopeCache.put(type.getQName(), scope);
+      }
+      return scope;
+    }
+  }
+
   private static String getName(XmlSchemaNamed name, String defaultName) {
     if (name.isAnonymous()) {
       return defaultName;
@@ -812,6 +827,7 @@ final class XmlSchemaScope {
   }
 
   private Map<String, XmlSchema> schemasByNamespace;
+  private Map<QName, XmlSchemaScope> scopeCache;
 
   private XmlSchemaTypeInfo typeInfo;
   private HashMap<QName, XmlSchemaAttribute> attributes;

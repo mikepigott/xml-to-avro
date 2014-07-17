@@ -79,6 +79,8 @@ final class XmlSchemaWalker {
         }
       }
     }
+
+    scopeCache = new HashMap<QName, XmlSchemaScope>();
   }
 
   XmlSchemaWalker(XmlSchemaCollection xmlSchemas, XmlSchemaVisitor visitor) {
@@ -98,6 +100,13 @@ final class XmlSchemaWalker {
       visitors.remove(visitor);
     }
     return this;
+  }
+
+  void clear() {
+    if (scopeCache != null) {
+      scopeCache.clear();
+      scopeCache = null;
+    }
   }
 
   // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
@@ -124,10 +133,13 @@ final class XmlSchemaWalker {
     }
 
     XmlSchemaScope scope = null;
-    try {
-      scope = new XmlSchemaScope(schemaType, schemasByNamespace);
-    } catch (Exception e) {
-      throw new IllegalStateException("Unable to create scope of " + element.getQName(), e);
+    if ( (schemaType.getQName() != null) && scopeCache.containsKey( schemaType.getQName()) ) {
+      scope = scopeCache.get(schemaType.getQName());
+    } else {
+      scope = new XmlSchemaScope(schemaType, schemasByNamespace, scopeCache);
+      if (schemaType.getQName() != null) {
+        scopeCache.put(schemaType.getQName(), scope);
+      }
     }
 
     // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
@@ -142,8 +154,17 @@ final class XmlSchemaWalker {
     // 3. Walk the attributes in the element, retrieving type information.
     if (attrs != null) {
       for (XmlSchemaAttribute attr : attrs) {
-        final XmlSchemaScope attrScope =
-            new XmlSchemaScope(attr.getSchemaType(), schemasByNamespace);
+        XmlSchemaType attrType = attr.getSchemaType();
+        XmlSchemaScope attrScope = null;
+        if ((attrType.getQName() != null) && scopeCache.containsKey( attrType.getQName() )) {
+          attrScope = scopeCache.get( attrType.getQName() );
+        } else {
+          attrScope = new XmlSchemaScope(attr.getSchemaType(), schemasByNamespace, scopeCache);
+          if (attrType.getName() != null) {
+            scopeCache.put(attrType.getQName(), attrScope);
+          }
+        }
+
         final XmlSchemaTypeInfo attrTypeInfo = attrScope.getTypeInfo();
   
         for (XmlSchemaVisitor visitor : visitors) {
@@ -394,4 +415,5 @@ final class XmlSchemaWalker {
   private ArrayList<XmlSchemaVisitor> visitors;
   private Map<QName, List<XmlSchemaElement>> elemsBySubstGroup;
   private Map<String, XmlSchema> schemasByNamespace;
+  private Map<QName, XmlSchemaScope> scopeCache;
 }
