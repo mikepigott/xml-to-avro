@@ -354,7 +354,7 @@ final class XmlSchemaScope {
         typeInfo =
             new XmlSchemaTypeInfo(
                 Schema.createArray( parentScope.getTypeInfo().getAvroType() ),
-                createJsonNodeForList( parentScope.getTypeInfo().getXmlSchemaType() ));
+                createJsonNodeForList( parentScope.getTypeInfo().getXmlSchemaAsJson() ));
 
     } else if (content instanceof XmlSchemaSimpleTypeUnion) {
         XmlSchemaSimpleTypeUnion union = (XmlSchemaSimpleTypeUnion) content;
@@ -386,7 +386,7 @@ final class XmlSchemaScope {
         for (XmlSchemaSimpleType baseType : baseTypes) {
           XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
           unionSchemas.add( parentScope.getTypeInfo().getAvroType() );
-          unionNodes.add( parentScope.getTypeInfo().getXmlSchemaType() );
+          unionNodes.add( parentScope.getTypeInfo().getXmlSchemaAsJson() );
         }
 
         typeInfo =
@@ -568,7 +568,7 @@ final class XmlSchemaScope {
 
     for (XmlSchemaAttributeGroupMember member : attrGroup.getAttributes()) {
       if (member instanceof XmlSchemaAttribute) {
-        attrs.add( getAttribute((XmlSchemaAttribute) member) );
+        attrs.add( getAttribute((XmlSchemaAttribute) member, false) );
 
       } else if (member instanceof XmlSchemaAttributeGroup) {
         attrs.addAll( getAttributesOf((XmlSchemaAttributeGroup) member) );
@@ -584,37 +584,44 @@ final class XmlSchemaScope {
     return attrs;
   }
 
-  private XmlSchemaAttribute getAttribute(XmlSchemaAttribute attribute) {
-    if (!attribute.isRef()) {
+  private XmlSchemaAttribute getAttribute(XmlSchemaAttribute attribute, boolean forceCopy) {
+    if (!attribute.isRef() && !forceCopy) {
       return attribute;
     }
 
+    XmlSchemaAttribute globalAttr = null;
     final QName attrQName = attribute.getRefBase().getTargetQName();
     final XmlSchema schema = schemasByNamespace.get( attrQName.getNamespaceURI() );
 
-    XmlSchemaAttribute globalAttr = null;
-    if (attribute.getRef().getTarget() != null) {
-      globalAttr = attribute.getRef().getTarget();
+    if (!attribute.isRef() && forceCopy) {
+      // If we are forcing a copy, there is no reference to follow.
+      globalAttr = attribute;
     } else {
-      globalAttr = schema.getAttributeByName(attrQName);
+      if (attribute.getRef().getTarget() != null) {
+        globalAttr = attribute.getRef().getTarget();
+      } else {
+        globalAttr = schema.getAttributeByName(attrQName);
+      }
     }
-
+  
     /* The attribute reference defines the attribute use and overrides the ID,
      * default, and fixed fields.  Everything else is defined by the global
      * attribute.
      */
     String fixedValue = attribute.getFixedValue();
-    if (fixedValue != null) {
+    if ((fixedValue != null) && (attribute != globalAttr)) {
       fixedValue = globalAttr.getFixedValue();
     }
 
     String defaultValue = attribute.getDefaultValue();
-    if ((defaultValue == null) && (fixedValue == null)) {
+    if ((defaultValue == null)
+        && (fixedValue == null)
+        && (attribute != globalAttr)) {
       defaultValue = globalAttr.getDefaultValue();
     }
 
     String id = attribute.getId();
-    if (id == null) {
+    if ((id == null) && (attribute != globalAttr)) {
       id = globalAttr.getId();
     }
 
@@ -637,19 +644,27 @@ final class XmlSchemaScope {
     return copy;
   }
 
-  private Map<QName, XmlSchemaAttribute> createAttributeMap(List<XmlSchemaAttributeOrGroupRef> attrs) {
+  private HashMap<QName, XmlSchemaAttribute> createAttributeMap(
+      List<XmlSchemaAttributeOrGroupRef> attrs) {
+
     if ((attrs == null) || attrs.isEmpty()) {
       return null;
     }
 
-    Map<QName, XmlSchemaAttribute >attributes = new HashMap<QName, XmlSchemaAttribute>();
+    HashMap<QName, XmlSchemaAttribute> attributes =
+        new HashMap<QName, XmlSchemaAttribute>();
+
     for (XmlSchemaAttributeOrGroupRef attr : attrs) {
+
       if (attr instanceof XmlSchemaAttribute) {
-        XmlSchemaAttribute attribute = getAttribute((XmlSchemaAttribute) attr);
+        XmlSchemaAttribute attribute =
+            getAttribute((XmlSchemaAttribute) attr, false);
         attributes.put(attribute.getQName(), attribute);
+
       } else if (attr instanceof XmlSchemaAttributeGroupRef) {
         final List<XmlSchemaAttribute> attrList =
             getAttributesOf((XmlSchemaAttributeGroupRef) attr);
+
         for (XmlSchemaAttribute attribute : attrList) {
           attributes.put(attribute.getQName(), attribute);
         }
@@ -657,6 +672,53 @@ final class XmlSchemaScope {
     }
 
     return attributes;
+  }
+
+  private HashMap<QName, XmlSchemaAttribute> mergeAttributes(
+      HashMap<QName, XmlSchemaAttribute> parentAttrs,
+      HashMap<QName, XmlSchemaAttribute> childAttrs) {
+
+    if ((parentAttrs == null) || parentAttrs.isEmpty()) {
+      return childAttrs;
+    } else if ((childAttrs == null) || childAttrs.isEmpty()) {
+      return parentAttrs;
+    }
+
+    HashMap<QName, XmlSchemaAttribute> newAttrs =
+        (HashMap<QName, XmlSchemaAttribute>) parentAttrs.clone();
+
+    /* Child attributes inherit all parent attributes, but may
+     * change the type, usage, default value, or fixed value.
+     */
+    for (Map.Entry<QName, XmlSchemaAttribute> parentAttrEntry : parentAttrs.entrySet()) {
+      XmlSchemaAttribute parentAttr = parentAttrEntry.getValue();
+      XmlSchemaAttribute childAttr = childAttrs.get( parentAttrEntry.getKey() );
+      if (childAttr != null) {
+        XmlSchemaAttribute newAttr = getAttribute(parentAttr, true);
+
+        if (childAttr.getSchemaType() != null) {
+          newAttr.setSchemaType( childAttr.getSchemaType() );
+        }
+
+        if (childAttr.getUse() != XmlSchemaUse.NONE) {
+          newAttr.setUse( childAttr.getUse() );
+        }
+
+        // Attribute values may be defaulted or fixed, but not both.
+        if (childAttr.getDefaultValue() != null) {
+          newAttr.setDefaultValue( childAttr.getDefaultValue() );
+          newAttr.setFixedValue(null);
+
+        } else if (childAttr.getFixedValue() != null) {
+          newAttr.setFixedValue( childAttr.getFixedValue() );
+          newAttr.setDefaultValue(null);
+        }
+
+        newAttrs.put(newAttr.getQName(), newAttr);
+      }
+    }
+
+    return newAttrs;
   }
 
   private static String getName(XmlSchemaNamed name, String defaultName) {
@@ -725,44 +787,9 @@ final class XmlSchemaScope {
     return parentFacets;
   }
 
-  private static Map<QName, XmlSchemaAttribute> mergeAttributes(Map<QName, XmlSchemaAttribute> parentAttrs, Map<QName, XmlSchemaAttribute> childAttrs) {
-    if (parentAttrs == null) {
-      return childAttrs;
-    } else if (childAttrs == null) {
-      return parentAttrs;
-    }
-
-    /* Child attributes inherit all parent attributes, but may
-     * change the type, usage, default value, or fixed value.
-     */
-    for (Map.Entry<QName, XmlSchemaAttribute> parentAttrEntry : parentAttrs.entrySet()) {
-      XmlSchemaAttribute parentAttr = parentAttrEntry.getValue();
-      XmlSchemaAttribute childAttr = childAttrs.get( parentAttrEntry.getKey() );
-      if (childAttr != null) {
-        if (childAttr.getSchemaType() != null) {
-          parentAttr.setSchemaType( childAttr.getSchemaType() );
-        }
-        if (childAttr.getUse() != XmlSchemaUse.NONE) {
-          parentAttr.setUse( childAttr.getUse() );
-        }
-
-        // Attribute values may be defaulted or fixed, but not both.
-        if (childAttr.getDefaultValue() != null) {
-          parentAttr.setDefaultValue( childAttr.getDefaultValue() );
-          parentAttr.setFixedValue(null);
-        } else if (childAttr.getFixedValue() != null) {
-          parentAttr.setFixedValue( childAttr.getFixedValue() );
-          parentAttr.setDefaultValue(null);
-        }
-      }
-    }
-
-    return parentAttrs;
-  }
-
   private Map<String, XmlSchema> schemasByNamespace;
 
   private XmlSchemaTypeInfo typeInfo;
-  private Map<QName, XmlSchemaAttribute> attributes;
+  private HashMap<QName, XmlSchemaAttribute> attributes;
   private XmlSchemaParticle child;
 }

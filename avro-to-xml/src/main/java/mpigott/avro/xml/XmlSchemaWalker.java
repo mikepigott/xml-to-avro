@@ -27,12 +27,18 @@ import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAll;
+import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.XmlSchemaGroup;
+import org.apache.ws.commons.schema.XmlSchemaGroupParticle;
+import org.apache.ws.commons.schema.XmlSchemaGroupRef;
+import org.apache.ws.commons.schema.XmlSchemaObject;
 import org.apache.ws.commons.schema.XmlSchemaParticle;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
+import org.apache.ws.commons.schema.XmlSchemaSequenceMember;
 import org.apache.ws.commons.schema.XmlSchemaType;
 
 /**
@@ -143,6 +149,9 @@ final class XmlSchemaWalker {
 
     // 4. Walk the child groups and elements (if any), depth-first.
     final XmlSchemaParticle child = scope.getParticle();
+    if (child != null) {
+      walk(child);
+    }
 
     // 5. On the way back up, call visitor.endElement(element, type, attributes);
     for (XmlSchemaVisitor visitor : visitors) {
@@ -161,18 +170,44 @@ final class XmlSchemaWalker {
     }
   }
 
-  private void walk(XmlSchemaAll allGroup) {
-    // For each visitor, call visitor.startAll(allGroup)
-    // Walk the child elements.
-    // On the way back up, call visitor.endAll(allGroup)
+  private void walk(XmlSchemaParticle particle) {
+    if (particle instanceof XmlSchemaGroupRef) {
+      XmlSchemaGroupRef groupRef = (XmlSchemaGroupRef) particle;
+      XmlSchemaGroupParticle group = groupRef.getParticle();
+      if (group == null) {
+        XmlSchema schema = schemasByNamespace.get( groupRef.getRefName().getNamespaceURI() );
+        group = schema.getGroupByName( groupRef.getRefName() ).getParticle();
+      }
+      walk(group, groupRef.getMinOccurs(), groupRef.getMaxOccurs());
+
+    } else if (particle instanceof XmlSchemaGroupParticle) {
+      walk((XmlSchemaGroupParticle) particle,
+           particle.getMinOccurs(),
+           particle.getMaxOccurs());
+
+    } else if (particle instanceof XmlSchemaElement) {
+      walk((XmlSchemaElement) particle);
+
+    } else if (particle instanceof XmlSchemaAny) {
+      // Ignored.
+
+    } else {
+      throw new IllegalArgumentException("Unknown particle type " + particle.getClass().getName());
+    }
+
   }
 
-  private void walk(XmlSchemaSequence seq) {
-    
-  }
+  private void walk(XmlSchemaGroupParticle group, long minOccurs, long maxOccurs) {
+    // Only make a copy of the particle if the minOccurs or maxOccurs was set.
+    final boolean forceCopy =
+        ((minOccurs != group.getMinOccurs())
+            || (maxOccurs != group.getMaxOccurs()));
 
-  private void walk(XmlSchemaChoice choice) {
-    
+    // 1. Determine the group particle type.
+    // 2. Make a copy if necessary.
+    // 3. Notify the visitors.
+    // 4. Walk the children.
+    // 5. Notify the visitors of the ending
   }
 
   /**
