@@ -381,7 +381,7 @@ final class XmlSchemaScope {
           throw new IllegalArgumentException("Unrecognized base types for union " + getName(simpleType, "{Anonymous Union Type}"));
         }
 
-        ArrayList<Schema> unionSchemas = new ArrayList<Schema>( baseTypes.size() );
+        HashSet<Schema> unionSchemas = new HashSet<Schema>( baseTypes.size() );
         ArrayList<JsonNode> unionNodes = new ArrayList<JsonNode>( baseTypes.size() );
         for (XmlSchemaSimpleType baseType : baseTypes) {
           XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
@@ -391,7 +391,7 @@ final class XmlSchemaScope {
 
         typeInfo =
             new XmlSchemaTypeInfo(
-                Schema.createUnion(unionSchemas),
+                Schema.createUnion(Arrays.asList(unionSchemas.toArray(new Schema[0]))),
                 createJsonNodeForUnion(unionNodes));
 
     } else if (content instanceof XmlSchemaSimpleTypeRestriction) {
@@ -468,8 +468,15 @@ final class XmlSchemaScope {
         Collection<XmlSchemaAttribute> parentAttrs = parentScope.getAttributesInScope();
 
         attributes = createAttributeMap( ext.getAttributes() );
-        for (XmlSchemaAttribute parentAttr : parentAttrs) {
-          attributes.put(parentAttr.getQName(), parentAttr);
+
+        if (attributes == null) {
+          attributes = createAttributeMap(parentAttrs);
+        } else {
+          if (parentAttrs != null) {
+            for (XmlSchemaAttribute parentAttr : parentAttrs) {
+              attributes.put(parentAttr.getQName(), parentAttr);
+            }
+          }
         }
 
         baseParticle = parentScope.getParticle();
@@ -519,7 +526,7 @@ final class XmlSchemaScope {
       attributes = createAttributeMap( ext.getAttributes() );
 
       XmlSchema schema = schemasByNamespace.get( ext.getBaseTypeName().getNamespaceURI() );
-      XmlSchemaSimpleType baseType = (XmlSchemaSimpleType) schema.getTypeByName( ext.getBaseTypeName() );
+      XmlSchemaType baseType = schema.getTypeByName( ext.getBaseTypeName() );
 
       if (baseType != null) {
         XmlSchemaScope parentScope = new XmlSchemaScope(this, baseType);
@@ -535,12 +542,12 @@ final class XmlSchemaScope {
       XmlSchemaSimpleContentRestriction rstr = (XmlSchemaSimpleContentRestriction) content;
       attributes = createAttributeMap( rstr.getAttributes() );
 
-      XmlSchemaSimpleType baseType = null;
+      XmlSchemaType baseType = null;
       if (rstr.getBaseType() != null) {
         baseType = rstr.getBaseType();
       } else {
         XmlSchema schema = schemasByNamespace.get( rstr.getBaseTypeName().getNamespaceURI() );
-        baseType = (XmlSchemaSimpleType) schema.getTypeByName( rstr.getBaseTypeName() );
+        baseType = schema.getTypeByName( rstr.getBaseTypeName() );
       }
 
       if (baseType != null) {
@@ -585,15 +592,23 @@ final class XmlSchemaScope {
   }
 
   private XmlSchemaAttribute getAttribute(XmlSchemaAttribute attribute, boolean forceCopy) {
-    if (!attribute.isRef() && !forceCopy) {
+    if (!attribute.isRef()
+        && (attribute.getSchemaType() != null)
+        && !forceCopy) {
+
       return attribute;
     }
 
     XmlSchemaAttribute globalAttr = null;
-    final QName attrQName = attribute.getRefBase().getTargetQName();
+    QName attrQName = null;
+    if ( attribute.isRef() ) {
+      attrQName = attribute.getRefBase().getTargetQName();
+    } else {
+      attrQName = attribute.getQName();
+    }
     final XmlSchema schema = schemasByNamespace.get( attrQName.getNamespaceURI() );
 
-    if (!attribute.isRef() && forceCopy) {
+    if (!attribute.isRef() && (forceCopy || (attribute.getSchemaType() == null))) {
       // If we are forcing a copy, there is no reference to follow.
       globalAttr = attribute;
     } else {
@@ -604,6 +619,13 @@ final class XmlSchemaScope {
       }
     }
   
+    XmlSchemaSimpleType schemaType = globalAttr.getSchemaType();
+    if (schemaType == null) {
+      final QName typeQName = globalAttr.getSchemaTypeName();
+      XmlSchema typeSchema = schemasByNamespace.get( typeQName.getNamespaceURI() );
+      schemaType = (XmlSchemaSimpleType) typeSchema.getTypeByName(typeQName);
+    }
+
     /* The attribute reference defines the attribute use and overrides the ID,
      * default, and fixed fields.  Everything else is defined by the global
      * attribute.
@@ -626,6 +648,8 @@ final class XmlSchemaScope {
     }
 
     final XmlSchemaAttribute copy = new XmlSchemaAttribute(schema, false);
+    copy.setName( globalAttr.getName() );
+
     copy.setAnnotation( globalAttr.getAnnotation() );
     copy.setDefaultValue(defaultValue);
     copy.setFixedValue(fixedValue);
@@ -634,8 +658,7 @@ final class XmlSchemaScope {
     copy.setLineNumber( attribute.getLineNumber() );
     copy.setLinePosition( attribute.getLinePosition() );
     copy.setMetaInfoMap( globalAttr.getMetaInfoMap() );
-    copy.setName( globalAttr.getName() );
-    copy.setSchemaType( globalAttr.getSchemaType() );
+    copy.setSchemaType(schemaType);
     copy.setSchemaTypeName( globalAttr.getSchemaTypeName() );
     copy.setSourceURI( globalAttr.getSourceURI() );
     copy.setUnhandledAttributes( globalAttr.getUnhandledAttributes() );
@@ -645,7 +668,7 @@ final class XmlSchemaScope {
   }
 
   private HashMap<QName, XmlSchemaAttribute> createAttributeMap(
-      List<XmlSchemaAttributeOrGroupRef> attrs) {
+      Collection<? extends XmlSchemaAttributeOrGroupRef> attrs) {
 
     if ((attrs == null) || attrs.isEmpty()) {
       return null;
@@ -659,6 +682,7 @@ final class XmlSchemaScope {
       if (attr instanceof XmlSchemaAttribute) {
         XmlSchemaAttribute attribute =
             getAttribute((XmlSchemaAttribute) attr, false);
+
         attributes.put(attribute.getQName(), attribute);
 
       } else if (attr instanceof XmlSchemaAttributeGroupRef) {

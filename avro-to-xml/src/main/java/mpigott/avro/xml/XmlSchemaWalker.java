@@ -123,7 +123,12 @@ final class XmlSchemaWalker {
       schemaType = schema.getTypeByName(typeQName);
     }
 
-    XmlSchemaScope scope = new XmlSchemaScope(schemaType, schemasByNamespace);
+    XmlSchemaScope scope = null;
+    try {
+      scope = new XmlSchemaScope(schemaType, schemasByNamespace);
+    } catch (Exception e) {
+      throw new IllegalStateException("Unable to create scope of " + element.getQName(), e);
+    }
 
     // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
     final Collection<XmlSchemaAttribute> attrs = scope.getAttributesInScope();
