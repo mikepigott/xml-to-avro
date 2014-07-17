@@ -791,7 +791,7 @@ final class XmlSchemaScope {
     return object;
   }
 
-  private static Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> mergeFacets(Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> parentFacets, List<XmlSchemaFacet> child) {
+  private static HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> mergeFacets(HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> parentFacets, List<XmlSchemaFacet> child) {
     if ((child == null) || child.isEmpty()) {
       return parentFacets;
     }
@@ -818,12 +818,15 @@ final class XmlSchemaScope {
       return childFacets;
     }
 
+    HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> mergedFacets =
+        (HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>) parentFacets.clone();
+
     // Child facets override parent facets
     for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> rstrEntry : childFacets.entrySet()) {
-      parentFacets.put(rstrEntry.getKey(), rstrEntry.getValue());
+      mergedFacets.put(rstrEntry.getKey(), rstrEntry.getValue());
     }
 
-    return parentFacets;
+    return mergedFacets;
   }
 
   private Map<String, XmlSchema> schemasByNamespace;

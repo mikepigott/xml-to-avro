@@ -16,6 +16,7 @@
 
 package mpigott.avro.xml;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,7 +52,7 @@ final class XmlSchemaTypeInfo {
   XmlSchemaTypeInfo(
       Schema avroType,
       JsonNode xmlType,
-      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
+      HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
 
     this(avroType, xmlType);
     this.facets = facets;
@@ -65,7 +66,7 @@ final class XmlSchemaTypeInfo {
     return xmlSchemaType;
   }
 
-  Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> getFacets() {
+  HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> getFacets() {
     return facets;
   }
 
@@ -112,5 +113,5 @@ final class XmlSchemaTypeInfo {
 
   private Schema avroSchemaType;
   private JsonNode xmlSchemaType;
-  private Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets;
+  private HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets;
 }
