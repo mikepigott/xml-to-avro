@@ -204,10 +204,128 @@ final class XmlSchemaWalker {
             || (maxOccurs != group.getMaxOccurs()));
 
     // 1. Determine the group particle type.
+    XmlSchemaAll all = null;
+    XmlSchemaChoice choice = null;
+    XmlSchemaSequence seq = null;
+
+    ArrayList<XmlSchemaParticle> children = null;
+
+    if (group instanceof XmlSchemaAll) {
+      all = (XmlSchemaAll) group;
+
+    } else if (group instanceof XmlSchemaChoice) {
+      choice = (XmlSchemaChoice) group;
+
+    } else if (group instanceof XmlSchemaSequence) {
+      seq = (XmlSchemaSequence) group;
+
+    } else {
+      throw new IllegalArgumentException("Unrecognized XmlSchemaGroupParticle of type " + group.getClass().getName());
+    }
+
     // 2. Make a copy if necessary.
+    if (forceCopy) {
+      if (all != null) {
+        XmlSchemaAll copy = new XmlSchemaAll();
+        copy.setAnnotation( all.getAnnotation() );
+        copy.setId( all.getId() );
+        copy.setLineNumber( all.getLineNumber() );
+        copy.setLinePosition( all.getLinePosition() );
+        copy.setMetaInfoMap( all.getMetaInfoMap() );
+        copy.setMinOccurs(minOccurs);
+        copy.setMaxOccurs(maxOccurs);
+        copy.setSourceURI( all.getSourceURI() );
+        copy.setUnhandledAttributes( all.getUnhandledAttributes() );
+        copy.getItems().addAll( all.getItems() );
+
+        all = copy;
+
+      } else if (choice != null) {
+        XmlSchemaChoice copy = new XmlSchemaChoice();
+        copy.setAnnotation( choice.getAnnotation() );
+        copy.setId( choice.getId() );
+        copy.setLineNumber( choice.getLineNumber() );
+        copy.setLinePosition( choice.getLinePosition() );
+        copy.setMinOccurs(minOccurs);
+        copy.setMaxOccurs(maxOccurs);
+        copy.setMetaInfoMap( choice.getMetaInfoMap() );
+        copy.setSourceURI( choice.getSourceURI() );
+        copy.setUnhandledAttributes( choice.getUnhandledAttributes() );
+        copy.getItems().addAll( choice.getItems() );
+
+        choice = copy;
+
+      } else if (seq != null) {
+        XmlSchemaSequence copy = new XmlSchemaSequence();
+        copy.setAnnotation( seq.getAnnotation() );
+        copy.setId( seq.getId() );
+        copy.setLineNumber( seq.getLineNumber() );
+        copy.setLinePosition( seq.getLinePosition() );
+        copy.setMinOccurs(minOccurs);
+        copy.setMaxOccurs(maxOccurs);
+        copy.setMetaInfoMap( seq.getMetaInfoMap() );
+        copy.setSourceURI( seq.getSourceURI() );
+        copy.setUnhandledAttributes( seq.getUnhandledAttributes() );
+
+        seq = copy;
+      }
+    }
+
     // 3. Notify the visitors.
+    for (XmlSchemaVisitor visitor : visitors) {
+      if (all != null) {
+        visitor.onEnterAllGroup(all);
+      } else if (choice != null) {
+        visitor.onEnterChoiceGroup(choice);
+      } else if (seq != null) {
+        visitor.onEnterSequenceGroup(seq);
+      }
+    }
+
     // 4. Walk the children.
-    // 5. Notify the visitors of the ending
+    if (all != null) {
+      children = new ArrayList<XmlSchemaParticle>( all.getItems().size() );
+      children.addAll( all.getItems() );
+
+    } else if (choice != null) {
+      children = new ArrayList<XmlSchemaParticle>( choice.getItems().size() );
+      for (XmlSchemaObject item : choice.getItems()) {
+        if (item instanceof XmlSchemaGroup) {
+          children.add(((XmlSchemaGroup) item).getParticle());
+        } else if (item instanceof XmlSchemaParticle) {
+          children.add((XmlSchemaParticle) item);
+        } else {
+          throw new IllegalArgumentException("Choice child is not an XmlSchemaGroup or XmlSchemaParticle; it is a " + item.getClass().getName());
+        }
+      }
+
+    } else if (seq != null) {
+      children = new ArrayList<XmlSchemaParticle>( seq.getItems().size() );
+      for (XmlSchemaSequenceMember item : seq.getItems()) {
+        if (item instanceof XmlSchemaGroup) {
+          children.add(((XmlSchemaGroup) item).getParticle());
+        } else if (item instanceof XmlSchemaParticle) {
+          children.add((XmlSchemaParticle) item);
+        } else {
+          throw new IllegalArgumentException("Sequence child is not an XmlSchemaGroup or XmlSchemaParticle; is is a " + item.getClass().getName());
+        }
+      }
+    }
+
+    for (XmlSchemaParticle child : children) {
+      walk(child);
+    }
+
+    // 5. Notify the visitors we are exiting the group.
+    for (XmlSchemaVisitor visitor : visitors) {
+      if (all != null) {
+        visitor.onExitAllGroup(all);
+      } else if (choice != null) {
+        visitor.onExitChoiceGroup(choice);
+      } else if (seq != null) {
+        visitor.onExitSequenceGroup(seq);
+      }
+    }
   }
 
   /**
