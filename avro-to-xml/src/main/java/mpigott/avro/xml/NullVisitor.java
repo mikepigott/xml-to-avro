@@ -1,6 +1,8 @@
 package mpigott.avro.xml;
 
 import org.apache.ws.commons.schema.XmlSchemaAll;
+import org.apache.ws.commons.schema.XmlSchemaAny;
+import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaElement;
@@ -78,6 +80,19 @@ public class NullVisitor implements XmlSchemaVisitor {
   public void onExitSequenceGroup(XmlSchemaSequence seq) {
     // TODO Auto-generated method stub
 
+  }
+
+  @Override
+  public void onVisitAny(XmlSchemaAny any) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void onVisitAnyAttribute(XmlSchemaElement element,
+      XmlSchemaAnyAttribute anyAttr) {
+    // TODO Auto-generated method stub
+    
   }
 
 }

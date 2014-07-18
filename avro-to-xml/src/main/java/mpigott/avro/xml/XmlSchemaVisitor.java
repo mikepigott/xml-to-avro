@@ -20,6 +20,8 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.ws.commons.schema.XmlSchemaAll;
+import org.apache.ws.commons.schema.XmlSchemaAny;
+import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaElement;
@@ -46,7 +48,6 @@ interface XmlSchemaVisitor {
       XmlSchemaAttribute attribute,
       XmlSchemaTypeInfo attributeType);
 
-
   void onEnterSubstitutionGroup(XmlSchemaElement base);
   void onExitSubstitutionGroup(XmlSchemaElement base);
 
@@ -58,4 +59,10 @@ interface XmlSchemaVisitor {
 
   void onEnterSequenceGroup(XmlSchemaSequence seq);
   void onExitSequenceGroup(XmlSchemaSequence seq);
+
+  void onVisitAny(XmlSchemaAny any);
+
+  void onVisitAnyAttribute(
+      XmlSchemaElement element,
+      XmlSchemaAnyAttribute anyAttr);
 }

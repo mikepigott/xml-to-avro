@@ -173,6 +173,13 @@ final class XmlSchemaWalker {
       }
     }
 
+    // 4. Visit the anyAttribute, if any.
+    if (scope.getAnyAttribute() != null) {
+      for (XmlSchemaVisitor visitor : visitors) {
+        visitor.onVisitAnyAttribute(element, scope.getAnyAttribute());
+      }
+    }
+
     // 4. Walk the child groups and elements (if any), depth-first.
     final XmlSchemaParticle child = scope.getParticle();
     if (child != null) {
@@ -215,7 +222,9 @@ final class XmlSchemaWalker {
       walk((XmlSchemaElement) particle);
 
     } else if (particle instanceof XmlSchemaAny) {
-      // Ignored.
+      for (XmlSchemaVisitor visitor : visitors) {
+        visitor.onVisitAny((XmlSchemaAny) particle);
+      }
 
     } else {
       throw new IllegalArgumentException("Unknown particle type " + particle.getClass().getName());

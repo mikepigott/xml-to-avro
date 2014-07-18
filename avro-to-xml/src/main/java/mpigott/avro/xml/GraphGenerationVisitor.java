@@ -25,6 +25,8 @@ import javax.xml.namespace.QName;
 import org.antlr.stringtemplate.StringTemplate;
 import org.antlr.stringtemplate.StringTemplateGroup;
 import org.apache.ws.commons.schema.XmlSchemaAll;
+import org.apache.ws.commons.schema.XmlSchemaAny;
+import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaElement;
@@ -217,6 +219,35 @@ public class GraphGenerationVisitor implements XmlSchemaVisitor {
   @Override
   public void onExitSequenceGroup(XmlSchemaSequence seq) {
     getTopEntry(seq, true);
+  }
+
+  @Override
+  public void onVisitAny(XmlSchemaAny any) {
+    StackEntry topEntry = getTopEntry(null, false);
+    String anyNodeName = getElemNodeName(counter++);
+
+    StringBuilder name = new StringBuilder("Any [Namespaces: {");
+    name.append( any.getNamespace() ).append("}, Process Content: \'");
+    name.append( any.getProcessContent().name() ).append("\']");
+
+    edges.add( getEdgeSt(topEntry.nodeName, anyNodeName) );
+    nodes.add( getNodeSt(anyNodeName, name.toString()) );
+  }
+
+  @Override
+  public void onVisitAnyAttribute(
+      XmlSchemaElement element,
+      XmlSchemaAnyAttribute anyAttr) {
+
+    StackEntry topEntry = getTopEntry(element, false);
+    String anyAttrName = getAttrNodeName(counter++);
+
+    StringBuilder name = new StringBuilder("Any Attribute [Namespaces: {");
+    name.append( anyAttr.getNamespace() ).append("}, Process Content: \'");
+    name.append( anyAttr.getProcessContent().name() ).append("\']");
+
+    edges.add( getEdgeSt(topEntry.nodeName, anyAttrName) );
+    nodes.add( getNodeSt(anyAttrName, name.toString()) );
   }
 
   private StackEntry getTopEntry(XmlSchemaParticle expected, boolean remove) {
