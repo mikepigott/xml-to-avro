@@ -14,8 +14,7 @@
   ~ limitations under the License.
   -->
 
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:avro="http://avro.apache.org/XmlTest" targetNamespace="http://avro.apache.org/XmlTest">
-	<xsd:import namespace="http://www.w3.org/2001/XMLSchema" schemaLocation="http://www.w3.org/2001/XMLSchema.xsd" />
+<xsd:schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="http://avro.apache.org/AvroTest" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:avro="http://avro.apache.org/AvroTest">
 	<xsd:attributeGroup name="attrGroup" id="attrGroup">
 		<xsd:annotation>
 			<xsd:documentation>An attribute group with attributes of all simple types.</xsd:documentation>
@@ -39,7 +38,6 @@
 		<xsd:attribute name="double"               type="xsd:double"             use="optional" />
 		<xsd:attribute name="anyURI"               type="xsd:anyURI"             use="optional" />
 		<xsd:attribute name="qname"                type="xsd:QName"              use="optional" />
-		<xsd:attribute name="notation"             type="xsd:NOTATION"           use="optional" />
 		<xsd:attribute name="normalizedString"     type="xsd:normalizedString"   use="optional" />
 		<xsd:attribute name="token"                type="xsd:token"              use="optional" />
 		<xsd:attribute name="language"             type="xsd:language"           use="optional" />
@@ -75,7 +73,11 @@
 	</xsd:group>
 	<xsd:element name="root">
 		<xsd:complexType>
-			
+			<xsd:simpleContent>
+				<xsd:extension base="xsd:string">
+					<xsd:attributeGroup ref="avro:attrGroup" />
+				</xsd:extension>				
+			</xsd:simpleContent>
 		</xsd:complexType>
 	</xsd:element>
 </xsd:schema>
