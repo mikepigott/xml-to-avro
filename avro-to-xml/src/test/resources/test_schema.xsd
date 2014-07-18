@@ -1,7 +1,5 @@
-<? xml version="1.0" encoding="UTF-8" ?>
-
-<!--
-  ~ Copyright 2014 Mike Pigott
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2014 Mike Pigott
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -14,7 +12,7 @@
   ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
--->
+  -->
 
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:avro="http://avro.apache.org/XmlTest" targetNamespace="http://avro.apache.org/XmlTest">
 	<xsd:import namespace="http://www.w3.org/2001/XMLSchema" schemaLocation="http://www.w3.org/2001/XMLSchema.xsd" />
@@ -22,10 +20,9 @@
 		<xsd:annotation>
 			<xsd:documentation>An attribute group with attributes of all simple types.</xsd:documentation>
 		</xsd:annotation>
-		<xsd:attribute name="anyType"              type="xsd:anyType"            use="optional" />
 		<xsd:attribute name="anySimpleType"        type="xsd:anySimpleType"      use="optional" />
 		<xsd:attribute name="duration"             type="xsd:duration"           use="optional" />
-		<xsd:attribute name="dateTime"             type="xsd:dateType"           use="optional" />
+		<xsd:attribute name="dateTime"             type="xsd:dateTime"           use="optional" />
 		<xsd:attribute name="date"                 type="xsd:date"               use="optional" />
 		<xsd:attribute name="time"                 type="xsd:time"               use="optional" />
 		<xsd:attribute name="gYearMonth"           type="xsd:gYearMonth"         use="optional" />
@@ -72,7 +69,7 @@
 		<xsd:annotation>
 			<xsd:documentation>An All Group</xsd:documentation>
 		</xsd:annotation>
-		<xsd:all minOccurs="0" maxOccurs="1">
+		<xsd:all>
 			<xsd:element ref="avro:root" />
 		</xsd:all>
 	</xsd:group>
