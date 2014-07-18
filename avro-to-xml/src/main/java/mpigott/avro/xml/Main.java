@@ -44,8 +44,8 @@ public class Main {
     System.out.println("[Start jvisualvm, and press any key when ready.]");
     System.out.println();
 
-    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-    reader.readLine();
+    //BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+    //reader.readLine();
 
     GraphGenerationVisitor visitor = new GraphGenerationVisitor();
     NullVisitor nullVisitor = new NullVisitor();
@@ -105,7 +105,7 @@ public class Main {
     }
     */
 
-    XmlSchemaElement root = getElementOf(collection, "root");
+    XmlSchemaElement root = getElementOf(collection, "avroType");
     walk(walker, visitor, root, "test.dot");
   }
 

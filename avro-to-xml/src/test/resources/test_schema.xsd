@@ -71,13 +71,37 @@
 			<xsd:element ref="avro:root" />
 		</xsd:all>
 	</xsd:group>
+	<xsd:group name="group">
+		<xsd:annotation>
+			<xsd:documentation>A group of nested sequences, choices, and elements.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:choice minOccurs="0" maxOccurs="5">
+				<xsd:element ref="avro:avroPrimitive" />
+			</xsd:choice>
+		</xsd:sequence>
+	</xsd:group>
 	<xsd:element name="root">
 		<xsd:complexType>
-			<xsd:simpleContent>
-				<xsd:extension base="xsd:string">
-					<xsd:attributeGroup ref="avro:attrGroup" />
-				</xsd:extension>				
-			</xsd:simpleContent>
+			<xsd:group ref="avro:group">
+			</xsd:group>
+			<xsd:attributeGroup ref="avro:attrGroup" />
 		</xsd:complexType>
 	</xsd:element>
+	<xsd:element name="avroPrimitive">
+		<xsd:simpleType>
+			<xsd:restriction base="xsd:NMTOKEN">
+				<xsd:enumeration value="null" />
+				<xsd:enumeration value="boolean" />
+				<xsd:enumeration value="int" />
+				<xsd:enumeration value="long" />
+				<xsd:enumeration value="float" />
+				<xsd:enumeration value="double" />
+				<xsd:enumeration value="decimal" />
+				<xsd:enumeration value="bytes" />
+				<xsd:enumeration value="string" />
+			</xsd:restriction>
+		</xsd:simpleType>
+	</xsd:element>
+	
 </xsd:schema>
