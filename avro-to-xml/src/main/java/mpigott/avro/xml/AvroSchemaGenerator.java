@@ -82,6 +82,15 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
   }
 
   /**
+   * The generated {@link Schema}, or <code>null</code> if none.
+   *
+   * @return The generated {@link Schema}, or <code>null</code> if none.
+   */
+  public Schema getSchema() {
+    return root;
+  }
+
+  /**
    * If this element was not added previously, registers a new schema for it.
    * If this element was added previously, and it is not part of a substitution
    * group, add it to its parent.
@@ -188,6 +197,13 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
        * will be processed later.
        */
       return;
+
+    } else if ((getSubstitutionGroup() != null) && element.isAbstract()) {
+
+      /* This element is part of a substitution group and was declared
+       * abstract, so it will not be a valid child element.
+       */
+      return;
     }
 
     final StackEntry entry = pop(element.getQName(), false);
@@ -259,6 +275,11 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       XmlSchemaAttribute attribute,
       XmlSchemaTypeInfo attributeType) {
 
+    if ((getSubstitutionGroup() != null) && element.isAbstract()) {
+      // Abstract elements are ignored.
+      return;
+    }
+
     if ( attribute.getUse().equals(XmlSchemaUse.PROHIBITED) ) {
       // This attribute is prohibited and cannot be part of the record.
       return;
@@ -279,12 +300,14 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       defaultValue = attribute.getFixedValue();
     }
 
-    Schema.Field attr =
+    final Schema.Field attr =
         new Schema.Field(
             attrQName.getLocalPart(),
             attributeType.getAvroType(),
             documentation,
             Utils.createJsonNodeFor(defaultValue, attributeType.getAvroType()));
+
+    attr.addProp("xmlSchema", attributeType.getXmlSchemaAsJson());
 
     List<Schema.Field> attrs = attributesByElement.get(entry.elementQName);
     if (attrs == null) {
@@ -315,7 +338,10 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     final StackEntry entry = pop(base.getQName(), true);
     final List<Schema> substitutes = substitutionGroups.get(entry.elementQName);
     if ((substitutes == null) || substitutes.isEmpty()) {
-      throw new IllegalStateException("Substitution group of \"" + entry.elementQName + "\" has no substitutes!");
+      /* This happens when an abstract element can only
+       * be substituted by other abstract elements.
+       */
+      return;
     }
 
     StackEntry parent = getParentElement();
@@ -454,7 +480,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     final StackEntry entry = stack.get(stack.size() - 1);
     stack.remove(stack.size() - 1);
 
-    if (!entry.elementQName.equals(entryQName)) {
+    if (!entry.elementQName.equals(entryQName) || (entry.isSubstitutionGroup != isSubstGroup)) {
       throw new IllegalStateException("Attempted to pop " + getStackEntryInfo(entryQName, isSubstGroup) + " but found " + getStackEntryInfo(entry.elementQName, entry.isSubstitutionGroup));
     }
 
@@ -475,7 +501,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
         if (item instanceof XmlSchemaDocumentation) {
           NodeList docNodes = ((XmlSchemaDocumentation) item).getMarkup();
           for (int nodeIndex = 0; nodeIndex < docNodes.getLength(); ++nodeIndex) {
-            docs.append( docNodes.item(nodeIndex).getTextContent().replaceAll("\\s", " ") );
+            docs.append( docNodes.item(nodeIndex).getTextContent().replaceAll("\\s+", " ") );
           }
           break;
         }

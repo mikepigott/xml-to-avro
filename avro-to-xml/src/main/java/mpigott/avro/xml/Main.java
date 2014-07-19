@@ -12,6 +12,7 @@ import java.net.URLClassLoader;
 
 import javax.xml.transform.stream.StreamSource;
 
+import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
@@ -47,37 +48,38 @@ public class Main {
     //BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
     //reader.readLine();
 
-    GraphGenerationVisitor visitor = new GraphGenerationVisitor();
-    NullVisitor nullVisitor = new NullVisitor();
+    //GraphGenerationVisitor visitor = new GraphGenerationVisitor();
+    //NullVisitor nullVisitor = new NullVisitor();
+    AvroSchemaGenerator avroVisitor = new AvroSchemaGenerator();
 
     long startResolve = System.currentTimeMillis();
     long endResolve = 0;
 
     XmlSchemaCollection collection = null;
     try {
-      File file = new File("src\\test\\resources\\test_schema.xsd");
-      System.out.println("Reading from: " + file.getAbsolutePath());
+      //File file = new File("src\\test\\resources\\test_schema.xsd");
+      //System.out.println("Reading from: " + file.getAbsolutePath());
       URL url = new URL("http://xbrl.fasb.org/us-gaap/2013/elts/us-gaap-2013-01-31.xsd");
       collection = new XmlSchemaCollection();
       collection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
-      //collection.setBaseUri("http://xbrl.fasb.org/us-gaap/2013/elts/");
-      //InputStream urlStream = url.openStream();
-      FileReader fileReader = new FileReader(file);
-      collection.read(new StreamSource(fileReader, file.getAbsolutePath()));
-      fileReader.close();
+      collection.setBaseUri("http://xbrl.fasb.org/us-gaap/2013/elts/");
+      InputStream urlStream = url.openStream();
+      collection.read(new StreamSource(url.openStream(), url.toString()));
+      //FileReader fileReader = new FileReader(file);
+      //collection.read(new StreamSource(fileReader, file.getAbsolutePath()));
+      //fileReader.close();
     } finally {
       endResolve = System.currentTimeMillis();
 
       System.out.println("Schema resolution required " + (endResolve - startResolve) + " milliseconds.");
     }
 
-    XmlSchemaWalker walker = new XmlSchemaWalker(collection, visitor);
+    XmlSchemaWalker walker = new XmlSchemaWalker(collection, avroVisitor);
 
-    /*
     long startContextWalk = System.currentTimeMillis();
     try {
       XmlSchemaElement context = getElementOf(collection, "context");
-      walk(walker, visitor, context, "context.dot");
+      walk(walker, avroVisitor, context, "context.avsc");
       //walker.walk(context);
     } finally {
       long endContextWalk = System.currentTimeMillis();
@@ -87,7 +89,7 @@ public class Main {
     long startCosWalk = System.currentTimeMillis();
     try {
       XmlSchemaElement costOfServices = getElementOf(collection, "CostOfServices");
-      walk(walker, visitor, costOfServices, "CostOfServices.dot");
+      walk(walker, avroVisitor, costOfServices, "CostOfServices.avsc");
       //walker.walk(costOfServices);
     } finally {
       long endCosWalk = System.currentTimeMillis();
@@ -97,16 +99,18 @@ public class Main {
     long startXbrlWalk = System.currentTimeMillis();
     try {
       XmlSchemaElement xbrl = getElementOf(collection, "xbrl");
-      walk(walker, visitor, xbrl, "xbrl.dot");
+      walk(walker, avroVisitor, xbrl, "xbrl.avsc");
       //walker.walk(xbrl);
     } finally {
       long endXbrlWalk = System.currentTimeMillis();
       System.out.println("Walking the xbrl node took " + (endXbrlWalk - startXbrlWalk) + " milliseconds.");
     }
-    */
 
-    XmlSchemaElement root = getElementOf(collection, "avroType");
-    walk(walker, visitor, root, "test.dot");
+    /*
+    XmlSchemaElement root = getElementOf(collection, "root");
+    //walk(walker, visitor, root, "test.dot");
+    walk(walker, avroVisitor, root, "test.avsc");
+    */
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
@@ -138,5 +142,28 @@ public class Main {
     }
 
     visitor.clear();
+    walker.clear();
+  }
+
+  private static void walk(XmlSchemaWalker walker, AvroSchemaGenerator visitor, XmlSchemaElement elem, String outFileName) throws IOException {
+    walker.walk(elem);
+    Schema schema = visitor.getSchema();
+
+    FileWriter writer = null;
+    try {
+      writer = new FileWriter(outFileName);
+      writer.write( schema.toString(true) );
+    } finally {
+      if (writer != null) {
+        try {
+          writer.close();
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
+      }
+    }
+
+    visitor.clear();
+    walker.clear();
   }
 }
