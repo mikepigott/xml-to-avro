@@ -35,6 +35,7 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.junit.Assert;
 
+import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
@@ -74,6 +75,7 @@ public class TestSchemaWalker {
       this.name = null;
       this.typeName = null;
       this.facets = null;
+      this.schema = null;
       this.minOccurs = 1;
       this.maxOccurs = 1;
     }
@@ -95,14 +97,25 @@ public class TestSchemaWalker {
       this.typeName = typeName;
     }
 
+    StackEntry(Type type, String name, String typeName, Schema schema) {
+      this(type, name, typeName);
+      this.schema = schema;
+    }
+
     StackEntry(Type type, String name, String typeName, long minOccurs, long maxOccurs) {
       this(type, name, typeName);
       this.minOccurs = minOccurs;
       this.maxOccurs = maxOccurs;
     }
 
-    StackEntry(Type type, String name, String typeName, Set<XmlSchemaRestriction> facets) {
-      this(type, name, typeName);
+    StackEntry(Type type, String name, String typeName, Schema schema, long minOccurs, long maxOccurs) {
+      this(type, name, typeName, schema);
+      this.minOccurs = minOccurs;
+      this.maxOccurs = maxOccurs;
+    }
+
+    StackEntry(Type type, String name, String typeName, Schema schema, Set<XmlSchemaRestriction> facets) {
+      this(type, name, typeName, schema);
       this.facets = facets;
     }
 
@@ -110,12 +123,14 @@ public class TestSchemaWalker {
         Type type,
         String name,
         String typeName,
+        Schema schema,
         long minOccurs,
         long maxOccurs,
         Set<XmlSchemaRestriction> facets) {
 
-      this(type, name, typeName, minOccurs, maxOccurs);
+      this(type, name, typeName, schema, minOccurs, maxOccurs);
       this.facets = facets;
+      
     }
 
     Type type;
@@ -124,6 +139,7 @@ public class TestSchemaWalker {
     Set<XmlSchemaRestriction> facets;
     long minOccurs;
     long maxOccurs;
+    Schema schema;
   }
 
   private static class Attribute {
@@ -197,6 +213,17 @@ public class TestSchemaWalker {
             }
           }
         }
+
+        if ((next.schema == null) && (typeInfo.getAvroType() != null)) {
+          throw new IllegalStateException("Element \"" + next.name + "\" was not expected to have an Avro schema, but has a schema of " + typeInfo.getAvroType());
+        } else if ((next.schema != null) && (typeInfo.getAvroType() == null)) {
+          throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.schema + " but instead has no schema.");
+        } else if (!next.schema.equals(typeInfo.getAvroType())) {
+          throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.schema + " but instead has a schema of " + typeInfo.getAvroType());
+        }
+
+      } else if (next.schema != null) {
+        throw new IllegalStateException("Expected a schema of " + next.schema + " but received none.");
       }
 
       if ((next.facets != null) && !next.facets.isEmpty()) {
@@ -496,6 +523,9 @@ public class TestSchemaWalker {
     nonNullPrimitiveTypeFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.PATTERN,     "\\c+",     false) );
     nonNullPrimitiveTypeFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.WHITESPACE,  "collapse", false) );
 
+    Schema nonNullPrimitiveTypeSchema = Schema.create(Schema.Type.STRING);
+    Schema primitiveTypeSchema = Schema.create(Schema.Type.STRING);
+
     HashSet<XmlSchemaRestriction> primitiveTypeFacets =
         new HashSet<XmlSchemaRestriction>(15);
     primitiveTypeFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.ENUMERATION, "null",     false) );
@@ -507,34 +537,34 @@ public class TestSchemaWalker {
     stack.add( new StackEntry(Type.ELEMENT, "root") );
       stack.add( new StackEntry(Type.SEQUENCE) );
         stack.add( new StackEntry(Type.CHOICE, 0, Long.MAX_VALUE) );
-          stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
-          stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
+          stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+          stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveTypeSchema, (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
           stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
             stack.add( new StackEntry(Type.ELEMENT, "record", "recordType") );
               stack.add( new StackEntry(Type.SEQUENCE) );
                 stack.add( new StackEntry(Type.CHOICE, 0, Long.MAX_VALUE) );
-/* 10 */          stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
-                  stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
+/* 10 */          stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+                  stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveTypeSchema, (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
                   stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
                     stack.add( new StackEntry(Type.ELEMENT, "record", "recordType") );
                     stack.add( new StackEntry(Type.ELEMENT, "map") );
                       stack.add( new StackEntry(Type.SEQUENCE) );
                       stack.add( new StackEntry(Type.CHOICE, 0, Long.MAX_VALUE) );
-                        stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
-                        stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
+                        stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+                        stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveTypeSchema, (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
                         stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
 /* 20 */                  stack.add( new StackEntry(Type.ELEMENT, "record", "recordType") );
                           stack.add( new StackEntry(Type.ELEMENT, "map") );
                         stack.add( new StackEntry(Type.ELEMENT, "list") );
                           stack.add( new StackEntry(Type.CHOICE) );
-                            stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", 1, 100, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+                            stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, 1, 100, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
                             stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
                               stack.add( new StackEntry(Type.ELEMENT, "record", "recordType", 1, 100) );
                               stack.add( new StackEntry(Type.ELEMENT, "map") );
                         stack.add( new StackEntry(Type.ELEMENT, "tuple") );
                           stack.add( new StackEntry(Type.ALL) );
-/* 30 */                    stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
-                            stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", (Set<XmlSchemaRestriction>)nonNullPrimitiveTypeFacets.clone()) );
+/* 30 */                    stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+                            stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveTypeSchema, (Set<XmlSchemaRestriction>)nonNullPrimitiveTypeFacets.clone()) );
                             stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
                               stack.add( new StackEntry(Type.ELEMENT, "record", "recordType") );
                               stack.add( new StackEntry(Type.ELEMENT, "map") );
