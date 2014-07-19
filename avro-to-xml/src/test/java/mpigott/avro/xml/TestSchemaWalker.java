@@ -33,6 +33,8 @@ import java.util.Set;
 
 import javax.xml.transform.stream.StreamSource;
 
+import org.junit.Assert;
+
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
@@ -590,16 +592,8 @@ public class TestSchemaWalker {
     } catch (Exception e) {
       throw new IllegalStateException("Failed on stack entry " + (numEntries - stack.size()), e);
     }
-  }
 
-  private static ArrayList<Attribute> clone(ArrayList<Attribute> attrs) {
-    ArrayList<Attribute> clone = new ArrayList<Attribute>( attrs.size() );
-
-    for (Attribute old : attrs) {
-      clone.add( new Attribute(old.name, old.typeName, old.isOptional, old.facets) );
-    }
-
-    return clone;
+    Assert.assertTrue( stack.isEmpty() );
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
