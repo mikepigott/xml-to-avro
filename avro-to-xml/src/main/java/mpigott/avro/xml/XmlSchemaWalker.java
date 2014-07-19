@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.namespace.QName;
 
@@ -81,6 +82,7 @@ final class XmlSchemaWalker {
     }
 
     scopeCache = new HashMap<QName, XmlSchemaScope>();
+    visitedElements = new java.util.HashSet<QName>();
   }
 
   XmlSchemaWalker(XmlSchemaCollection xmlSchemas, XmlSchemaVisitor visitor) {
@@ -103,10 +105,8 @@ final class XmlSchemaWalker {
   }
 
   void clear() {
-    if (scopeCache != null) {
-      scopeCache.clear();
-      scopeCache = null;
-    }
+    scopeCache.clear();
+    visitedElements.clear();
   }
 
   // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
@@ -147,51 +147,62 @@ final class XmlSchemaWalker {
     final XmlSchemaTypeInfo typeInfo = scope.getTypeInfo();
 
     // 2. for each visitor, call visitor.startElement(element, type);
+    final boolean previouslyVisited =
+        (!element.isAnonymous() && visitedElements.contains( element.getQName() ));
+
     for (XmlSchemaVisitor visitor : visitors) {
-      visitor.onEnterElement(element, typeInfo);
+      visitor.onEnterElement(element, typeInfo, previouslyVisited);
     }
 
-    // 3. Walk the attributes in the element, retrieving type information.
-    if (attrs != null) {
-      for (XmlSchemaAttribute attr : attrs) {
-        XmlSchemaType attrType = attr.getSchemaType();
-        XmlSchemaScope attrScope = null;
-        if ((attrType.getQName() != null) && scopeCache.containsKey( attrType.getQName() )) {
-          attrScope = scopeCache.get( attrType.getQName() );
-        } else {
-          attrScope = new XmlSchemaScope(attr.getSchemaType(), schemasByNamespace, scopeCache);
-          if (attrType.getName() != null) {
-            scopeCache.put(attrType.getQName(), attrScope);
+    if (!element.isAnonymous() && !previouslyVisited) {
+      visitedElements.add( element.getQName() );
+    }
+
+    // If we have already visited this element, skip the attributes and child.
+    if (!previouslyVisited) {
+
+      // 3. Walk the attributes in the element, retrieving type information.
+      if (attrs != null) {
+        for (XmlSchemaAttribute attr : attrs) {
+          XmlSchemaType attrType = attr.getSchemaType();
+          XmlSchemaScope attrScope = null;
+          if ((attrType.getQName() != null) && scopeCache.containsKey( attrType.getQName() )) {
+            attrScope = scopeCache.get( attrType.getQName() );
+          } else {
+            attrScope = new XmlSchemaScope(attr.getSchemaType(), schemasByNamespace, scopeCache);
+            if (attrType.getName() != null) {
+              scopeCache.put(attrType.getQName(), attrScope);
+            }
+          }
+  
+          final XmlSchemaTypeInfo attrTypeInfo = attrScope.getTypeInfo();
+    
+          for (XmlSchemaVisitor visitor : visitors) {
+            visitor.onVisitAttribute(element, attr, attrTypeInfo);
           }
         }
-
-        final XmlSchemaTypeInfo attrTypeInfo = attrScope.getTypeInfo();
+      }
   
+      // 4. Visit the anyAttribute, if any.
+      if (scope.getAnyAttribute() != null) {
         for (XmlSchemaVisitor visitor : visitors) {
-          visitor.onVisitAttribute(element, attr, attrTypeInfo);
+          visitor.onVisitAnyAttribute(element, scope.getAnyAttribute());
         }
       }
-    }
-
-    // 4. Visit the anyAttribute, if any.
-    if (scope.getAnyAttribute() != null) {
-      for (XmlSchemaVisitor visitor : visitors) {
-        visitor.onVisitAnyAttribute(element, scope.getAnyAttribute());
+  
+      // 5. Walk the child groups and elements (if any), depth-first.
+      final XmlSchemaParticle child = scope.getParticle();
+      if (child != null) {
+        walk(child);
       }
     }
 
-    // 4. Walk the child groups and elements (if any), depth-first.
-    final XmlSchemaParticle child = scope.getParticle();
-    if (child != null) {
-      walk(child);
-    }
-
-    // 5. On the way back up, call visitor.endElement(element, type, attributes);
+    // 6. On the way back up, call visitor.endElement(element, type, attributes);
     for (XmlSchemaVisitor visitor : visitors) {
-      visitor.onExitElement(element, typeInfo);
+      visitor.onExitElement(element, typeInfo, previouslyVisited);
     }
 
-    // Now handle substitute elements, if any.
+    // 7. Now handle substitute elements, if any.
     if (substitutes != null) {
       for (XmlSchemaElement substitute : substitutes) {
         walk(substitute);
@@ -396,6 +407,7 @@ final class XmlSchemaWalker {
     }
 
     final XmlSchemaElement copy = new XmlSchemaElement(schema, false);
+    copy.setName( globalElem.getName() );
     copy.setAbstract( globalElem.isAbstract() );
     copy.setAnnotation( globalElem.getAnnotation() );
     copy.setBlock( globalElem.getBlock() );
@@ -409,7 +421,6 @@ final class XmlSchemaWalker {
     copy.setMaxOccurs( element.getMaxOccurs() );
     copy.setMinOccurs( element.getMinOccurs() );
     copy.setMetaInfoMap( globalElem.getMetaInfoMap() );
-    copy.setName( globalElem.getName() );
     copy.setNillable( globalElem.isNillable() );
     copy.setType( globalElem.getSchemaType() );
     copy.setSchemaTypeName( globalElem.getSchemaTypeName() );
@@ -425,4 +436,5 @@ final class XmlSchemaWalker {
   private Map<QName, List<XmlSchemaElement>> elemsBySubstGroup;
   private Map<String, XmlSchema> schemasByNamespace;
   private Map<QName, XmlSchemaScope> scopeCache;
+  private Set<QName> visitedElements;
 }

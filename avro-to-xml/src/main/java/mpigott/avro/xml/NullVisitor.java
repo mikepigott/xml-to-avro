@@ -15,14 +15,16 @@ public class NullVisitor implements XmlSchemaVisitor {
   }
 
   @Override
-  public void onEnterElement(XmlSchemaElement element,
-      XmlSchemaTypeInfo typeInfo) {
+  public void onEnterElement(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo typeInfo,
+      boolean previouslyVisited) {
     // TODO Auto-generated method stub
 
   }
 
   @Override
-  public void onExitElement(XmlSchemaElement element, XmlSchemaTypeInfo typeInfo) {
+  public void onExitElement(XmlSchemaElement element, XmlSchemaTypeInfo typeInfo, boolean prevVisited) {
     // TODO Auto-generated method stub
 
   }

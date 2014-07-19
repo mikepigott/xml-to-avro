@@ -37,11 +37,13 @@ interface XmlSchemaVisitor {
 
   void onEnterElement(
       XmlSchemaElement element,
-      XmlSchemaTypeInfo typeInfo);
+      XmlSchemaTypeInfo typeInfo,
+      boolean previouslyVisited);
 
   void onExitElement(
       XmlSchemaElement element,
-      XmlSchemaTypeInfo typeInfo);
+      XmlSchemaTypeInfo typeInfo,
+      boolean previouslyVisited);
 
   void onVisitAttribute(
       XmlSchemaElement element,

@@ -85,7 +85,8 @@ public class GraphGenerationVisitor implements XmlSchemaVisitor {
   @Override
   public void onEnterElement(
       XmlSchemaElement element,
-      XmlSchemaTypeInfo typeInfo) {
+      XmlSchemaTypeInfo typeInfo,
+      boolean previouslyVisited) {
 
     StringBuilder name = new StringBuilder( element.getQName().toString() );
     if (typeInfo != null) {
@@ -107,7 +108,7 @@ public class GraphGenerationVisitor implements XmlSchemaVisitor {
    * @see mpigott.avro.xml.XmlSchemaVisitor#onExitElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo)
    */
   @Override
-  public void onExitElement(XmlSchemaElement element, XmlSchemaTypeInfo typeInfo) {
+  public void onExitElement(XmlSchemaElement element, XmlSchemaTypeInfo typeInfo, boolean previouslyVisited) {
     getTopEntry(element, true);
   }
 
