@@ -174,4 +174,17 @@
 			</xsd:complexContent>
 		</xsd:complexType>
 	</xsd:element>
+	<!--
+	  The below is needed due to some kind of bug in the Java SAX and DOM parsers.
+	  I have found that if the last element only contains an attribute, it is
+	  given the URI, local name, and QName of the root element (schema).  The SAX
+	  parser will give it the correct attributes, but the DOM parser will give it
+	  the root element's attributes as well, causing the TestSaxWalkerOverDom test
+	  to fail.
+	 -->
+	<xsd:element name="test">
+		<complexType>
+			<xsd:sequence />
+		</complexType>
+	</xsd:element>
 </xsd:schema>
