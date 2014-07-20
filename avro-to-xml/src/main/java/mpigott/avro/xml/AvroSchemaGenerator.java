@@ -300,10 +300,20 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       defaultValue = attribute.getFixedValue();
     }
 
+    Schema attrSchema = attributeType.getAvroType();
+
+    // Optional types are unions of the real type and null.
+    if ( attribute.getUse().equals(XmlSchemaUse.OPTIONAL) ) {
+      ArrayList<Schema> unionTypes = new ArrayList<Schema>(2);
+      unionTypes.add(attrSchema);
+      unionTypes.add( Schema.create(Schema.Type.NULL) );
+      attrSchema = Schema.createUnion(unionTypes);
+    }
+
     final Schema.Field attr =
         new Schema.Field(
             attrQName.getLocalPart(),
-            attributeType.getAvroType(),
+            attrSchema,
             documentation,
             Utils.createJsonNodeFor(defaultValue, attributeType.getAvroType()));
 
