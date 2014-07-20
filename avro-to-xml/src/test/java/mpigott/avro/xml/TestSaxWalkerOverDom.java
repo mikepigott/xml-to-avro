@@ -149,6 +149,10 @@ public class TestSaxWalkerOverDom {
     Attributes attributes;
   }
 
+  /**
+   * Used to confirm the {@link SaxWalkerOverDom} walker generates
+   * the exact same events as a real {@link SAXParser}.
+   */
   private static class ContentValidator implements ContentHandler {
 
     ContentValidator(List<StackEntry> stack) {
@@ -281,8 +285,6 @@ public class TestSaxWalkerOverDom {
 
   /**
    * This is traversed by a SAX parser to retrieve the expected SAX events.
-   *
-   * @author  Mike Pigott
    */
   private static class StackBuilder extends DefaultHandler {
 
