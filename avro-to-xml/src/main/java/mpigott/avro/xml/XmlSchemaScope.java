@@ -482,11 +482,9 @@ final class XmlSchemaScope {
 
         if (attributes == null) {
           attributes = createAttributeMap(parentAttrs);
-        } else {
-          if (parentAttrs != null) {
-            for (XmlSchemaAttribute parentAttr : parentAttrs) {
-              attributes.put(parentAttr.getQName(), parentAttr);
-            }
+        } else if (parentAttrs != null) {
+          for (XmlSchemaAttribute parentAttr : parentAttrs) {
+            attributes.put(parentAttr.getQName(), parentAttr);
           }
         }
 
