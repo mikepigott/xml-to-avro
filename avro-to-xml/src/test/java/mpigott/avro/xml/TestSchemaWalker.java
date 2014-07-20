@@ -220,7 +220,7 @@ public class TestSchemaWalker {
           throw new IllegalStateException("Element \"" + next.name + "\" was not expected to have an Avro schema, but has a schema of " + typeInfo.getAvroType());
         } else if ((next.schema != null) && (typeInfo.getAvroType() == null)) {
           throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.schema + " but instead has no schema.");
-        } else if (!next.schema.equals(typeInfo.getAvroType())) {
+        } else if ((next.schema != null) && !next.schema.equals(typeInfo.getAvroType())) {
           throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.schema + " but instead has a schema of " + typeInfo.getAvroType());
         }
 

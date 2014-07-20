@@ -358,6 +358,10 @@ final class XmlSchemaWalker {
       }
     }
 
+    if (children == null) {
+      throw new IllegalStateException("Could not process group of type " + group.getClass().getName());
+    }
+
     for (XmlSchemaParticle child : children) {
       walk(child);
     }

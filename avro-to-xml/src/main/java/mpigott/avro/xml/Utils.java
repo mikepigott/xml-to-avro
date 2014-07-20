@@ -114,7 +114,8 @@ class Utils {
         Schema textType = null;
         for (Schema subType : subTypes) {
           // Try the text types last.
-          if (subType.equals(Schema.Type.BYTES) || subType.equals(Schema.Type.STRING)) {
+          if (subType.getType().equals(Schema.Type.BYTES)
+              || subType.getType().equals(Schema.Type.STRING)) {
             textType = subType;
             continue;
           }
