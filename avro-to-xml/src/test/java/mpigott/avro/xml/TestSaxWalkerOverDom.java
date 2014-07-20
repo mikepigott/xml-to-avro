@@ -46,6 +46,36 @@ import org.junit.Test;
  */
 public class TestSaxWalkerOverDom {
 
+  private static class AttrInfo {
+
+    static List<AttrInfo> getAttributesOf(Attributes attrs) {
+      ArrayList<AttrInfo> newAttrs = new ArrayList<AttrInfo>();
+
+      for (int a = 0; a < attrs.getLength(); ++a) {
+        newAttrs.add(
+            new AttrInfo(
+                attrs.getURI(a),
+                attrs.getLocalName(a),
+                attrs.getQName(a),
+                attrs.getValue(a)) );
+      }
+
+      return newAttrs;
+    }
+
+    AttrInfo(String ns, String ln, String qn, String v) {
+      namespace = new String(ns);
+      localName = new String(ln);
+      qName = new String(qn);
+      value = new String(v);
+    }
+
+    private String namespace;
+    private String localName;
+    private String qName;
+    private String value;
+  }
+
   private static class StackEntry {
     enum Type {
       ELEMENT,
@@ -66,7 +96,7 @@ public class TestSaxWalkerOverDom {
       namespace = ns;
       localName = ln;
       qName = qn;
-      attributes = attrs;
+      attributes = AttrInfo.getAttributesOf(attrs);
       value = null;
     }
 
@@ -78,22 +108,22 @@ public class TestSaxWalkerOverDom {
       if (!stringsEqual(namespace, ns)
           || !stringsEqual(localName, ln)
           || !stringsEqual(qName, qn)
-          || (attributes.getLength() > attrs.getLength()))
+          || (attributes.size() > attrs.getLength()))
       {
-        throw new IllegalStateException("Expected element [\"" + namespace + "\", \"" + localName + "\", \"" + qName + "\", " + attributes.getLength() + " attrs] does not match actual of [\"" + ns + "\", \"" + ln + "\", \"" + qn + "\", " + attrs.getLength() + " attrs].");
+        throw new IllegalStateException("Expected element [\"" + namespace + "\", \"" + localName + "\", \"" + qName + "\", " + attributes.size() + " attrs] does not match actual of [\"" + ns + "\", \"" + ln + "\", \"" + qn + "\", " + attrs.getLength() + " attrs].");
       }
 
-      for (int index = 0; index < attributes.getLength(); ++index) {
-        final String actual =
-            attrs.getValue(attributes.getURI(index), attributes.getLocalName(index));
+      for (int index = 0; index < attributes.size(); ++index) {
+        AttrInfo attribute = attributes.get(index);
+        final String actual = attrs.getValue(attribute.qName);
 
-        if ( !attributes.getValue(index).equals(value) ) {
-          System.err.println("Attribute [\"" + attributes.getURI(index) + "\", \"" + attributes.getLocalName(index) + "\"] has a value of \"" + attributes.getValue(index) + "\" which does not match the actual value of \"" + actual + "\".  ");
+        if ( !attribute.value.equals(actual) ) {
+          System.err.println("Attribute [\"" + attribute.qName + "\" has a value of \"" + attribute.value + "\" but that does not match the actual value of \"" + attrs.getValue( attribute.qName) + "\".");
           return false;
         }
 
-        if ( !attrs.getValue( attributes.getQName(index) ).equals(actual) ) {
-          System.err.println("Attribute [\"" + attributes.getQName(index) + "\" has a value of \"" + value + "\" but that does not match the actual value of \"" + attrs.getValue( attributes.getQName(index) ) + "\".");
+        if ( !attrs.getValue(attribute.namespace, attribute.localName).equals(actual) ) {
+          System.err.println("Attribute [\"" + attribute.namespace + "\", \"" + attribute.localName + "\"] has a value of \"" + attribute.value + "\" which does not match the actual value of \"" + actual + "\".  ");
           return false;
         }
       }
@@ -113,11 +143,12 @@ public class TestSaxWalkerOverDom {
         str.append("\", attributes={ ");
 
         if (attributes != null) {
-          for (int index = 0; index < attributes.getLength(); ++index) {
-            str.append("[Attr: namespace=\"").append( attributes.getURI(index) );
-            str.append("\", localName=\"").append( attributes.getLocalName(index) );
-            str.append("\", qName=\"").append( attributes.getQName(index) );
-            str.append("\", value=\"").append( attributes.getValue(index) ).append("\"] ");
+          for (int index = 0; index < attributes.size(); ++index) {
+            AttrInfo attribute = attributes.get(index);
+            str.append("[Attr: namespace=\"").append(attribute.namespace);
+            str.append("\", localName=\"").append(attribute.localName);
+            str.append("\", qName=\"").append( attribute.qName);
+            str.append("\", value=\"").append( attribute.value).append("\"] ");
           }
         }
 
@@ -146,7 +177,7 @@ public class TestSaxWalkerOverDom {
     String localName;
     String qName;
     String value;
-    Attributes attributes;
+    List<AttrInfo> attributes;
   }
 
   /**

@@ -17,7 +17,11 @@
 package mpigott.avro.xml;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import javax.xml.namespace.QName;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -49,51 +53,86 @@ import org.xml.sax.SAXException;
  */
 final class SaxWalkerOverDom {
 
+  private static class Attr {
+
+    Attr(String namespace, String localName, String qualName, String val) {
+      qName = new QName(namespace, localName);
+      qualifiedName = qualName;
+      value = val;
+    }
+
+    Attr(Node node) {
+      this(
+          node.getNamespaceURI(),
+          node.getLocalName(),
+          node.getNodeName(),
+          node.getNodeValue());
+    }
+
+    private final QName qName;
+    private final String qualifiedName;
+    private final String value;
+  }
+
   private static class DomAttrsAsSax implements org.xml.sax.Attributes {
 
     DomAttrsAsSax(NamedNodeMap domAttrs) throws SAXException {
-      attrMap = domAttrs;
-    }
+      attributes = new ArrayList<Attr>();
+      attrsByQualifiedName = new HashMap<String, Attr>();
+      attrsByQName = new HashMap<QName, Attr>();
 
-    @Override
-    public int getLength() {
-      if (attrMap == null) {
-        return 0;
-      } else {
-        return attrMap.getLength();
+      indexByQualifiedName = new HashMap<String, Integer>();
+      indexByQName = new HashMap<QName, Integer>();
+
+      if (domAttrs != null) {
+        for (int attrIndex = 0; attrIndex < domAttrs.getLength(); ++attrIndex) {
+          Attr attribute = new Attr(domAttrs.item(attrIndex));
+          attributes.add(attribute);
+
+          attrsByQualifiedName.put(attribute.qualifiedName, attribute);
+          attrsByQName.put(attribute.qName, attribute);
+
+          indexByQualifiedName.put(attribute.qualifiedName, attrIndex);
+          indexByQName.put(attribute.qName, attrIndex);
+        }
       }
     }
 
     @Override
+    public int getLength() {
+      return attributes.size();
+    }
+
+    @Override
     public String getURI(int index) {
-      if ((attrMap == null) || (attrMap.getLength() <= index)) {
+      if (attributes.size() <= index) {
         return null;
       } else {
-        return attrMap.item(index).getNamespaceURI();
+        return attributes.get(index).qName.getNamespaceURI();
       }
     }
 
     @Override
     public String getLocalName(int index) {
-      if ((attrMap == null) || (attrMap.getLength() <= index)) {
+      if (attributes.size() <= index) {
         return null;
       } else {
-        return attrMap.item(index).getLocalName();
+        return attributes.get(index).qName.getLocalPart();
       }
     }
 
     @Override
     public String getQName(int index) {
-      if ((attrMap == null) || (attrMap.getLength() <= index)) {
+      if (attributes.size() <= index) {
         return null;
       } else {
-        return attrMap.item(index).getNodeName();
+        return attributes.get(index).qualifiedName;
       }
     }
 
     @Override
     public String getType(int index) {
-      if ((attrMap == null) || (attrMap.getLength() <= index)) {
+      if (attributes.size() <= index) {
         return null;
       } else {
         return "CDATA"; // We do not know the type information.
@@ -102,85 +141,88 @@ final class SaxWalkerOverDom {
 
     @Override
     public String getValue(int index) {
-      if ((attrMap == null) || (attrMap.getLength() <= index)) {
+      if (attributes.size() <= index) {
         return null;
       } else {
-        return attrMap.item(index).getNodeValue();
+        return attributes.get(index).value;
       }
     }
 
     @Override
     public int getIndex(String uri, String localName) {
-      if ((attrMap == null) || (uri == null) || (localName == null)) {
+      if ((uri == null) || (localName == null)) {
         return -1;
       }
 
-      for (int index = 0; index < attrMap.getLength(); ++index) {
-        if ( uri.equals( attrMap.item(index).getNamespaceURI() )
-            && localName.equals( attrMap.item(index).getLocalName() )) {
-          return index;
-        }
-      }
+      final QName qName = new QName(uri, localName);
+      final Integer index = indexByQName.get(qName);
 
-      return -1;
+      if (index == null) {
+        return -1;
+      } else {
+        return index;
+      }
     }
 
     @Override
     public int getIndex(String qName) {
-      if ((attrMap == null) || (qName == null)) {
+      if (qName == null) {
         return -1;
       }
 
-      for (int index = 0; index < attrMap.getLength(); ++index) {
-        if ( qName.equals( attrMap.item(index).getNodeName() ) ) {
-          return index;
-        }
+      final Integer index = indexByQualifiedName.get(qName);
+      if (index == null) {
+        return -1;
+      } else {
+        return index;
       }
-
-      return -1;
     }
 
     @Override
     public String getType(String uri, String localName) {
-      if ((attrMap == null) || (uri == null) || (localName == null)) {
+      if ((uri == null) || (localName == null)) {
         return null;
       } else {
-        final Node node = attrMap.getNamedItemNS(uri, localName);
-        return (node == null) ? null : "CDATA";
+        final Attr attr = attrsByQName.get( new QName(uri, localName) );
+        return (attr == null) ? null : "CDATA";
       }
     }
 
     @Override
     public String getType(String qName) {
-      if ((attrMap == null) || (qName == null)) {
+      if (qName == null) {
         return null;
       } else {
-        final Node node = attrMap.getNamedItem(qName);
-        return (node == null) ? null : "CDATA";
+        final Attr attr = attrsByQualifiedName.get(qName);
+        return (attr == null) ? null : "CDATA";
       }
     }
 
     @Override
     public String getValue(String uri, String localName) {
-      if ((attrMap == null) || (uri == null) || (localName == null)) {
+      if ((uri == null) || (localName == null)) {
         return null;
       } else {
-        final Node node = attrMap.getNamedItemNS(uri, localName);
-        return (node == null) ? null : node.getNodeValue();
+        final Attr attr = attrsByQName.get( new QName(uri, localName) );
+        return (attr == null) ? null : attr.value;
       }
     }
 
     @Override
     public String getValue(String qName) {
-      if ((attrMap == null) || (qName == null)) {
+      if (qName == null) {
         return null;
       } else {
-        final Node node = attrMap.getNamedItem(qName);
-        return (node == null) ? null : node.getNodeValue();
+        final Attr attr = attrsByQualifiedName.get(qName);
+        return (attr == null) ? null : attr.value;
       }
     }
 
-    private final NamedNodeMap attrMap;
+    private final List<Attr> attributes;
+    private final Map<String, Attr> attrsByQualifiedName;
+    private final Map<QName, Attr> attrsByQName;
+    private final Map<String, Integer> indexByQualifiedName;
+    private final Map<QName, Integer> indexByQName;
   }
 
   /**
