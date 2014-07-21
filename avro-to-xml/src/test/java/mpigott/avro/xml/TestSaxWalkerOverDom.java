@@ -375,10 +375,17 @@ public class TestSaxWalkerOverDom {
     /* Walk the DOM, firing off SAX events, and
      * confirm they match the real SAX events.
      */
-    SaxWalkerOverDom walker =
-        new SaxWalkerOverDom(new ContentValidator( stackBuilder.getStack() ));
+    final List<StackEntry> stack = stackBuilder.getStack();
+    final int stackSize = stack.size();
 
-    walker.walk(doc);
+    final SaxWalkerOverDom walker =
+        new SaxWalkerOverDom(new ContentValidator(stack));
+
+    try {
+      walker.walk(doc);
+    } catch (Exception e) {
+      throw new SAXException("Traversed through element " + (stackSize - stack.size()) + " before failing.", e);
+    }
   }
 
 }
