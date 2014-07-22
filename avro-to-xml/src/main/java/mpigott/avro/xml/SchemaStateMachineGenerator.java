@@ -16,6 +16,11 @@
 
 package mpigott.avro.xml;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
@@ -33,12 +38,74 @@ import org.apache.ws.commons.schema.XmlSchemaSequence;
  */
 final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
+  private static class StackEntry {
+    SchemaStateMachineNode node;
+    boolean isIgnored;
+  }
+
+  private static class ElementInfo {
+    ElementInfo(Schema schema) {
+      elementSchema = schema;
+      attributes = new ArrayList<SchemaStateMachineNode.Attribute>();
+    }
+
+    void addAttribute(XmlSchemaAttribute attr, XmlSchemaTypeInfo attrType) {
+      attributes.add( new SchemaStateMachineNode.Attribute(attr, attrType) );
+    }
+
+    final List<SchemaStateMachineNode.Attribute> attributes;
+    final Schema elementSchema;
+  }
+
   /**
    *  Creates a <code>SchemaStateMachineGenerator</code> with the
    *  Avro {@link Schema} we will be converting XML documents to.
    */
   SchemaStateMachineGenerator(Schema avroSchema) {
     this.avroSchema = avroSchema;
+
+    attrsByElem =
+      new HashMap<XmlSchemaElement, ElementInfo>();
+
+    stack = new ArrayList<StackEntry>();
+
+    validNextElements = new ArrayList<Schema>();
+
+    if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
+      /* The user is only looking to retrieve specific elements from the XML
+       * document.  Likewise, the next valid elements are only the ones in
+       * that list.
+       *
+       * (The expected format is Array<Union<Type>>)
+       */
+      if ( !avroSchema.getElementType().getType().equals(Schema.Type.UNION) ) {
+        throw new IllegalArgumentException("If retrieving only a subset of elements in the document, the Avro Schema must be an ARRAY of UNION of those types, not an Array of " + avroSchema.getElementType().getType());
+      }
+
+      // Confirm all of the elements in the UNION are either RECORDs or MAPs.
+      verifyIsUnionOfRecord( avroSchema.getElementType() );
+
+      validNextElements.addAll( avroSchema.getElementType().getTypes() );
+
+    } else if ( avroSchema.getType().equals(Schema.Type.UNION) ) {
+      /* It is possible for the root element to actually be the root of a
+       * substitution group.  If this happens, the root element could be
+       * one of many different record types.
+       *
+       * This can only be valid if the schema is a union of records.
+       */
+      verifyIsUnionOfRecord(avroSchema);
+
+      validNextElements.addAll( avroSchema.getTypes() );
+
+    } else if ( avroSchema.getType().equals(Schema.Type.RECORD)
+        || avroSchema.getType().equals(Schema.Type.MAP) ) {
+      // This is a definition of the root element.
+      validNextElements.add(avroSchema);
+
+    } else {
+      throw new IllegalArgumentException("The Avro Schema must be one of the following types: RECORD, MAP, UNION of RECORDs/MAPs, or ARRAY of UNION of RECORDs/MAPs.");
+    }
   }
 
   /**
@@ -65,6 +132,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       XmlSchemaTypeInfo typeInfo,
       boolean previouslyVisited) {
 
+    boolean foundRecord = false;
   }
 
   /**
@@ -280,5 +348,19 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       XmlSchemaAnyAttribute anyAttr) {
   }
 
+  // Confirms the root-level Schema is a UNION of MAPs, RECORDs, or both.
+  private final void verifyIsUnionOfRecord(Schema schema) {
+    for (Schema unionType : avroSchema.getTypes()) {
+      if (!unionType.getType().equals(Schema.Type.RECORD)
+          && !unionType.getType().equals(Schema.Type.MAP)) {
+        throw new IllegalArgumentException("The Avro Schema may either be a UNION or an ARRAY of UNION, but only if all of the elements in the UNION are of either type RECORD or MAP, not " + unionType.getType());
+      }
+    }
+  }
+
   private final Schema avroSchema;
+
+  private final List<Schema> validNextElements;
+  private final Map<XmlSchemaElement, ElementInfo> attrsByElem;
+  private final List<StackEntry> stack;
 }

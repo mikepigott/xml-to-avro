@@ -86,6 +86,10 @@ final class SchemaStateMachineNode {
    *                 {@link Type#SUBSTITUTION_GROUP}, {@link Type#CHOICE},
    *                 {@link Type#SEQUENCE}, or {@link Type#ANY}).
    *
+   * @param avroSchema The Avro {@link Schema} representing this group,
+   *                   or <code>null</code> if no element from this group
+   *                   should be written to the Avro document.
+   *
    * @param minOccurs The minimum number of occurrences of this group.
    * @param maxOccurs The maximum number of occurrences of this group.
    *
@@ -129,7 +133,9 @@ final class SchemaStateMachineNode {
    * @param typeInfo The type information, if the element has simple content.
    *                 <code>null</code> if not.
    *
-   * @param avroSchema The Avro {@link Schema} representing this Element.
+   * @param avroSchema The Avro {@link Schema} representing this Element, or
+   *                   or <code>null</code> if this element should not be
+   *                   written to the Avro document.
    */
   SchemaStateMachineNode(
       XmlSchemaElement elem,
@@ -230,7 +236,11 @@ final class SchemaStateMachineNode {
 
   /**
    * Returns the Avro {@link Schema} associated with this node.
-   * This will only be <code>null</code> if the type is {@link Type#ANY}.
+   *
+   * <p>
+   * This will only be <code>null</code> if the corresponding
+   * node in the XML document should not be written to Avro.
+   * </p>
    */
   public Schema getAvroSchema() {
     return avroSchema;
