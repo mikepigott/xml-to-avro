@@ -768,7 +768,17 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     return false;
   }
 
-  private void pushGroup(SchemaStateMachineNode.Type groupType, long minOccurs, long maxOccurs) {
+  private void pushGroup(
+      SchemaStateMachineNode.Type groupType,
+      long minOccurs,
+      long maxOccurs) {
+
+    /* NOTE: An XML Schema group may contain only an Any element, and thus a
+     *       corresponding Avro Schema with no valid children at this stage
+     *       would still be fully conformant.  Likewise, having no valid next
+     *       elements is NOT an indicator that this Avro Schema is invalid.
+     */
+
     if ( stack.isEmpty() ) {
       throw new IllegalStateException("Attempted to create a(n) " + groupType + " group with no parent - the stack is empty!");
     }
