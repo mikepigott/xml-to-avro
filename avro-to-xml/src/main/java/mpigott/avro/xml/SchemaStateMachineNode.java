@@ -19,6 +19,8 @@ package mpigott.avro.xml;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.avro.Schema;
+import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 
@@ -88,20 +90,30 @@ final class SchemaStateMachineNode {
    * @param maxOccurs The maximum number of occurrences of this group.
    *
    * @throws IllegalArgumentException if this constructor is used to
-   *                                  define an {@link Type#ELEMENT}.
+   *                                  define an {@link Type#ELEMENT}
+   *                                  or an {@link Type#ANY}.
    */
-  SchemaStateMachineNode(Type nodeType, long minOccurs, long maxOccurs) {
-    if (nodeType.equals(Type.ELEMENT)) {
+  SchemaStateMachineNode(
+      Type nodeType,
+      Schema avroSchema,
+      long minOccurs,
+      long maxOccurs) {
+
+    if ( nodeType.equals(Type.ELEMENT) ) {
       throw new IllegalArgumentException("This constructor cannot be used for elements.");
+    } else if ( nodeType.equals(Type.ANY) ) {
+      throw new IllegalArgumentException("This constructor cannot be used for anys.");
     }
 
     this.nodeType = nodeType;
     this.minOccurs = minOccurs;
     this.maxOccurs = maxOccurs;
+    this.avroSchema = avroSchema;
 
     this.element = null;
     this.attributes = null;
     this.typeInfo = null;
+    this.any = null;
 
     this.possibleNextStates = new ArrayList<SchemaStateMachineNode>();
   }
@@ -116,11 +128,14 @@ final class SchemaStateMachineNode {
    *
    * @param typeInfo The type information, if the element has simple content.
    *                 <code>null</code> if not.
+   *
+   * @param avroSchema The Avro {@link Schema} representing this Element.
    */
   SchemaStateMachineNode(
       XmlSchemaElement elem,
       List<Attribute> attrs,
-      XmlSchemaTypeInfo typeInfo)
+      XmlSchemaTypeInfo typeInfo,
+      Schema avroSchema)
   {
     this.nodeType = Type.ELEMENT;
     this.element = elem;
@@ -128,6 +143,28 @@ final class SchemaStateMachineNode {
     this.typeInfo = typeInfo;
     this.minOccurs = elem.getMinOccurs();
     this.maxOccurs = elem.getMaxOccurs();
+    this.avroSchema = avroSchema;
+
+    this.any = null;
+
+    this.possibleNextStates = new ArrayList<SchemaStateMachineNode>();
+  }
+
+  /**
+   * Constructs a {@link SchemaStateMachineNode} from the {@link XmlSchemaAny}.
+   *
+   * @param any The <code>XmlSchemaAny</code> to construct the node from.
+   */
+  SchemaStateMachineNode(XmlSchemaAny any) {
+    this.nodeType = Type.ANY;
+    this.any = any;
+    this.minOccurs = any.getMinOccurs();
+    this.maxOccurs = any.getMaxOccurs();
+
+    this.element = null;
+    this.attributes = null;
+    this.typeInfo = null;
+    this.avroSchema = null;
 
     this.possibleNextStates = new ArrayList<SchemaStateMachineNode>();
   }
@@ -221,6 +258,8 @@ final class SchemaStateMachineNode {
   private final XmlSchemaTypeInfo typeInfo;
   private final long minOccurs;
   private final long maxOccurs;
+  private final XmlSchemaAny any;
+  private final Schema avroSchema;
 
   private List<SchemaStateMachineNode> possibleNextStates;
 }
