@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchemaAll;
@@ -115,6 +116,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     this.xmlIsWritten = xmlIsWritten;
 
     startNode = null;
+    conversionCache = new HashMap<Schema.Type, Set<Schema.Type>>();
 
     elements =
       new HashMap<XmlSchemaElement, ElementInfo>();
@@ -606,7 +608,8 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       if (!unionType.getType().equals(Schema.Type.RECORD)
           && !unionType.getType().equals(Schema.Type.MAP)) {
         throw new IllegalArgumentException("The Avro Schema may either be a UNION or an ARRAY of UNION, but only if all of the elements in the UNION are of either type RECORD or MAP, not " + unionType.getType());
-      } else if ( unionType.getType().equals(Schema.Type.MAP) && !unionType.getValueType().getType().equals(Schema.Type.RECORD) ) {
+      } else if ( unionType.getType().equals(Schema.Type.MAP)
+          && !unionType.getValueType().getType().equals(Schema.Type.RECORD) ) {
         throw new IllegalArgumentException("If the Avro Schema is a UNION of MAPs or an ARRAY of UNION of MAPs, all MAP value types must be RECORD, not " + unionType.getValueType().getType());
       }
     }
@@ -662,6 +665,11 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   private boolean confirmEquivalent(Schema readerType, Schema writerType) {
 
+    if ( conversionCache.containsKey(writerType.getType()) ) {
+      return conversionCache.get( writerType.getType() )
+                            .contains( readerType.getType() );
+    }
+
     final HashSet<Schema.Type> convertibleFrom = new HashSet<Schema.Type>();
     switch ( writerType.getType() ) {
     case STRING:
@@ -702,7 +710,8 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     }
 
     if ( !convertibleFrom.isEmpty() ) {
-      return convertibleFrom.contains(writerType.getType());
+      conversionCache.put(writerType.getType(), convertibleFrom);
+      return convertibleFrom.contains( readerType.getType() );
     }
 
     /* If we're here, it's because the writer is an ENUM.  Confirm
@@ -730,6 +739,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
   private final List<Schema> validNextElements;
   private final Map<XmlSchemaElement, ElementInfo> elements;
   private final List<StackEntry> stack;
+  private final Map<Schema.Type, Set<Schema.Type>> conversionCache;
 
   private SchemaStateMachineNode startNode;
 }
