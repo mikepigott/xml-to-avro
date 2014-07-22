@@ -42,7 +42,7 @@ import org.junit.Test;
  * file as an XML document and confirms the correct events
  * are triggered.
  *
- * @author  Mike Pigott
+ * @author Mike Pigott
  */
 public class TestSaxWalkerOverDom {
 

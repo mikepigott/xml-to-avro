@@ -34,130 +34,251 @@ import org.apache.ws.commons.schema.XmlSchemaSequence;
 final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
   /**
-   * 
+   *  Creates a <code>SchemaStateMachineGenerator</code> with the
+   *  Avro {@link Schema} we will be converting XML documents to.
    */
-  public SchemaStateMachineGenerator(Schema avroSchema) {
+  SchemaStateMachineGenerator(Schema avroSchema) {
+    this.avroSchema = avroSchema;
   }
 
-  /* (non-Javadoc)
+  /**
+   * Processes an {@link XmlSchemaElement} in the XML Schema.
+   *
+   * <ol>
+   *   <li>
+   *     Confirms the {@link XmlSchemaElement} matches an Avro
+   *     record at the same place in the Avro {@link Schema}.
+   *     If not, this element is ignored.
+   *   </li>
+   *   <li>
+   *     Confirms the {@link XmlSchemaTypeInfo} of the element is consistent
+   *     with what is expected from the {@link Schema} record.  If not, throws
+   *     an {@link IllegalStateException}.
+   *   </li>
+   * </ol>
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo, boolean)
    */
   @Override
-  public void onEnterElement(XmlSchemaElement element,
-      XmlSchemaTypeInfo typeInfo, boolean previouslyVisited) {
-    // TODO Auto-generated method stub
+  public void onEnterElement(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo typeInfo,
+      boolean previouslyVisited) {
 
   }
 
-  /* (non-Javadoc)
+  /**
+   * Finishes processing the {@link XmlSchemaElement} in the XML Schema.
+   *
+   * <ol>
+   *   <li>
+   *     If this {@link XmlSchemaElement} is not ignored, checks if a
+   *     {@link SchemaStateMachineNode} was previously created to represent it.
+   *   </li>
+   *   <li>
+   *     If a {@link SchemaStateMachineNode} does not represent this
+   *     {@link XmlSchemaElement}, creates a new one representing it
+   *     and its {@link XmlSchemaAttribute}s.
+   *   </li>
+   *   <li>
+   *     Adds the {@link SchemaStateMachineNode} to the list of possible
+   *     future states of the previous {@link SchemaStateMachineNode}.
+   *   </li>
+   * </ol>
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onExitElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo, boolean)
    */
   @Override
-  public void onExitElement(XmlSchemaElement element,
-      XmlSchemaTypeInfo typeInfo, boolean previouslyVisited) {
-    // TODO Auto-generated method stub
+  public void onExitElement(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo typeInfo,
+      boolean previouslyVisited) {
 
   }
 
-  /* (non-Javadoc)
+  /**
+   * Processes the incoming {@link XmlSchemaAttribute}.
+   *
+   * <ol>
+   *   <li>
+   *     If the {@link XmlSchemaElement} is not skipped, confirms the
+   *     {@link XmlSchemaTypeInfo} of the {@link XmlSchemaAttribute}
+   *     is compatible with the Avro schema for the corresponding record.
+   *     If the types are not compatible, throws an
+   *     {@link IllegalStateException}.
+   *   </li>
+   *   <li>
+   *     Links the attribute to its owning element.
+   *   </li>
+   * </ol>
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAttribute(org.apache.ws.commons.schema.XmlSchemaElement, org.apache.ws.commons.schema.XmlSchemaAttribute, mpigott.avro.xml.XmlSchemaTypeInfo)
    */
   @Override
-  public void onVisitAttribute(XmlSchemaElement element,
-      XmlSchemaAttribute attribute, XmlSchemaTypeInfo attributeType) {
-    // TODO Auto-generated method stub
+  public void onVisitAttribute(
+      XmlSchemaElement element,
+      XmlSchemaAttribute attribute,
+      XmlSchemaTypeInfo attributeType) {
 
   }
 
-  /* (non-Javadoc)
+  /**
+   * Processes the substitution group.
+   *
+   * <ol>
+   *   <li>
+   *     Confirms a substitution group is consistent with
+   *     the current position in the Avro {@link Schema}.
+   *   </li>
+   *   <li>
+   *     Creates a {@link SchemaStateMachineNode}
+   *     representing the substitution group.
+   *   </li>
+   *   <li>
+   *     Adds the <code>SchemaStateMachineNode</code> to the
+   *     set of possible next states for the previous state.
+   *   </li>
+   * </ol>
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterSubstitutionGroup(org.apache.ws.commons.schema.XmlSchemaElement)
    */
   @Override
   public void onEnterSubstitutionGroup(XmlSchemaElement base) {
-    // TODO Auto-generated method stub
 
   }
 
-  /* (non-Javadoc)
+  /**
+   * Completes processing the substitution group.
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onExitSubstitutionGroup(org.apache.ws.commons.schema.XmlSchemaElement)
    */
   @Override
   public void onExitSubstitutionGroup(XmlSchemaElement base) {
-    // TODO Auto-generated method stub
 
   }
 
-  /* (non-Javadoc)
+  /**
+   * Processes an All group.
+   *
+   * <ol>
+   *   <li>
+   *     Confirms an All group is consistent with the
+   *     current position in the Avro {@link Schema}.
+   *   </li>
+   *   <li>
+   *     Creates a {@link SchemaStateMachineNode}
+   *     representing the All group.
+   *   </li>
+   *   <li>
+   *     Adds the <code>SchemaStateMachineNode</code> to the
+   *     set of possible next states for the previous state.
+   *   </li>
+   * </ol>
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterAllGroup(org.apache.ws.commons.schema.XmlSchemaAll)
    */
   @Override
   public void onEnterAllGroup(XmlSchemaAll all) {
-    // TODO Auto-generated method stub
-
   }
 
-  /* (non-Javadoc)
+  /**
+   * Completes processing the All group.
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onExitAllGroup(org.apache.ws.commons.schema.XmlSchemaAll)
    */
   @Override
   public void onExitAllGroup(XmlSchemaAll all) {
-    // TODO Auto-generated method stub
-
   }
 
-  /* (non-Javadoc)
+  /**
+   * Processes a Choice group.
+   *
+   * <ol>
+   *   <li>
+   *     Confirms a Choice group is consistent with the
+   *     current position in the Avro {@link Schema}.
+   *   </li>
+   *   <li>
+   *     Creates a {@link SchemaStateMachineNode}
+   *     representing the Choice group.
+   *   </li>
+   *   <li>
+   *     Adds the <code>SchemaStateMachineNode</code> to the
+   *     set of possible next states for the previous state.
+   *   </li>
+   * </ol>
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterChoiceGroup(org.apache.ws.commons.schema.XmlSchemaChoice)
    */
   @Override
   public void onEnterChoiceGroup(XmlSchemaChoice choice) {
-    // TODO Auto-generated method stub
-
   }
 
-  /* (non-Javadoc)
+  /**
+   * Finishes processing the Choice group.
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onExitChoiceGroup(org.apache.ws.commons.schema.XmlSchemaChoice)
    */
   @Override
   public void onExitChoiceGroup(XmlSchemaChoice choice) {
-    // TODO Auto-generated method stub
-
   }
 
-  /* (non-Javadoc)
+  /**
+   * Processes a Sequence group. 
+   *
+   * <ol>
+   *   <li>
+   *     Confirms a Sequence group is consistent with
+   *     the current position in the Avro {@link Schema}.
+   *   </li>
+   *   <li>
+   *     Creates a {@link SchemaStateMachineNode}
+   *     representing the Sequence group.
+   *   </li>
+   *   <li>
+   *     Adds the <code>SchemaStateMachineNode</code> to the
+   *     set of possible next states for the previous state.
+   *   </li>
+   * </ol>
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterSequenceGroup(org.apache.ws.commons.schema.XmlSchemaSequence)
    */
   @Override
   public void onEnterSequenceGroup(XmlSchemaSequence seq) {
-    // TODO Auto-generated method stub
-
   }
 
-  /* (non-Javadoc)
+  /**
+   * Finishes processing the Sequence group.
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onExitSequenceGroup(org.apache.ws.commons.schema.XmlSchemaSequence)
    */
   @Override
   public void onExitSequenceGroup(XmlSchemaSequence seq) {
-    // TODO Auto-generated method stub
-
   }
 
-  /* (non-Javadoc)
+  /**
+   * {@link XmlSchemaAny} nodes are skipped in the Avro {@link Schema},
+   * but they must be part of the state machine.  Creates a
+   * {@link SchemaStateMachineNode} to represent it, and adds it as
+   * a possible future state of the previous node.
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAny(org.apache.ws.commons.schema.XmlSchemaAny)
    */
   @Override
   public void onVisitAny(XmlSchemaAny any) {
-    // TODO Auto-generated method stub
-
   }
 
-  /* (non-Javadoc)
+  /**
+   * {@link XmlSchemaAnyAttribute}s are not part of
+   * the Avro {@link Schema} and thus are ignored.
+   *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAnyAttribute(org.apache.ws.commons.schema.XmlSchemaElement, org.apache.ws.commons.schema.XmlSchemaAnyAttribute)
    */
   @Override
-  public void onVisitAnyAttribute(XmlSchemaElement element,
+  public void onVisitAnyAttribute(
+      XmlSchemaElement element,
       XmlSchemaAnyAttribute anyAttr) {
-    // TODO Auto-generated method stub
-
   }
 
+  private final Schema avroSchema;
 }

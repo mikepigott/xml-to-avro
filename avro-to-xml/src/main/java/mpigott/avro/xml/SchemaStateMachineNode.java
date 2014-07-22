@@ -16,6 +16,7 @@
 
 package mpigott.avro.xml;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
@@ -36,7 +37,7 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
  *   <li>An all group</li>
  *   <li>A choice group</li>
  *   <li>A sequence group</li>
- *   <li>
+ *   <li>An &lt;any&gt; node.</li>
  * </ul>
  * As a {@link org.w3c.dom.Document} is traversed, the state machine is used
  * to determine how to process the current element.  Two passes will be needed:
@@ -54,15 +55,34 @@ final class SchemaStateMachineNode {
     SUBSTITUTION_GROUP,
     ALL,
     CHOICE,
-    SEQUENCE
+    SEQUENCE,
+    ANY
+  }
+
+  static class Attribute {
+    Attribute(XmlSchemaAttribute attribute, XmlSchemaTypeInfo attrType) {
+      this.attribute = attribute;
+      this.attrType = attrType;
+    }
+
+    XmlSchemaAttribute getAttribute() {
+      return attribute;
+    }
+
+    XmlSchemaTypeInfo getType() {
+      return attrType;
+    }
+
+    private final XmlSchemaAttribute attribute;
+    private final XmlSchemaTypeInfo attrType;
   }
 
   /**
    * Constructs a new <code>SchemaStateMachineNode</code> for a group.
    *
-   * @param nodeType The type of the group node ({@link Type#SUBSTITUTION_GROUP},
-   *                 {@link Type#ALL}, {@link Type#CHOICE}, or
-   *                 {@link Type#SEQUENCE}).
+   * @param nodeType The type of the group node ({@link Type#ALL},
+   *                 {@link Type#SUBSTITUTION_GROUP}, {@link Type#CHOICE},
+   *                 {@link Type#SEQUENCE}, or {@link Type#ANY}).
    *
    * @param minOccurs The minimum number of occurrences of this group.
    * @param maxOccurs The maximum number of occurrences of this group.
@@ -70,7 +90,7 @@ final class SchemaStateMachineNode {
    * @throws IllegalArgumentException if this constructor is used to
    *                                  define an {@link Type#ELEMENT}.
    */
-  public SchemaStateMachineNode(Type nodeType, long minOccurs, long maxOccurs) {
+  SchemaStateMachineNode(Type nodeType, long minOccurs, long maxOccurs) {
     if (nodeType.equals(Type.ELEMENT)) {
       throw new IllegalArgumentException("This constructor cannot be used for elements.");
     }
@@ -82,6 +102,8 @@ final class SchemaStateMachineNode {
     this.element = null;
     this.attributes = null;
     this.typeInfo = null;
+
+    this.possibleNextStates = new ArrayList<SchemaStateMachineNode>();
   }
 
   /**
@@ -95,9 +117,9 @@ final class SchemaStateMachineNode {
    * @param typeInfo The type information, if the element has simple content.
    *                 <code>null</code> if not.
    */
-  public SchemaStateMachineNode(
+  SchemaStateMachineNode(
       XmlSchemaElement elem,
-      List<XmlSchemaAttribute> attrs,
+      List<Attribute> attrs,
       XmlSchemaTypeInfo typeInfo)
   {
     this.nodeType = Type.ELEMENT;
@@ -106,14 +128,99 @@ final class SchemaStateMachineNode {
     this.typeInfo = typeInfo;
     this.minOccurs = elem.getMinOccurs();
     this.maxOccurs = elem.getMaxOccurs();
+
+    this.possibleNextStates = new ArrayList<SchemaStateMachineNode>();
   }
 
-  private Type nodeType;
-  private XmlSchemaElement element;
-  private List<XmlSchemaAttribute> attributes;
-  private XmlSchemaTypeInfo typeInfo;
-  private long minOccurs;
-  private long maxOccurs;
+  /**
+   * The XML Schema node {@link Type} this
+   * <code>SchemaStateMachineNode</code> represents.
+   */
+  Type getNodeType() {
+    return nodeType;
+  }
 
-  private List<SchemaStateMachineNode> nextPossibleStates;
+  /**
+   * If this <code>SchemaStateMachineNode</code> represents an
+   * {@link XmlSchemaElement}, the <code>XmlSchemaElement</code>
+   * it represents.
+   */
+  XmlSchemaElement getElement() {
+    return element;
+  }
+
+  /**
+   * If this <code>SchemaStateMachineNode</code> represents an
+   * {@link XmlSchemaElement}, the {@link XmlSchemaTypeInfo}
+   * of the element it represents.
+   */
+  XmlSchemaTypeInfo getElementType() {
+    return typeInfo;
+  }
+
+  /**
+   * If this <code>SchemaStateMachineNode</code> represents an
+   * {@link XmlSchemaElement}, the set of {@link Attribute}s
+   * associated with the element it represents.
+   */
+  List<Attribute> getAttributes() {
+    return attributes;
+  }
+
+  /**
+   * The minimum number of times this <code>SchemaStateMachineNode</code>
+   * may appear in succession.
+   */
+  long getMinOccurs() {
+    return minOccurs;
+  }
+
+  /**
+   * The maximum number of times this <code>SchemaStateMachineNode</code>
+   * may appear in succession.
+   */
+  long getMaxOccurs() {
+    return maxOccurs;
+  }
+
+  /**
+   * Adds a state that could follow this <code>SchemaStateMachineNode</code>.
+   *
+   * @param next A node that could follow this one in the XML document.
+   * @return Itself, for chaining.
+   */
+  SchemaStateMachineNode addPossibleNextState(SchemaStateMachineNode next) {
+    possibleNextStates.add(next);
+    return this;
+  }
+
+  /**
+   * Adds the set of possible states that could follow
+   * this <code>SchemaStateMachineNode</code>.
+   *
+   * @param nextStates The set of possible nodes that could
+   *                   follow this one in the XML document.
+   *
+   * @return Itself, for chaining.
+   */
+  SchemaStateMachineNode addPossibleNextStates(java.util.Collection<SchemaStateMachineNode> nextStates) {
+    possibleNextStates.addAll(nextStates);
+    return this;
+  }
+
+  /**
+   * All of the known possible states that could follow this one.
+   */
+  List<SchemaStateMachineNode> getPossibleNextStates() {
+    return possibleNextStates;
+  }
+
+  private final Type nodeType;
+  private final XmlSchemaElement element;
+  private final List<Attribute> attributes;
+  private final XmlSchemaTypeInfo typeInfo;
+  private final long minOccurs;
+  private final long maxOccurs;
+
+  private List<SchemaStateMachineNode> possibleNextStates;
 }
