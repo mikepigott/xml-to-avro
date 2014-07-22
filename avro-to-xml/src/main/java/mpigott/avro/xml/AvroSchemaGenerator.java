@@ -242,10 +242,11 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
               "Simple type " + typeInfo.getAvroType(),
               null);
       fields.add(field);
-    }
 
-    if ( fields.isEmpty() ) {
-      // This element is nillable and only needed to exist.
+    } else if (((children == null) || children.isEmpty())
+               && ((typeInfo == null) || (typeInfo.getAvroType() == null))) {
+
+      // This element has no children.  Set a null placeholder.
       final Schema.Field field =
           new Schema.Field(
               entry.elementQName.getLocalPart(),

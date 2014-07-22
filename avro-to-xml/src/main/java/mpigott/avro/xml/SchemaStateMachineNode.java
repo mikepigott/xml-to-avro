@@ -266,7 +266,9 @@ final class SchemaStateMachineNode {
    *
    * @return Itself, for chaining.
    */
-  SchemaStateMachineNode addPossibleNextStates(java.util.Collection<SchemaStateMachineNode> nextStates) {
+  SchemaStateMachineNode addPossibleNextStates(
+      java.util.Collection<SchemaStateMachineNode> nextStates) {
+
     possibleNextStates.addAll(nextStates);
     return this;
   }
