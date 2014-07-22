@@ -221,6 +221,22 @@ final class SchemaStateMachineNode {
   }
 
   /**
+   * Returns the {@link XmlSchemaAny} associated
+   * with this node, or <code>null</code if none.
+   */
+  XmlSchemaAny getAny() {
+    return any;
+  }
+
+  /**
+   * Returns the Avro {@link Schema} associated with this node.
+   * This will only be <code>null</code> if the type is {@link Type#ANY}.
+   */
+  public Schema getAvroSchema() {
+    return avroSchema;
+  }
+
+  /**
    * Adds a state that could follow this <code>SchemaStateMachineNode</code>.
    *
    * @param next A node that could follow this one in the XML document.
