@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import mpigott.avro.xml.SchemaStateMachineNode.Type;
+
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
@@ -46,14 +48,14 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     StackEntry(boolean isIgnored) {
       this.isIgnored = isIgnored;
       this.node = null;
-      this.validNextElements = null;
+      this.unionOfChildrenTypes = null;
       this.nextNodes = new ArrayList<SchemaStateMachineNode>();
     }
 
     StackEntry(SchemaStateMachineNode node, boolean isIgnored) {
       this.isIgnored = isIgnored;
       this.node = node;
-      this.validNextElements = null;
+      this.unionOfChildrenTypes = null;
       this.nextNodes = null;
     }
 
@@ -61,7 +63,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     final boolean isIgnored;
     final List<SchemaStateMachineNode> nextNodes;
 
-    List<Schema> validNextElements;
+    Schema unionOfChildrenTypes;
   }
 
   private static class ElementInfo {
@@ -116,14 +118,13 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     this.xmlIsWritten = xmlIsWritten;
 
     startNode = null;
+    validNextElements = null;
     conversionCache = new HashMap<Schema.Type, Set<Schema.Type>>();
 
     elements =
       new HashMap<XmlSchemaElement, ElementInfo>();
 
     stack = new ArrayList<StackEntry>();
-
-    validNextElements = new ArrayList<Schema>();
 
     if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
       // ARRAY of UNION of RECORDs/MAPs is not valid when writing XML.
@@ -144,7 +145,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       // Confirm all of the elements in the UNION are either RECORDs or MAPs.
       verifyIsUnionOfMapsAndRecords( avroSchema.getElementType() );
 
-      validNextElements.addAll( avroSchema.getElementType().getTypes() );
+      validNextElements = avroSchema.getElementType().getTypes();
 
     } else if ( avroSchema.getType().equals(Schema.Type.UNION) ) {
       /* It is possible for the root element to actually be the root of a
@@ -155,11 +156,12 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
        */
       verifyIsUnionOfMapsAndRecords(avroSchema);
 
-      validNextElements.addAll( avroSchema.getTypes() );
+      validNextElements = avroSchema.getTypes();
 
     } else if ( avroSchema.getType().equals(Schema.Type.RECORD)
         || avroSchema.getType().equals(Schema.Type.MAP) ) {
       // This is a definition of the root element.
+      validNextElements = new ArrayList<Schema>(1);
       validNextElements.add(avroSchema);
 
     } else {
@@ -192,36 +194,38 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       boolean previouslyVisited) {
 
     Schema elemSchema = null;
-    for (Schema possibleSchema : validNextElements) {
-      Schema valueType = possibleSchema;
-      if ( possibleSchema.getType().equals(Schema.Type.MAP) ) {
-        valueType = possibleSchema.getValueType();
-      }
-
-      if (!valueType.getType().equals(Schema.Type.RECORD)) {
-        // The map must have a value type of record, or it is invalid.
-        throw new IllegalStateException("MAPs in Avro Schemas for XML documents must have a value type of RECORD, not " + valueType.getType());
-      }
-
-      if (valueType.getName().equals( element.getName() )) {
-        // Confirm the namespaces match.
-        String ns = element.getQName().getNamespaceURI();
-        if ((ns != null) && !ns.isEmpty()) {
-          try {
-            if (!Utils.getAvroNamespaceFor(ns).equals(
-                  valueType.getNamespace()))
-            {
-              // Namespaces do not mach. Try the next schema.
-              continue;
-            }
-          } catch (URISyntaxException e) {
-            throw new IllegalStateException("Element \"" + element.getQName() + "\" has a namespace that is not a valid URI", e);
-          }
+    if (validNextElements != null) {
+      for (Schema possibleSchema : validNextElements) {
+        Schema valueType = possibleSchema;
+        if ( possibleSchema.getType().equals(Schema.Type.MAP) ) {
+          valueType = possibleSchema.getValueType();
         }
-
-        // We found the schema!
-        elemSchema = possibleSchema;
-        break;
+  
+        if (!valueType.getType().equals(Schema.Type.RECORD)) {
+          // The map must have a value type of record, or it is invalid.
+          throw new IllegalStateException("MAPs in Avro Schemas for XML documents must have a value type of RECORD, not " + valueType.getType());
+        }
+  
+        if (valueType.getName().equals( element.getName() )) {
+          // Confirm the namespaces match.
+          String ns = element.getQName().getNamespaceURI();
+          if ((ns != null) && !ns.isEmpty()) {
+            try {
+              if (!Utils.getAvroNamespaceFor(ns).equals(
+                    valueType.getNamespace()))
+              {
+                // Namespaces do not mach. Try the next schema.
+                continue;
+              }
+            } catch (URISyntaxException e) {
+              throw new IllegalStateException("Element \"" + element.getQName() + "\" has a namespace that is not a valid URI", e);
+            }
+          }
+  
+          // We found the schema!
+          elemSchema = possibleSchema;
+          break;
+        }
       }
     }
 
@@ -268,7 +272,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
             verifyIsUnionOfMapsAndRecords( childrenSchema.getElementType() );
 
-            entry.validNextElements = childrenSchema.getElementType().getTypes();
+            entry.unionOfChildrenTypes = childrenSchema.getElementType();
           }
           break;
         case BOOLEAN:
@@ -296,18 +300,19 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     elements.put(element, new ElementInfo(elemSchema));
 
-    validNextElements.clear();
-
-    if (entry.validNextElements == null) {
+    if (entry.unionOfChildrenTypes == null) {
       /* If the root schema is an ARRAY of UNION, then the next valid
        * element will be one of its entries.  Otherwise, there are no
        * next valid entries.
        */
       if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
-        validNextElements.addAll( avroSchema.getElementType().getTypes() );
+        validNextElements = avroSchema.getElementType().getTypes();
+      } else {
+        validNextElements = null;
       }
+
     } else {
-      validNextElements.addAll(entry.validNextElements);
+      validNextElements = entry.unionOfChildrenTypes.getTypes();
     }
 
     stack.add(entry);
@@ -377,6 +382,8 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       }
 
       parent.node.addPossibleNextState(node);
+
+      validNextElements = parent.unionOfChildrenTypes.getTypes();
     }
   }
 
@@ -466,7 +473,9 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onEnterSubstitutionGroup(XmlSchemaElement base) {
-
+    if ((validNextElements == null) || validNextElements.isEmpty()) {
+      throw new IllegalStateException("About to enter a substitution group for " + base.getQName() + ", but there are no valid elements to expect.");
+    }
   }
 
   /**
@@ -475,9 +484,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    * @see mpigott.avro.xml.XmlSchemaVisitor#onExitSubstitutionGroup(org.apache.ws.commons.schema.XmlSchemaElement)
    */
   @Override
-  public void onExitSubstitutionGroup(XmlSchemaElement base) {
-
-  }
+  public void onExitSubstitutionGroup(XmlSchemaElement base) { }
 
   /**
    * Processes an All group.
@@ -501,6 +508,10 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onEnterAllGroup(XmlSchemaAll all) {
+    pushGroup(
+        SchemaStateMachineNode.Type.ALL,
+        all.getMinOccurs(),
+        all.getMaxOccurs());
   }
 
   /**
@@ -510,6 +521,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onExitAllGroup(XmlSchemaAll all) {
+    popGroup(SchemaStateMachineNode.Type.ALL);
   }
 
   /**
@@ -534,6 +546,10 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onEnterChoiceGroup(XmlSchemaChoice choice) {
+    pushGroup(
+        SchemaStateMachineNode.Type.CHOICE,
+        choice.getMinOccurs(),
+        choice.getMaxOccurs());
   }
 
   /**
@@ -543,6 +559,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onExitChoiceGroup(XmlSchemaChoice choice) {
+    popGroup(SchemaStateMachineNode.Type.CHOICE);
   }
 
   /**
@@ -567,6 +584,10 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onEnterSequenceGroup(XmlSchemaSequence seq) {
+    pushGroup(
+        SchemaStateMachineNode.Type.SEQUENCE,
+        seq.getMinOccurs(),
+        seq.getMaxOccurs());
   }
 
   /**
@@ -576,6 +597,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onExitSequenceGroup(XmlSchemaSequence seq) {
+    popGroup(SchemaStateMachineNode.Type.SEQUENCE);
   }
 
   /**
@@ -588,6 +610,19 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onVisitAny(XmlSchemaAny any) {
+    if ( stack.isEmpty() ) {
+      throw new IllegalStateException("Reached an wildcard with no parent!  The stack is empty.");
+    }
+
+    final SchemaStateMachineNode node = new SchemaStateMachineNode(any);
+
+    final StackEntry entry = stack.get(stack.size() - 1);
+
+    if (entry.node == null) {
+      throw new IllegalStateException("Reached a wildcard with an element for a parent!");
+    }
+
+    entry.node.addPossibleNextState(node);
   }
 
   /**
@@ -733,13 +768,64 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     return false;
   }
 
+  private void pushGroup(SchemaStateMachineNode.Type groupType, long minOccurs, long maxOccurs) {
+    if ( stack.isEmpty() ) {
+      throw new IllegalStateException("Attempted to create a(n) " + groupType + " group with no parent - the stack is empty!");
+    }
+
+    final StackEntry parent = stack.get(stack.size() - 1);
+    final SchemaStateMachineNode node =
+        new SchemaStateMachineNode(
+            groupType,
+            parent.unionOfChildrenTypes,
+            minOccurs,
+            maxOccurs);
+
+    if (parent.node != null) {
+      // Parent is another group.
+      parent.node.addPossibleNextState(node);
+    } else {
+      // Parent is an element.
+      parent.nextNodes.add(node);
+    }
+  }
+
+  private void popGroup(SchemaStateMachineNode.Type groupType) {
+    if ( stack.isEmpty() ) {
+      throw new IllegalStateException("Exiting an " + groupType + " group, but the stack is empty!");
+    }
+
+    final StackEntry entry = stack.get(stack.size() - 1);
+
+    if (entry.node == null) {
+      throw new IllegalStateException("Exiting a(n) " + groupType + " group, but an element was on the stack instead!");
+
+    } else if (!entry.node.getNodeType().equals(groupType)) {
+      throw new IllegalStateException("Exiting a(n) " + groupType + " group, but found a " + entry.node.getNodeType() + " on the stack instead!");
+    }
+
+    stack.remove(stack.size() - 1);
+
+    if ( stack.isEmpty() ) {
+      throw new IllegalStateException(groupType + " group had no parent!  The stack is empty after removing it.");
+    }
+
+    final StackEntry parent = stack.get(stack.size() - 1);
+
+    if (parent.unionOfChildrenTypes == null) {
+      validNextElements = null;
+    } else {
+      validNextElements = parent.unionOfChildrenTypes.getTypes();
+    }
+  }
+
   private final Schema avroSchema;
   private final boolean xmlIsWritten;
 
-  private final List<Schema> validNextElements;
   private final Map<XmlSchemaElement, ElementInfo> elements;
   private final List<StackEntry> stack;
   private final Map<Schema.Type, Set<Schema.Type>> conversionCache;
 
+  private List<Schema> validNextElements;
   private SchemaStateMachineNode startNode;
 }

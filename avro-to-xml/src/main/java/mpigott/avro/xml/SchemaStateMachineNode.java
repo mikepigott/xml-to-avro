@@ -35,7 +35,6 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
  * A <code>SchemaStateMachineNode</code> represents one of:
  * <ul>
  *   <li>An element, its type, and its attributes</li>
- *   <li>A substitution group</li>
  *   <li>An all group</li>
  *   <li>A choice group</li>
  *   <li>A sequence group</li>
@@ -54,7 +53,6 @@ final class SchemaStateMachineNode {
 
   enum Type {
     ELEMENT,
-    SUBSTITUTION_GROUP,
     ALL,
     CHOICE,
     SEQUENCE,
