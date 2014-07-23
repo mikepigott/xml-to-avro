@@ -516,6 +516,37 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     if ((validNextElements == null) || validNextElements.isEmpty()) {
       throw new IllegalStateException("About to enter a substitution group for " + base.getQName() + ", but there are no valid elements to expect.");
     }
+
+    if ( !stack.isEmpty() ) {
+      pushGroup(SchemaStateMachineNode.Type.SUBSTITUTION_GROUP, 1, 1);
+
+    } else {
+      // The root element is part of a substitution group.
+      Schema schema = avroSchema;
+      if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
+        /* The schema is an ARRAY of UNION of RECORDs/MAPs, acting as
+         * a filter on the XML document nodes to fetch.  Likewise, the
+         * valid RECORDs and MAPs to work with are the union of types.
+         */
+        schema = avroSchema.getElementType();
+      }
+
+      if ( schema.getType().equals(Schema.Type.UNION) ) {
+        startNode =
+            new SchemaStateMachineNode(
+                SchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
+                schema,
+                1,
+                1);
+
+        final StackEntry entry = new StackEntry(startNode, true);
+        entry.unionOfChildrenTypes = schema;
+        stack.add(entry);
+
+      } else {
+        throw new IllegalStateException("The document starts with a substitution group, but the Schema root is of type " + schema.getType() + ", not UNION.");
+      }
+    }
   }
 
   /**
@@ -524,7 +555,9 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    * @see mpigott.avro.xml.XmlSchemaVisitor#onExitSubstitutionGroup(org.apache.ws.commons.schema.XmlSchemaElement)
    */
   @Override
-  public void onExitSubstitutionGroup(XmlSchemaElement base) { }
+  public void onExitSubstitutionGroup(XmlSchemaElement base) {
+    popGroup(SchemaStateMachineNode.Type.SUBSTITUTION_GROUP);
+  }
 
   /**
    * Processes an All group.
@@ -887,17 +920,19 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     stack.remove(stack.size() - 1);
 
-    if ( stack.isEmpty() ) {
+    if ( !stack.isEmpty() ) {
+      final StackEntry parent = stack.get(stack.size() - 1);
+
+      if (parent.unionOfChildrenTypes == null) {
+        validNextElements = null;
+      } else {
+        validNextElements = parent.unionOfChildrenTypes.getTypes();
+      }
+    } else if (!groupType.equals(
+                  SchemaStateMachineNode.Type.SUBSTITUTION_GROUP) ) {
       throw new IllegalStateException(groupType + " group had no parent!  The stack is empty after removing it.");
     }
 
-    final StackEntry parent = stack.get(stack.size() - 1);
-
-    if (parent.unionOfChildrenTypes == null) {
-      validNextElements = null;
-    } else {
-      validNextElements = parent.unionOfChildrenTypes.getTypes();
-    }
   }
 
   private final Schema avroSchema;

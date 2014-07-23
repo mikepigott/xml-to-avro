@@ -46,7 +46,7 @@ public class TestSchemaStateMachineGenerator {
       }
     }
 
-    XmlSchemaElement elem = getElementOf(collection, "root");
+    XmlSchemaElement elem = getElementOf(collection, "record");
     XmlSchemaWalker walker = new XmlSchemaWalker(collection, visitor);
     walker.walk(elem);
 

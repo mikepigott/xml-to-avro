@@ -53,6 +53,7 @@ final class SchemaStateMachineNode {
 
   enum Type {
     ELEMENT,
+    SUBSTITUTION_GROUP,
     ALL,
     CHOICE,
     SEQUENCE,

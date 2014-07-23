@@ -164,7 +164,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       }
       substitutionSchemas.add(record);
 
-    } else if (root == null) {
+    } else if ( stack.isEmpty() ) {
       // This is the root element!
       root = record;
 
@@ -361,12 +361,19 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       return;
     }
 
-    StackEntry parent = getParentElement();
-    List<Schema> siblings = fieldsByElement.get(parent.elementQName);
-    if (siblings == null) {
-      siblings = new ArrayList<Schema>( substitutes.size() );
+    if ( stack.isEmpty() ) {
+      // The root node in the stack is part of a substitution group.
+      root = Schema.createUnion(substitutes);
+
+    } else {
+      // The substitution group is part of a higher group.
+      StackEntry parent = getParentElement();
+      List<Schema> siblings = fieldsByElement.get(parent.elementQName);
+      if (siblings == null) {
+        siblings = new ArrayList<Schema>( substitutes.size() );
+      }
+      siblings.addAll(substitutes);
     }
-    siblings.addAll(substitutes);
   }
 
   /**
