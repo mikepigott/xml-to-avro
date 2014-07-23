@@ -307,9 +307,13 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       /* If the root schema is an ARRAY of UNION, then the next valid
        * element will be one of its entries.  Otherwise, there are no
        * next valid entries.
+       *
+       * We want to push that on the stack for when we exit children
+       * of the current element.
        */
       if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
         validNextElements = avroSchema.getElementType().getTypes();
+        entry.unionOfChildrenTypes = avroSchema.getElementType();
       } else {
         validNextElements = null;
       }
