@@ -457,10 +457,8 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     if (attrField != null) {
       Schema attrType = attrField.schema();
 
-      if ( attribute.getUse().equals(XmlSchemaUse.OPTIONAL) ) {
-        if ( !attrType.getType().equals(Schema.Type.UNION) ) {
-          throw new IllegalStateException("Attribute " + attribute.getQName() + " for element " + element.getQName() + " is marked \"OPTIONAL\" but the schema is of type " + attrType.getType());
-        }
+      if ( attribute.getUse().equals(XmlSchemaUse.OPTIONAL) 
+          && attrType.getType().equals(Schema.Type.UNION) ) {
 
         /* The XML Schema Attribute may have already been a union, so we
          * need to walk all of the subtypes and pull out the non-NULL ones.
@@ -481,8 +479,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
         }
       }
 
-      if (!attrType.getType().equals(Schema.Type.UNION)
-          && !confirmEquivalent(attributeType, attrType)) {
+      if (!confirmEquivalent(attributeType, attrType)) {
         throw new IllegalStateException("Cannot convert element " + element.getQName() + " attribute " + attribute.getQName() + " types between " + attributeType + " and " + attrField.schema());
       }
 
