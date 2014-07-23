@@ -35,6 +35,7 @@ import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.XmlSchemaParticle;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
 import org.apache.ws.commons.schema.XmlSchemaUse;
 
@@ -518,7 +519,10 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     }
 
     if ( !stack.isEmpty() ) {
-      pushGroup(SchemaStateMachineNode.Type.SUBSTITUTION_GROUP, 1, 1);
+      pushGroup(
+          SchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
+          XmlSchemaParticle.DEFAULT_MIN_OCCURS,
+          XmlSchemaParticle.DEFAULT_MAX_OCCURS);
 
     } else {
       // The root element is part of a substitution group.
@@ -536,8 +540,8 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
             new SchemaStateMachineNode(
                 SchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
                 schema,
-                1,
-                1);
+                XmlSchemaParticle.DEFAULT_MIN_OCCURS,
+                XmlSchemaParticle.DEFAULT_MAX_OCCURS);
 
         final StackEntry entry = new StackEntry(startNode, true);
         entry.unionOfChildrenTypes = schema;
