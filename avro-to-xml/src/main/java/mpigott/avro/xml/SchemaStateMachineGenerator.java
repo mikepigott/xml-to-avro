@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.xml.namespace.QName;
+
 import mpigott.avro.xml.SchemaStateMachineNode.Type;
 
 import org.apache.avro.Schema;
@@ -122,7 +124,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     conversionCache = new HashMap<Schema.Type, Set<Schema.Type>>();
 
     elements =
-      new HashMap<XmlSchemaElement, ElementInfo>();
+      new HashMap<QName, ElementInfo>();
 
     stack = new ArrayList<StackEntry>();
 
@@ -167,6 +169,10 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     } else {
       throw new IllegalArgumentException("The Avro Schema must be one of the following types: RECORD, MAP, UNION of RECORDs/MAPs, or ARRAY of UNION of RECORDs/MAPs.");
     }
+  }
+
+  SchemaStateMachineNode getStartNode() {
+    return startNode;
   }
 
   /**
@@ -235,11 +241,11 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     final StackEntry entry = new StackEntry(elemSchema == null);
 
-    if (elemSchema != null) {
-      if (!previouslyVisited) {
-        elements.put(element, new ElementInfo(elemSchema));
-      }
+    if (!previouslyVisited) {
+      elements.put(element.getQName(), new ElementInfo(elemSchema));
+    }
 
+    if (elemSchema != null) {
       /* Child elements are in a field under the same name as the element.
        *
        * In the Avro schema, they may be NULL (no children), a
@@ -298,8 +304,6 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       }
     }
 
-    elements.put(element, new ElementInfo(elemSchema));
-
     if (entry.unionOfChildrenTypes == null) {
       /* If the root schema is an ARRAY of UNION, then the next valid
        * element will be one of its entries.  Otherwise, there are no
@@ -351,13 +355,17 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     StackEntry entry = stack.get(stack.size() - 1);
 
-    if (entry.node == null) {
+    if (entry.node != null) {
       throw new IllegalStateException("Exiting element " + element.getQName() + " but found a " + entry.node.getNodeType() + " on the stack.");
     }
 
     stack.remove(stack.size() - 1);
 
-    final ElementInfo elemInfo = elements.get(element);
+    final ElementInfo elemInfo = elements.get( element.getQName() );
+
+    if (elemInfo == null) {
+      System.err.println("Did not create an entry for " + element.getQName());
+    }
 
     final SchemaStateMachineNode node =
         new SchemaStateMachineNode(
@@ -383,7 +391,11 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
       parent.node.addPossibleNextState(node);
 
-      validNextElements = parent.unionOfChildrenTypes.getTypes();
+      if (parent.unionOfChildrenTypes == null) {
+        validNextElements = null;
+      } else {
+        validNextElements = parent.unionOfChildrenTypes.getTypes();
+      }
     }
   }
 
@@ -426,7 +438,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       return;
     }
 
-    final ElementInfo elemInfo = elements.get(element);
+    final ElementInfo elemInfo = elements.get( element.getQName() );
 
     Schema valueType = elemInfo.elementSchema;
     if ( valueType.getType().equals(Schema.Type.MAP) ) {
@@ -443,7 +455,34 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     }
 
     if (attrField != null) {
-      if ( !confirmEquivalent(attributeType, attrField.schema()) ) {
+      Schema attrType = attrField.schema();
+
+      if ( attribute.getUse().equals(XmlSchemaUse.OPTIONAL) ) {
+        if ( !attrType.getType().equals(Schema.Type.UNION) ) {
+          throw new IllegalStateException("Attribute " + attribute.getQName() + " for element " + element.getQName() + " is marked \"OPTIONAL\" but the schema is of type " + attrType.getType());
+        }
+
+        /* The XML Schema Attribute may have already been a union, so we
+         * need to walk all of the subtypes and pull out the non-NULL ones.
+         */
+        ArrayList<Schema> subset =
+            new ArrayList<Schema>(attrType.getTypes().size() - 1);
+
+        for (Schema unionSchema : attrType.getTypes()) {
+          if ( !unionSchema.getType().equals(Schema.Type.NULL) ) {
+            subset.add(unionSchema);
+          }
+        }
+
+        if (subset.size() == 1) {
+          attrType = subset.get(0);
+        } else {
+          attrType = Schema.createUnion(subset);
+        }
+      }
+
+      if (!attrType.getType().equals(Schema.Type.UNION)
+          && !confirmEquivalent(attributeType, attrType)) {
         throw new IllegalStateException("Cannot convert element " + element.getQName() + " attribute " + attribute.getQName() + " types between " + attributeType + " and " + attrField.schema());
       }
 
@@ -639,7 +678,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
   // Confirms the root-level Schema is a UNION of MAPs, RECORDs, or both.
   private final void verifyIsUnionOfMapsAndRecords(Schema schema) {
-    for (Schema unionType : avroSchema.getTypes()) {
+    for (Schema unionType : schema.getTypes()) {
       if (!unionType.getType().equals(Schema.Type.RECORD)
           && !unionType.getType().equals(Schema.Type.MAP)) {
         throw new IllegalArgumentException("The Avro Schema may either be a UNION or an ARRAY of UNION, but only if all of the elements in the UNION are of either type RECORD or MAP, not " + unionType.getType());
@@ -699,6 +738,32 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    * STRING
    */
   private boolean confirmEquivalent(Schema readerType, Schema writerType) {
+
+    if (readerType.getType().equals(Schema.Type.ARRAY)
+        && (writerType.getType().equals(Schema.Type.ARRAY))) {
+      return confirmEquivalent(readerType.getElementType(), writerType.getElementType());
+
+    } else if (readerType.getType().equals(Schema.Type.UNION)
+        && writerType.getType().equals(Schema.Type.UNION)) {
+
+      // O(N^2) cross-examination.
+      int numFound = 0;
+      for (Schema readerUnionType : writerType.getTypes()) {
+        for (Schema writerUnionType : readerType.getTypes()) {
+          if ( confirmEquivalent(readerUnionType, writerUnionType) ) {
+            ++numFound;
+            break;
+          }
+        }
+      }
+      if (readerType.getTypes().size() == numFound) {
+        // We were able to find equivalents for all of the reader types.
+        return true;
+      } else {
+        // We could not find equivalents for all of the reader types.
+        return false;
+      }
+    }
 
     if ( conversionCache.containsKey(writerType.getType()) ) {
       return conversionCache.get( writerType.getType() )
@@ -798,6 +863,11 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       // Parent is an element.
       parent.nextNodes.add(node);
     }
+
+    StackEntry entry = new StackEntry(node, parent.isIgnored);
+    entry.unionOfChildrenTypes = parent.unionOfChildrenTypes;
+
+    stack.add(entry);
   }
 
   private void popGroup(SchemaStateMachineNode.Type groupType) {
@@ -832,7 +902,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
   private final Schema avroSchema;
   private final boolean xmlIsWritten;
 
-  private final Map<XmlSchemaElement, ElementInfo> elements;
+  private final Map<QName, ElementInfo> elements;
   private final List<StackEntry> stack;
   private final Map<Schema.Type, Set<Schema.Type>> conversionCache;
 

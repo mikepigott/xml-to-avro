@@ -304,10 +304,17 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     // Optional types are unions of the real type and null.
     if ( attribute.getUse().equals(XmlSchemaUse.OPTIONAL) ) {
-      ArrayList<Schema> unionTypes = new ArrayList<Schema>(2);
-      unionTypes.add(attrSchema);
-      unionTypes.add( Schema.create(Schema.Type.NULL) );
-      attrSchema = Schema.createUnion(unionTypes);
+      if ( attrSchema.getType().equals(Schema.Type.UNION) ) {
+        /* The attribute type is a union of other types.  Unions of unions are
+         * not allowed, so we must add the NULL type to the existing union.
+         */
+        attrSchema.getTypes().add( Schema.create(Schema.Type.NULL) );
+      } else {
+        ArrayList<Schema> unionTypes = new ArrayList<Schema>(2);
+        unionTypes.add(attrSchema);
+        unionTypes.add( Schema.create(Schema.Type.NULL) );
+        attrSchema = Schema.createUnion(unionTypes);
+      }
     }
 
     final Schema.Field attr =
