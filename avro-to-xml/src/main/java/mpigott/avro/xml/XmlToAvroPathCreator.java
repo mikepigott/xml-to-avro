@@ -16,6 +16,8 @@
 
 package mpigott.avro.xml;
 
+import java.util.List;
+
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -67,4 +69,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   @Override
   public void endDocument() throws SAXException {
   }
+
+  private SchemaStateMachineNode rootNode;
+  private List<DocumentPathNode> path;
 }

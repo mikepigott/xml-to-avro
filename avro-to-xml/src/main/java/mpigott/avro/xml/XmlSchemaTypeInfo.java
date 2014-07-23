@@ -111,6 +111,57 @@ final class XmlSchemaTypeInfo {
     return type;
   }
 
+  /**
+   * Computes a hash code for this {@link XmlSchemaTypeInfo} instance.
+   *
+   * @see java.lang.Object#hashCode()
+   */
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result
+        + ((avroSchemaType == null) ? 0 : avroSchemaType.hashCode());
+    result = prime * result + ((facets == null) ? 0 : facets.hashCode());
+    return result;
+  }
+
+  /**
+   * Determines of this instance of <code>XmlSchemaTypeInfo</code>
+   * is equal to another instance of <code>XmlSchemaTypeInfo</code>.
+   * The XML Schema JSON nodes are not compared in making this decision.
+   *
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof XmlSchemaTypeInfo)) {
+      return false;
+    }
+    XmlSchemaTypeInfo other = (XmlSchemaTypeInfo) obj;
+    if (avroSchemaType == null) {
+      if (other.avroSchemaType != null) {
+        return false;
+      }
+    } else if (!avroSchemaType.equals(other.avroSchemaType)) {
+      return false;
+    }
+    if (facets == null) {
+      if (other.facets != null) {
+        return false;
+      }
+    } else if (!facets.equals(other.facets)) {
+      return false;
+    }
+    return true;
+  }
+
   private Schema avroSchemaType;
   private JsonNode xmlSchemaType;
   private HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets;

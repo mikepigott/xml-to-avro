@@ -278,6 +278,103 @@ final class SchemaStateMachineNode {
     return possibleNextStates;
   }
 
+  /**
+   * Generates a hash code to represent this
+   * <code>SchemaStateMachineNode</code>.
+   *
+   * @see java.lang.Object#hashCode()
+   */
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((any == null) ? 0 : any.hashCode());
+    result = prime * result
+        + ((attributes == null) ? 0 : attributes.hashCode());
+    result = prime * result
+        + ((avroSchema == null) ? 0 : avroSchema.hashCode());
+    result = prime * result + ((element == null) ? 0 : element.hashCode());
+    result = prime * result + (int) (maxOccurs ^ (maxOccurs >>> 32));
+    result = prime * result + (int) (minOccurs ^ (minOccurs >>> 32));
+    result = prime * result + ((nodeType == null) ? 0 : nodeType.hashCode());
+    result = prime * result
+        + ((possibleNextStates == null) ? 0 : possibleNextStates.hashCode());
+    result = prime * result + ((typeInfo == null) ? 0 : typeInfo.hashCode());
+    return result;
+  }
+
+  /**
+   * Determines if this instance of <code>SchemaStateMachineNode</code>
+   * is equal to another instance of <code>SchemaStateMachineNode</code>.
+   *
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof SchemaStateMachineNode)) {
+      return false;
+    }
+    SchemaStateMachineNode other = (SchemaStateMachineNode) obj;
+    if (any == null) {
+      if (other.any != null) {
+        return false;
+      }
+    } else if (!any.equals(other.any)) {
+      return false;
+    }
+    if (attributes == null) {
+      if (other.attributes != null) {
+        return false;
+      }
+    } else if (!attributes.equals(other.attributes)) {
+      return false;
+    }
+    if (avroSchema == null) {
+      if (other.avroSchema != null) {
+        return false;
+      }
+    } else if (!avroSchema.equals(other.avroSchema)) {
+      return false;
+    }
+    if (element == null) {
+      if (other.element != null) {
+        return false;
+      }
+    } else if (!element.equals(other.element)) {
+      return false;
+    }
+    if (maxOccurs != other.maxOccurs) {
+      return false;
+    }
+    if (minOccurs != other.minOccurs) {
+      return false;
+    }
+    if (nodeType != other.nodeType) {
+      return false;
+    }
+    if (possibleNextStates == null) {
+      if (other.possibleNextStates != null) {
+        return false;
+      }
+    } else if (!possibleNextStates.equals(other.possibleNextStates)) {
+      return false;
+    }
+    if (typeInfo == null) {
+      if (other.typeInfo != null) {
+        return false;
+      }
+    } else if (!typeInfo.equals(other.typeInfo)) {
+      return false;
+    }
+    return true;
+  }
+
   private final Type nodeType;
   private final XmlSchemaElement element;
   private final List<Attribute> attributes;

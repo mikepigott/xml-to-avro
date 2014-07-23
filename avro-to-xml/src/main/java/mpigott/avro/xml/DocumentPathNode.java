@@ -25,9 +25,6 @@ import javax.xml.namespace.QName;
  */
 final class DocumentPathNode {
 
-  /**
-   * 
-   */
   DocumentPathNode(SchemaStateMachineNode node) {
     schemaNode = node;
     nextNodeStateIndex = -1;
@@ -42,6 +39,26 @@ final class DocumentPathNode {
     prevNode = previous;
   }
 
+  DocumentPathNode(
+      DocumentPathNode previous,
+      DocumentPathNode copyOf) {
+
+    schemaNode = copyOf.schemaNode;
+    nextNodeStateIndex = -1;
+    elemName = copyOf.elemName;
+    prevNode = previous;
+    nextNode = null;
+  }
+
+  DocumentPathNode(
+      DocumentPathNode previous,
+      DocumentPathNode copyOf,
+      int iteration) {
+
+    this(previous, copyOf);
+    iterationNum = iteration;
+  }
+
   SchemaStateMachineNode getStateMachineNode() {
     return schemaNode;
   }
@@ -50,8 +67,48 @@ final class DocumentPathNode {
     return nextNodeStateIndex;
   }
 
+  int getIteration() {
+    return iterationNum;
+  }
+
   QName getElementName() {
     return elemName;
+  }
+
+  DocumentPathNode getPrevious() {
+    return prevNode;
+  }
+
+  DocumentPathNode getNext() {
+    return nextNode;
+  }
+
+  void setIteration(int newIteration) {
+    iterationNum = newIteration;
+  }
+
+  DocumentPathNode setNextNode(int nextNodeIndex, DocumentPathNode newNext) {
+    if ((nextNodeIndex < 0)
+        || (nextNodeIndex >= schemaNode.getPossibleNextStates().size())) {
+      throw new IllegalArgumentException("The node index (" + nextNodeIndex + ") is not within the range of " + schemaNode.getPossibleNextStates().size() + " possible next states.");
+
+    } else if (newNext == null) {
+      throw new IllegalArgumentException("The next node must be defined.");
+
+    } else if ( !schemaNode
+                   .getPossibleNextStates()
+                   .get(nextNodeIndex)
+                   .equals( newNext.getStateMachineNode() ) ) {
+
+      throw new IllegalArgumentException("The next possible state at index " + nextNodeIndex + " does not match the state defined in the newNext.");
+    }
+
+    nextNodeStateIndex = nextNodeIndex;
+
+    DocumentPathNode oldNext = nextNode;
+    nextNode = newNext;
+
+    return oldNext;
   }
 
   /**
@@ -67,7 +124,10 @@ final class DocumentPathNode {
    * @return The next node in the path that this node referred to, as it will
    *         be discarded internally. 
    */
-  DocumentPathNode update(DocumentPathNode newPrevious, SchemaStateMachineNode newNode) {
+  DocumentPathNode update(
+      DocumentPathNode newPrevious,
+      SchemaStateMachineNode newNode) {
+
     schemaNode = newNode;
     nextNodeStateIndex = -1;
     elemName = null;
@@ -79,6 +139,27 @@ final class DocumentPathNode {
     nextNode = null;
 
     return oldNext;
+  }
+
+  /**
+   * Use this method when changing the the {@link SchemaStateMachineNode}
+   * and element this <code>DocumentPathNode</code> refers to.  The next
+   * node in the path is returned, as it will be discarded internally.
+   *
+   * @param newPrevious    The new prior node this will be traversed from.
+   * @param newNode        The new {@link SchemaStateMachineNode}.
+   * @param newElementName The new element name.
+   * @return The old next node in the chain, as it is discarded internally.
+   */
+  DocumentPathNode update(
+      DocumentPathNode newPrevious,
+      SchemaStateMachineNode newNode,
+      QName newElementName) {
+
+    DocumentPathNode oldPrev = update(newPrevious, newNode);
+    elemName = newElementName;
+
+    return oldPrev;
   }
 
   private SchemaStateMachineNode schemaNode;
