@@ -521,8 +521,8 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     if ( !stack.isEmpty() ) {
       pushGroup(
           SchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
-          XmlSchemaParticle.DEFAULT_MIN_OCCURS,
-          XmlSchemaParticle.DEFAULT_MAX_OCCURS);
+          base.getMinOccurs(),
+          base.getMaxOccurs());
 
     } else {
       // The root element is part of a substitution group.
@@ -540,8 +540,8 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
             new SchemaStateMachineNode(
                 SchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
                 schema,
-                XmlSchemaParticle.DEFAULT_MIN_OCCURS,
-                XmlSchemaParticle.DEFAULT_MAX_OCCURS);
+                base.getMinOccurs(),
+                base.getMaxOccurs());
 
         final StackEntry entry = new StackEntry(startNode, true);
         entry.unionOfChildrenTypes = schema;
