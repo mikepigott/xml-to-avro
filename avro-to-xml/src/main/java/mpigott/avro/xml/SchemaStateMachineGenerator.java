@@ -121,11 +121,10 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     startNode = null;
     validNextElements = null;
+
     conversionCache = new HashMap<Schema.Type, Set<Schema.Type>>();
-
-    elements =
-      new HashMap<QName, ElementInfo>();
-
+    elements = new HashMap<QName, ElementInfo>();
+    elementNodes = new HashMap<QName, SchemaStateMachineNode>();
     stack = new ArrayList<StackEntry>();
 
     if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
@@ -363,16 +362,17 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     final ElementInfo elemInfo = elements.get( element.getQName() );
 
-    if (elemInfo == null) {
-      System.err.println("Did not create an entry for " + element.getQName());
-    }
-
-    final SchemaStateMachineNode node =
+    SchemaStateMachineNode node = elementNodes.get( element.getQName() );
+    if (node == null) {
+      node =
         new SchemaStateMachineNode(
             element,
             elemInfo.attributes,
             typeInfo,
             elemInfo.elementSchema);
+
+      elementNodes.put(element.getQName(), node);
+    }
 
     if ( !entry.nextNodes.isEmpty() ) {
       node.addPossibleNextStates(entry.nextNodes);
@@ -908,4 +908,5 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
   private List<Schema> validNextElements;
   private SchemaStateMachineNode startNode;
+  private Map<QName, SchemaStateMachineNode> elementNodes;
 }
