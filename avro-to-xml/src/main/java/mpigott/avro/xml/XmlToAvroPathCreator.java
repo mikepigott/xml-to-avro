@@ -17,7 +17,10 @@
 package mpigott.avro.xml;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.xml.namespace.QName;
 
@@ -34,32 +37,67 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 final class XmlToAvroPathCreator extends DefaultHandler {
 
-  /**
-   * This represents a range of consecutive nodes through the XML Schema,
-   * starting with the <code>start</code> and ending with the <code>end</code>.
-   * The number of nodes, inclusive, is tracked by <code>length</code>.
+  /* We want to keep track of all of the valid path segments to a particular
+   * element, but we do not want to stomp on the very first node until we
+   * know which path we want to follow.  Likewise, we want to keep the
+   * first node in the segment without a "next" node, but every node after
+   * that we wish to chain together.
+   *
+   * To accomplish this, we start with a base node at the end and "prepend"
+   * previous nodes until we work our way back to the beginning.  When we
+   * prepend a node, we link the previous start node to the node directly
+   * after it, while leaving the new start node unlinked.
+   *
+   * Path segments may also be recycled when a decision point is refuted.
    */
-  private static class PathSegment {
+  private final class PathSegment {
     PathSegment() {
       start = null;
       end = null;
       length = 0;
     }
 
-    PathSegment(DocumentPathNode start, DocumentPathNode end) {
-      this.start = start;
-      this.end = end;
+    PathSegment(DocumentPathNode node) {
+      set(node);
     }
 
     int getLength() {
       if ((length == 0) && (start != end)) {
-        for (DocumentPathNode iter = start;
+        for (DocumentPathNode iter = afterStart;
             iter != end;
             iter = iter.getNext()) {
           ++length;
         }
+        ++length; // (afterStart -> end) + start
       }
       return length;
+    }
+
+    /* Prepends a new start node to this segment.  We want to clone
+     * the previous start node as sibling paths may be sharing it.
+     * We also need to know the newStart's path index to reach the
+     * clonedStartNode, so we know how to properly link them later.
+     */
+    void prepend(DocumentPathNode newStart, int pathIndexToNextNode) {
+      // We need to clone start and make it the afterStart.
+      DocumentPathNode clonedStartNode =
+          createDocumentPathNode(
+              start.getPrevious(),
+              start.getStateMachineNode());
+
+      if (afterStart != null) {
+        afterStart.setPreviousNode(clonedStartNode);
+        clonedStartNode.setNextNode(afterStartPathIndex, afterStart);
+        afterStart = clonedStartNode;
+
+      } else {
+        // This path segment only has one node in it; now it has two.
+        end = clonedStartNode;
+        afterStart = clonedStartNode;
+      }
+
+      start = newStart;
+      afterStartPathIndex = pathIndexToNextNode;
     }
 
     DocumentPathNode getStart() {
@@ -70,15 +108,23 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       return end;
     }
 
-    void set(DocumentPathNode start, DocumentPathNode end) {
-      this.start = start;
-      this.end = end;
+    DocumentPathNode getAfterStart() {
+      return afterStart;
+    }
+
+    final void set(DocumentPathNode node) {
+      this.start = node;
+      this.end = node;
+      this.afterStart = null;
+      this.afterStartPathIndex = -1;
       this.length = 0;
     }
 
     private DocumentPathNode start;
     private DocumentPathNode end;
+    private DocumentPathNode afterStart;
     private int length;
+    private int afterStartPathIndex;
   }
 
   /**
@@ -98,20 +144,72 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   }
 
   /**
+   * Represents the state machine as a tree with the current iteration of each
+   * node, and additional state information for All and Sequence groups.
+   *
+   * If the node represents an All group, we need to know which children we've
+   * already visited the maximum number of occurrences, so we do not traverse
+   * them again.
+   *
+   * If the node represents a sequence group, we need to know which child we
+   * visit next.  Once we visit a node the maximum number of occurrences (or
+   * we visit the minimum number of occurrences and the element name does not
+   * match), this increments to the next child.
+   *
+   * This class is package-protected, and not private, to allow an external
+   * graph generator to build a visualization of the tree.
+   */
+  static class StateMachineTreeWithState {
+    StateMachineTreeWithState(SchemaStateMachineNode stateMachineNode) {
+      this.stateMachineNode = stateMachineNode;
+
+      if ((this.stateMachineNode.getPossibleNextStates() == null)
+          || this.stateMachineNode.getPossibleNextStates().isEmpty()) {
+        this.children = null;
+
+      } else {
+        this.children =
+            new ArrayList<StateMachineTreeWithState>(
+                this.stateMachineNode.getPossibleNextStates().size() );
+      }
+
+      this.currIteration = 0;
+      this.visitedChildrenOfAllGroup = null;
+      this.currPositionInSeqGroup = -1;
+    }
+
+    SchemaStateMachineNode stateMachineNode;
+    List<StateMachineTreeWithState> children;
+
+    int currIteration;
+    Set<QName> visitedChildrenOfAllGroup;
+    int currPositionInSeqGroup;
+  }
+
+  /**
    * Creates a new <code>XmlToAvroPathCreator</code> with the root
    * {@link SchemaStateMachineNode} to start from when evaluating documents.
    */
   XmlToAvroPathCreator(SchemaStateMachineNode root) {
     rootNode = root;
+    rootStateNode = new StateMachineTreeWithState(rootNode);
     rootPathNode = new DocumentPathNode(root);
+
     traversedElements = new ArrayList<QName>();
     currentPosition = null;
+    currentPath = null;
     decisionPoints = null; // Hopefully there won't be any!
+
+    unusedNodePool = null;
+    unusedTreePool = null;
+    unusedPathSegmentPool = null;
   }
 
   @Override
   public void startDocument() throws SAXException {
-    currentPosition = rootPathNode;
+    currentPosition = rootStateNode;
+    currentPath = rootPathNode;
+
     traversedElements.clear();
 
     if (decisionPoints != null) {
@@ -119,6 +217,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     }
   }
 
+  /**
+   * Find the path through the XML Schema that best matches this element.
+   *
+   * @see org.xml.sax.helpers.DefaultHandler#startElement(java.lang.String, java.lang.String, java.lang.String, org.xml.sax.Attributes)
+   */
   @Override
   public void startElement(
       String uri,
@@ -127,35 +230,109 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       Attributes atts) throws SAXException {
 
     final QName elemQName = new QName(uri, localName);
-    traversedElements.add(elemQName);
 
-    final SchemaStateMachineNode state = currentPosition.getStateMachineNode();
-
-
-    if (state.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT)) {
-
-      /* If we are expecting an element, we must match
-       * that element.  This is consistent with looking
-       * at the root node.
-       */
-
+    try {
+      traversedElements.add(elemQName);
+  
+      final SchemaStateMachineNode state = currentPosition.stateMachineNode;
+  
+      // 1. Find possible paths.
+      List<PathSegment> possiblePaths =
+          find(currentPath, currentPosition, elemQName);
+  
+      if (possiblePaths != null) {
+        // 2. Build path segments from those paths.
+  
+        /* 3. If multiple paths were returned, add a DecisionPoint.
+         *    Sort the paths where paths ending in elements are favored over
+         *    element wild cards, and shorter paths are favored over longer
+         *    paths.
+         */
+  
+        /* 4. Choose the highest-rank path and build the
+         *    StateMachineTreeWithState accordingly.
+         */
+  
+        /* 5. Confirm the attributes of the element
+         *    match what is expected from the schema.
+         */
+  
+      } else {
+        // OR: If no paths are returned:
+  
+        /* 2a. Backtrack to the most recent decision point.
+         *     Remove the top path (the one we just tried),
+         *     and select the next one.
+         */
+  
+        /* 3a. Walk through the traversedElements list again from that
+         *     index and see if we traverse through all of the elements
+         *     in the list, including this one.  If not, repeat step 2a,
+         *     removing decision points from the stack as we refute them.
+         */
+  
+        // 4a. If we find (a) path(s) that match(es), success!  Return to step 2.
+  
+        /* OR: If we go through all prior decision points and are unable to find
+         *     one or more paths through the XML Schema that match the document,
+         *     throw an error.  There is nothing more we can do here.
+         */
+      }
+    } catch (Exception e) {
+      throw new SAXException("Error occurred while starting element " + elemQName + "; traversed path is " + getElementsTraversedAsString(), e);
     }
+  }
 
-    /* If the element is part of a group, we should
-     * determine which element in the group we are
-     * working with.
+  /**
+   * 
+   * @see org.xml.sax.helpers.DefaultHandler#characters(char[], int, int)
+   */
+  @Override
+  public void characters(char[] ch, int start, int length) throws SAXException {
+
+    /* If the most recent path node is an element with simple content,
+     * confirm these characters match the data type expected.
+     *
+     * If we are not expecting an element with simple content,
+     * and the characters don't represent all whitespace, throw
+     * an exception.
      */
 
+    try {
+      // Do stuff.
+    } catch (Exception e) {
+      throw new SAXException("Error occurred while processing characters; traversed path was " + getElementsTraversedAsString(), e);
+    }
   }
 
-  @Override
-  public void characters(
-      char[] ch,
-      int start,
-      int length)
-      throws SAXException {
-  }
-
+  /**
+   * Confirm the current position matches the element we are ending.
+   * If not, throw an exception.
+   *
+   * If the number of occurrences is less than the minimum number of
+   * occurrences, do not move.  The next element must be an instance
+   * of this one.
+   *
+   * Otherwise, walk back up the tree to the next position.
+   *
+   * If the parent is a group of any kind, and its minimum number of
+   * occurrences is not fulfilled, stop there.
+   *
+   * Otherwise, if the parent is a choice group or substitution group,
+   * walk two levels up to the grandparent.  If the number of occurrences
+   * of this element, the choice group, or the substitution group are
+   * maxed out, and the grandparent is a sequence group or all group,
+   * update the information accordingly.
+   *
+   * If the parent is a sequence group or an all group, update it
+   * accordingly.  Again, if the number of occurrences is equal to
+   * the maximum number, advance the parent accordingly.
+   *
+   * If the parent (or grandparent) is an element, return to it.
+   * We expect the next call to be to endElement of that.
+   *
+   * @see org.xml.sax.helpers.DefaultHandler#endElement(java.lang.String, java.lang.String, java.lang.String)
+   */
   @Override
   public void endElement(
       String uri,
@@ -163,16 +340,56 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       String qName)
       throws SAXException
   {
+    final QName elemQName = new QName(uri, localName);
+
+    try {
+      // Do stuff.
+    } catch (Exception e) {
+      throw new SAXException("Error occurred while ending element " + elemQName + "; traversed path was " + getElementsTraversedAsString(), e);
+    }
   }
 
   @Override
   public void endDocument() throws SAXException {
   }
 
-  private List<DocumentPathNode> find(DocumentPathNode startNode, QName elemQName) {
-    final SchemaStateMachineNode state = currentPosition.getStateMachineNode();
+  /**
+   * This can be used to generate an external representation of the
+   * internal state tree for visualization (and debugging) purposes.
+   *
+   * @return The root node of the tree built internally to represent
+   *         the XML Document against its XML Schema.
+   */
+  StateMachineTreeWithState getRootOfInternalTree() {
+    return rootStateNode;
+  }
 
-    List<DocumentPathNode> choices = null;
+  private List<PathSegment> find(
+      DocumentPathNode startNode,
+      StateMachineTreeWithState tree,
+      QName elemQName) {
+
+    if (startNode.getStateMachineNode()
+        != currentPosition.stateMachineNode) {
+
+      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode state machine (" + startNode.getStateMachineNode().getNodeType() + ") does not match the tree node (" + tree.stateMachineNode.getNodeType() + ").");
+
+    } else if (startNode.getIteration() != tree.currIteration) {
+      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") was not kept up-to-date with the tree node's iteration (" + tree.currIteration + ").  Current state machine position is " + tree.stateMachineNode.getNodeType());
+
+    } else if (tree
+                 .stateMachineNode
+                 .getNodeType()
+                 .equals(SchemaStateMachineNode.Type.SEQUENCE)
+        && (startNode.getIndexOfNextNodeState()
+            != tree.currPositionInSeqGroup)) {
+
+      throw new IllegalStateException("While processing a sequence group in search of " + elemQName + ", the current position in the DocumentPathNode (" + startNode.getIndexOfNextNodeState() + ") was not kept up-to-date with the tree node's position in the sequence group (" + tree.currPositionInSeqGroup + ").");
+    }
+
+    final SchemaStateMachineNode state = currentPosition.stateMachineNode;
+
+    List<PathSegment> choices = null;
 
     switch (state.getNodeType()) {
     case ELEMENT:
@@ -182,27 +399,28 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
           startNode.setIteration(1); // TODO: Handle loops.
 
-          choices = new ArrayList<DocumentPathNode>(1);
-          choices.add(startNode);
+          choices = new ArrayList<PathSegment>(1);
+          choices.add( new PathSegment(startNode) );
         }
       }
       break;
 
-    case SUBSTITUTION_GROUP:
-      // Find one that matches.
-      break;
     case ALL:
       // Find one that matches, and make sure it wasn't already selected.
       break;
     case SEQUENCE:
       // Find the next one in the sequence that matches.
       break;
+    case SUBSTITUTION_GROUP:
     case CHOICE:
       {
         if (( state.getPossibleNextStates() == null)
             || state.getPossibleNextStates().isEmpty()) {
 
           throw new IllegalStateException("Group " + state.getNodeType() + " has no children.  Found when processing " + elemQName);
+
+        } else if (tree.children == null) {
+          throw new IllegalStateException("StateMachineTreeWithState node represents a " + state.getNodeType() + ", but has no children.  Found when searching for " + elemQName);
         }
 
         /* Choice groups may have multiple paths through its children
@@ -210,11 +428,50 @@ final class XmlToAvroPathCreator extends DefaultHandler {
          * may be a child of any group, thus creating another decision
          * point.
          */
+        for (int stateIndex = 0;
+            stateIndex < state.getPossibleNextStates().size();
+            ++stateIndex) {
 
-        for (SchemaStateMachineNode nextState : state.getPossibleNextStates()) {
-          DocumentPathNode nextPath = createDocumentPathNode(startNode, nextState);
-          List<DocumentPathNode> choicePaths = find(nextPath, elemQName);
+          SchemaStateMachineNode nextState =
+              state.getPossibleNextStates().get(stateIndex);
+
+          DocumentPathNode nextPath =
+              createDocumentPathNode(startNode, nextState);
+
+          startNode.setNextNode(stateIndex, nextPath);
+
+          StateMachineTreeWithState nextTree = null;
+
+          if (tree.children.size() < stateIndex) {
+            throw new IllegalStateException("In group of type " + state.getNodeType() + " when searching for " + elemQName + ", StateMachineTreeWithState contained fewer children than the next possible state index, " + stateIndex);
+
+          } else if (tree.children.size() == stateIndex) {
+            nextTree = createTreeNode(nextState);
+            tree.children.add(nextTree);
+
+          } else {
+            nextTree = tree.children.get(stateIndex);
+          }
+
+          /* Both the tree node's and the document path node's state machine
+           * nodes should point to the same state machine node in memory.
+           */
+          if ((nextTree.stateMachineNode != nextState)
+              || (nextPath.getStateMachineNode() != nextState)) {
+            throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.stateMachineNode.getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
+          }
+
+          List<PathSegment> choicePaths =
+              find(nextPath, nextTree, elemQName);
+
           if (choicePaths != null) {
+            for (PathSegment choicePath : choicePaths) {
+              choicePath.prepend(startNode, stateIndex);
+            }
+
+            // nextPath was cloned by all path segments, so it can be recycled.
+            recyclePathNode(nextPath);
+
             if (choices == null) {
               choices = choicePaths;
             } else {
@@ -237,7 +494,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     if (choices == null) {
       recyclePathNode(startNode);
     }
-
     return choices;
   }
 
@@ -261,13 +517,89 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     unusedNodePool.add(toReuse);
   }
 
-  private final SchemaStateMachineNode rootNode;
+  private StateMachineTreeWithState createTreeNode(
+      SchemaStateMachineNode node) {
 
-  private DocumentPathNode currentPosition;
+    if ((unusedTreePool == null) || unusedTreePool.isEmpty()) {
+      return new StateMachineTreeWithState(node);
+    } else {
+      StateMachineTreeWithState tree =
+          unusedTreePool.remove(unusedTreePool.size() - 1);
+
+      tree.stateMachineNode = node;
+      tree.children = null;
+      tree.currIteration = 0;
+      tree.currPositionInSeqGroup = -1;
+      tree.visitedChildrenOfAllGroup = null;
+
+      return tree;
+    }
+  }
+
+  private void recycleTreeNode(StateMachineTreeWithState tree) {
+    if (unusedTreePool == null) {
+      unusedTreePool = new ArrayList<StateMachineTreeWithState>();
+    }
+    unusedTreePool.add(tree);
+  }
+
+  private PathSegment createPathSegment(DocumentPathNode endPathNode) {
+    PathSegment segment = null;
+    if ((unusedPathSegmentPool != null) && !unusedPathSegmentPool.isEmpty()) {
+      segment =
+          unusedPathSegmentPool.remove(unusedPathSegmentPool.size() - 1);
+      segment.set(endPathNode);
+
+    } else {
+      segment = new PathSegment(endPathNode);
+    }
+    return segment;
+  }
+
+  private void recyclePathSegment(PathSegment segment) {
+    if (unusedPathSegmentPool == null) {
+      unusedPathSegmentPool = new ArrayList<PathSegment>();
+    }
+
+    if (segment.getAfterStart() != null) {
+      /* All of the nodes starting with afterStart
+       * were cloned; we can recycle them.
+       */
+      for (DocumentPathNode iter = segment.getAfterStart();
+          iter != null;
+          iter = iter.getNext()) {
+  
+        recyclePathNode(iter);
+      }
+    }
+
+    unusedPathSegmentPool.add(segment);
+  }
+
+  private String getElementsTraversedAsString() {
+
+    final StringBuilder traversed = new StringBuilder("[");
+    if ((traversedElements != null) && !traversedElements.isEmpty()) {
+      for (int i = 0; i < traversedElements.size() - 1; ++i) {
+        traversed.append( traversedElements.get(i) ).append(" | ");
+      }
+      traversed.append( traversedElements.get(traversedElements.size() - 1) );
+    }
+    traversed.append(" ]");
+
+    return traversed.toString();
+  }
+
+  private final SchemaStateMachineNode rootNode;
   private DocumentPathNode rootPathNode;
-  private DocumentPathNode oldNextNode;
+  private StateMachineTreeWithState rootStateNode;
+
+  private StateMachineTreeWithState currentPosition;
+  private DocumentPathNode currentPath;
 
   private List<DocumentPathNode> unusedNodePool;
+  private List<StateMachineTreeWithState> unusedTreePool;
+  private List<PathSegment> unusedPathSegmentPool;
 
   private ArrayList<QName> traversedElements;
   private ArrayList<DecisionPoint> decisionPoints;

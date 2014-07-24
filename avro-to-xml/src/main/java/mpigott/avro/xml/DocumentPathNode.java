@@ -28,7 +28,6 @@ final class DocumentPathNode {
   DocumentPathNode(SchemaStateMachineNode node) {
     schemaNode = node;
     nextNodeStateIndex = -1;
-    elemName = null;
     iterationNum = 0;
     prevNode = null;
     nextNode = null;
@@ -45,7 +44,6 @@ final class DocumentPathNode {
 
     schemaNode = copyOf.schemaNode;
     nextNodeStateIndex = -1;
-    elemName = copyOf.elemName;
     prevNode = previous;
     nextNode = null;
   }
@@ -69,10 +67,6 @@ final class DocumentPathNode {
 
   int getIteration() {
     return iterationNum;
-  }
-
-  QName getElementName() {
-    return elemName;
   }
 
   DocumentPathNode getPrevious() {
@@ -105,10 +99,23 @@ final class DocumentPathNode {
 
     nextNodeStateIndex = nextNodeIndex;
 
-    DocumentPathNode oldNext = nextNode;
+    final DocumentPathNode oldNext = nextNode;
     nextNode = newNext;
 
     return oldNext;
+  }
+
+  /**
+   * Changes the previous node this one was pointing to.
+   * This is useful when cloning prior nodes in the chain.
+   *
+   * @param newPrevious The new previous node.
+   * @return The old previous node.
+   */
+  DocumentPathNode setPreviousNode(DocumentPathNode newPrevious) {
+    final DocumentPathNode oldPrevious = prevNode;
+    prevNode = newPrevious;
+    return oldPrevious;
   }
 
   /**
@@ -130,41 +137,18 @@ final class DocumentPathNode {
 
     schemaNode = newNode;
     nextNodeStateIndex = -1;
-    elemName = null;
     iterationNum = 0;
 
     prevNode = newPrevious;
 
-    DocumentPathNode oldNext = nextNode;
+    final DocumentPathNode oldNext = nextNode;
     nextNode = null;
 
     return oldNext;
   }
 
-  /**
-   * Use this method when changing the the {@link SchemaStateMachineNode}
-   * and element this <code>DocumentPathNode</code> refers to.  The next
-   * node in the path is returned, as it will be discarded internally.
-   *
-   * @param newPrevious    The new prior node this will be traversed from.
-   * @param newNode        The new {@link SchemaStateMachineNode}.
-   * @param newElementName The new element name.
-   * @return The old next node in the chain, as it is discarded internally.
-   */
-  DocumentPathNode update(
-      DocumentPathNode newPrevious,
-      SchemaStateMachineNode newNode,
-      QName newElementName) {
-
-    DocumentPathNode oldPrev = update(newPrevious, newNode);
-    elemName = newElementName;
-
-    return oldPrev;
-  }
-
   private SchemaStateMachineNode schemaNode;
   private int nextNodeStateIndex;
-  private QName elemName;
   private int iterationNum;
 
   private DocumentPathNode prevNode;
