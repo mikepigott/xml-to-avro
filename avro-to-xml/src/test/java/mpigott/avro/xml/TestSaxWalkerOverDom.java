@@ -211,8 +211,7 @@ public class TestSaxWalkerOverDom {
         throw new SAXException("Element " + toString(uri, localName, qName, atts) + " is not expected; stack is empty!");
       }
 
-      StackEntry entry = stack.get(0);
-      stack.remove(0);
+      StackEntry entry = stack.remove(0);
 
       if (entry.type != StackEntry.Type.ELEMENT) {
         throw new SAXException("Expected text of (" + entry + ") but received element of (" + toString(uri, localName, qName, atts) + ").");
@@ -245,8 +244,7 @@ public class TestSaxWalkerOverDom {
         throw new SAXException("Unexpected string \"" + value + "\"; stack is empty!");
       }
 
-      StackEntry entry = stack.get(0);
-      stack.remove(0);
+      StackEntry entry = stack.remove(0);
 
       if (!entry.type.equals(StackEntry.Type.TEXT)) {
         throw new SAXException("Unexpected string \"" + value + "\"; was expecting element (" + entry + ").");

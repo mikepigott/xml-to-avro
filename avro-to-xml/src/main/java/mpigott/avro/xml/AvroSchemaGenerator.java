@@ -501,8 +501,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       throw new IllegalStateException("Attempted to pop " + getStackEntryInfo(entryQName, isSubstGroup) + " off of an empty stack.");
     }
 
-    final StackEntry entry = stack.get(stack.size() - 1);
-    stack.remove(stack.size() - 1);
+    final StackEntry entry = stack.remove(stack.size() - 1);
 
     if (!entry.elementQName.equals(entryQName) || (entry.isSubstitutionGroup != isSubstGroup)) {
       throw new IllegalStateException("Attempted to pop " + getStackEntryInfo(entryQName, isSubstGroup) + " but found " + getStackEntryInfo(entry.elementQName, entry.isSubstitutionGroup));

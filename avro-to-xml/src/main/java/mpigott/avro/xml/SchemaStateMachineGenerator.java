@@ -357,13 +357,11 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       throw new IllegalStateException("Stack is empty before exiting element " + element.getQName());
     }
 
-    StackEntry entry = stack.get(stack.size() - 1);
+    StackEntry entry = stack.remove(stack.size() - 1);
 
     if (entry.node != null) {
       throw new IllegalStateException("Exiting element " + element.getQName() + " but found a " + entry.node.getNodeType() + " on the stack.");
     }
-
-    stack.remove(stack.size() - 1);
 
     final ElementInfo elemInfo = elements.get( element.getQName() );
 
@@ -913,7 +911,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       throw new IllegalStateException("Exiting an " + groupType + " group, but the stack is empty!");
     }
 
-    final StackEntry entry = stack.get(stack.size() - 1);
+    final StackEntry entry = stack.remove(stack.size() - 1);
 
     if (entry.node == null) {
       throw new IllegalStateException("Exiting a(n) " + groupType + " group, but an element was on the stack instead!");
@@ -921,8 +919,6 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     } else if (!entry.node.getNodeType().equals(groupType)) {
       throw new IllegalStateException("Exiting a(n) " + groupType + " group, but found a " + entry.node.getNodeType() + " on the stack instead!");
     }
-
-    stack.remove(stack.size() - 1);
 
     if ( !stack.isEmpty() ) {
       final StackEntry parent = stack.get(stack.size() - 1);

@@ -256,14 +256,18 @@ public class GraphGenerationVisitor implements XmlSchemaVisitor {
       throw new IllegalStateException("Attempted to pop an " + expected.getClass().getName() + " off of an empty stack.");
     }
 
-    StackEntry top = stack.get(stack.size() - 1);
+    StackEntry top = null;
+
+    if (remove) {
+      top = stack.remove(stack.size() - 1);
+    } else {
+      top = stack.get(stack.size() - 1);
+    }
+
     if ((expected != null) && (top.particle != expected)) {
       throw new IllegalStateException("Attempted to pop a " + expected.getClass().getName() + " when the stack contained a " + top.particle.getClass().getName() + " (" + top.nodeName + ")");
     }
 
-    if (remove) {
-      stack.remove(stack.size() - 1);
-    }
 
     return top;
   }

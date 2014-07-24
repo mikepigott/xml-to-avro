@@ -384,7 +384,7 @@ public class TestSchemaWalker {
       }
 
       StackEntry entry = stack.get(0);
-      stack.remove(stack.get(0));
+      stack.remove(entry);
       return entry;
     }
 
