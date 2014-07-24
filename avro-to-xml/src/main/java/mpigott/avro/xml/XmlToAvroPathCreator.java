@@ -24,6 +24,8 @@ import java.util.Set;
 
 import javax.xml.namespace.QName;
 
+import org.apache.ws.commons.schema.XmlSchemaAny;
+import org.apache.ws.commons.schema.XmlSchemaContentProcessing;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -80,7 +82,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
      */
     void prepend(DocumentPathNode newStart, int pathIndexToNextNode) {
       // We need to clone start and make it the afterStart.
-      DocumentPathNode clonedStartNode =
+      final DocumentPathNode clonedStartNode =
           createDocumentPathNode(
               start.getPrevious(),
               start.getStateMachineNode());
@@ -173,12 +175,22 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                 this.stateMachineNode.getPossibleNextStates().size() );
       }
 
+      this.parent = null;
       this.currIteration = 0;
       this.visitedChildrenOfAllGroup = null;
       this.currPositionInSeqGroup = -1;
     }
 
+    StateMachineTreeWithState(
+        StateMachineTreeWithState parent,
+        SchemaStateMachineNode stateMachineNode) {
+
+      this(stateMachineNode);
+      this.parent = parent;
+    }
+
     SchemaStateMachineNode stateMachineNode;
+    StateMachineTreeWithState parent;
     List<StateMachineTreeWithState> children;
 
     int currIteration;
@@ -276,6 +288,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         /* OR: If we go through all prior decision points and are unable to find
          *     one or more paths through the XML Schema that match the document,
          *     throw an error.  There is nothing more we can do here.
+         *
+         * TODO: When discarding an existing path segment, remember
+         *       to walk through the tree and undo what the path did.
          */
       }
     } catch (Exception e) {
@@ -385,6 +400,16 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             != tree.currPositionInSeqGroup)) {
 
       throw new IllegalStateException("While processing a sequence group in search of " + elemQName + ", the current position in the DocumentPathNode (" + startNode.getIndexOfNextNodeState() + ") was not kept up-to-date with the tree node's position in the sequence group (" + tree.currPositionInSeqGroup + ").");
+
+    } else if (tree.stateMachineNode.getMaxOccurs() > tree.currIteration) {
+
+      throw new IllegalStateException("While searching for " + elemQName + " found that a node of type " + tree.stateMachineNode.getNodeType() + " had more iterations in the tree (" + tree.currIteration + ") than were the maximum allowed for the state machine node (" + tree.stateMachineNode.getMaxOccurs() + ").");
+
+    } else if (tree.stateMachineNode.getMaxOccurs() == tree.currIteration) {
+      /* We already traversed this node the maximum number of times.
+       * This path cannot be followed.
+       */
+      return null;
     }
 
     final SchemaStateMachineNode state = currentPosition.stateMachineNode;
@@ -397,10 +422,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         if (state.getElement().getQName().equals(elemQName)
             && startNode.getIteration() <= state.getMaxOccurs()) {
 
-          startNode.setIteration(1); // TODO: Handle loops.
-
           choices = new ArrayList<PathSegment>(1);
-          choices.add( new PathSegment(startNode) );
+          choices.add( createPathSegment(startNode) );
         }
       }
       break;
@@ -446,12 +469,18 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             throw new IllegalStateException("In group of type " + state.getNodeType() + " when searching for " + elemQName + ", StateMachineTreeWithState contained fewer children than the next possible state index, " + stateIndex);
 
           } else if (tree.children.size() == stateIndex) {
-            nextTree = createTreeNode(nextState);
+            nextTree = createTreeNode(tree, nextState);
             tree.children.add(nextTree);
 
           } else {
             nextTree = tree.children.get(stateIndex);
           }
+
+          /* At this stage, we are only collecting possible paths to follow.
+           * Likewise, we do not want to increment the iteration number yet
+           * (or have any other side effects on the tree).
+           */
+          nextPath.setIteration(nextTree.currIteration);
 
           /* Both the tree node's and the document path node's state machine
            * nodes should point to the same state machine node in memory.
@@ -486,6 +515,83 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       /* If the XmlSchemaAny namespace and processing rules
        * apply, this element matches.  False otherwise.
        */
+      if (traversedElements.size() < 2) {
+        throw new IllegalStateException("Reached a wildcard element while searching for " + elemQName + ", but we've only seen " + traversedElements.size() + " element(s)!");
+      }
+
+      final XmlSchemaAny any = state.getAny();
+
+      if (any.getNamespace() == null) {
+        throw new IllegalStateException("The XmlSchemaAny element traversed when searching for " + elemQName + " does not have a namespace!");
+      }
+
+      boolean needTargetNamespace = false;
+      boolean matches = false;
+
+      List<String> validNamespaces = null;
+
+      if ( any.getNamespace().equals("##any") ) {
+        // Any namespace is valid.  This matches.
+        matches = true;
+
+      } else if ( any.getNamespace().equals("##other") ) {
+        needTargetNamespace = true;
+        validNamespaces = new ArrayList<String>(1);
+
+      } else {
+        final String[] namespaces = any.getNamespace().trim().split(" ");
+        validNamespaces = new ArrayList<String>(namespaces.length);
+        for (String namespace : namespaces) {
+          if (namespace.equals("##targetNamespace")) {
+            needTargetNamespace = true;
+
+          } else if (namespace.equals("##local")
+              && (elemQName.getNamespaceURI() == null)) {
+
+            matches = true;
+
+          } else {
+            validNamespaces.add(namespace);
+          }
+        }
+      }
+
+      if (!matches) {
+        /* At this time, it is not possible to determine the XmlSchemaAny's
+         * original target namespace without knowing the original element
+         * that owned it.  Likewise, unless the XmlSchemaAny's namespace is
+         * an actual namespace, or ##any, or ##local, there is no way to
+         * validate it.
+         *
+         * The work-around is to walk upwards through the tree and find
+         * the owning element, then use its namespace as the target namespace.
+         */
+        if (needTargetNamespace) {
+          StateMachineTreeWithState iter = tree;
+          while ( !iter
+                    .stateMachineNode
+                    .getNodeType()
+                    .equals(SchemaStateMachineNode.Type.ELEMENT) ) {
+
+            iter = iter.parent;
+
+            if (iter == null) {
+              throw new IllegalStateException("Walking up the StateMachineTreeWithState to determine the target namespace of a wildcard element, and reached the root without finding any elements.  Searching for " + elemQName + '.');
+            }
+          }
+
+          validNamespaces.add(
+              iter.stateMachineNode.getElement().getQName().getNamespaceURI());
+        }
+
+        matches = validNamespaces.contains( elemQName.getNamespaceURI() );
+      }
+
+      if (matches) {
+        choices = new ArrayList<PathSegment>(1);
+        choices.add( createPathSegment(startNode) );
+      }
+
       break;
     default:
       throw new IllegalStateException("Unrecognized node type " + state.getNodeType() + " when processing element " + elemQName);
@@ -518,14 +624,16 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   }
 
   private StateMachineTreeWithState createTreeNode(
+      StateMachineTreeWithState parent,
       SchemaStateMachineNode node) {
 
     if ((unusedTreePool == null) || unusedTreePool.isEmpty()) {
-      return new StateMachineTreeWithState(node);
+      return new StateMachineTreeWithState(parent, node);
     } else {
       StateMachineTreeWithState tree =
           unusedTreePool.remove(unusedTreePool.size() - 1);
 
+      tree.parent = parent;
       tree.stateMachineNode = node;
       tree.children = null;
       tree.currIteration = 0;
