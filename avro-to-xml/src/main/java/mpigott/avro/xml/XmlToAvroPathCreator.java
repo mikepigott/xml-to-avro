@@ -149,14 +149,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    * Represents the state machine as a tree with the current iteration of each
    * node, and additional state information for All and Sequence groups.
    *
-   * If the node represents an All group, we need to know which children we've
-   * already visited the maximum number of occurrences, so we do not traverse
-   * them again.
-   *
    * If the node represents a sequence group, we need to know which child we
    * visit next.  Once we visit a node the maximum number of occurrences (or
    * we visit the minimum number of occurrences and the element name does not
-   * match), this increments to the next child.
+   * match), this index will be incremented to the next child.
    *
    * This class is package-protected, and not private, to allow an external
    * graph generator to build a visualization of the tree.
@@ -177,7 +173,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       this.parent = null;
       this.currIteration = 0;
-      this.visitedChildrenOfAllGroup = null;
       this.currPositionInSeqGroup = -1;
     }
 
@@ -194,7 +189,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     List<StateMachineTreeWithState> children;
 
     int currIteration;
-    Set<QName> visitedChildrenOfAllGroup;
     int currPositionInSeqGroup;
   }
 
@@ -414,13 +408,28 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     final SchemaStateMachineNode state = currentPosition.stateMachineNode;
 
+    // If this is a group, confirm it has children.
+    if ( !state.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT)
+        && !state.getNodeType().equals(SchemaStateMachineNode.Type.ANY) ) {
+
+      if (( state.getPossibleNextStates() == null)
+          || state.getPossibleNextStates().isEmpty()) {
+
+        throw new IllegalStateException("Group " + state.getNodeType() + " has no children.  Found when processing " + elemQName);
+
+      } else if (tree.children == null) {
+        throw new IllegalStateException("StateMachineTreeWithState node represents a " + state.getNodeType() + ", but has no children.  Found when searching for " + elemQName);
+      }
+
+    }
+
     List<PathSegment> choices = null;
 
     switch (state.getNodeType()) {
     case ELEMENT:
       {
         if (state.getElement().getQName().equals(elemQName)
-            && startNode.getIteration() <= state.getMaxOccurs()) {
+            && startNode.getIteration() < state.getMaxOccurs()) {
 
           choices = new ArrayList<PathSegment>(1);
           choices.add( createPathSegment(startNode) );
@@ -428,25 +437,17 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       }
       break;
 
-    case ALL:
-      // Find one that matches, and make sure it wasn't already selected.
-      break;
     case SEQUENCE:
       // Find the next one in the sequence that matches.
       break;
+    case ALL:
     case SUBSTITUTION_GROUP:
     case CHOICE:
       {
-        if (( state.getPossibleNextStates() == null)
-            || state.getPossibleNextStates().isEmpty()) {
-
-          throw new IllegalStateException("Group " + state.getNodeType() + " has no children.  Found when processing " + elemQName);
-
-        } else if (tree.children == null) {
-          throw new IllegalStateException("StateMachineTreeWithState node represents a " + state.getNodeType() + ", but has no children.  Found when searching for " + elemQName);
-        }
-
-        /* Choice groups may have multiple paths through its children
+        /* All groups only contain elements.  Find one that matches.
+         * The max-occurrence check will confirm it wasn't already selected.
+         *
+         * Choice groups may have multiple paths through its children
          * which are valid.  In addition, a wild card ("any" element)
          * may be a child of any group, thus creating another decision
          * point.
@@ -455,10 +456,24 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             stateIndex < state.getPossibleNextStates().size();
             ++stateIndex) {
 
-          SchemaStateMachineNode nextState =
+          final SchemaStateMachineNode nextState =
               state.getPossibleNextStates().get(stateIndex);
 
-          DocumentPathNode nextPath =
+          if (state.getNodeType().equals(SchemaStateMachineNode.Type.ALL)
+              && !nextState
+                   .getNodeType()
+                   .equals(SchemaStateMachineNode.Type.ELEMENT)
+              && !nextState
+                   .getNodeType()
+                   .equals(SchemaStateMachineNode.Type.ANY)
+              && !nextState
+                   .getNodeType()
+                   .equals(SchemaStateMachineNode.Type.SUBSTITUTION_GROUP)) {
+
+            throw new IllegalStateException("While searching for " + elemQName + ", encountered an All group which contained a child of type " + nextState.getNodeType() + '.');
+          }
+
+          final DocumentPathNode nextPath =
               createDocumentPathNode(startNode, nextState);
 
           startNode.setNextNode(stateIndex, nextPath);
@@ -466,7 +481,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           StateMachineTreeWithState nextTree = null;
 
           if (tree.children.size() < stateIndex) {
-            throw new IllegalStateException("In group of type " + state.getNodeType() + " when searching for " + elemQName + ", StateMachineTreeWithState contained fewer children than the next possible state index, " + stateIndex);
+            throw new IllegalStateException("In group of type " + state.getNodeType() + " when searching for " + elemQName + ", StateMachineTreeWithState contained fewer children (" + tree.children.size() + ") than the next possible state index, " + stateIndex);
 
           } else if (tree.children.size() == stateIndex) {
             nextTree = createTreeNode(tree, nextState);
@@ -490,7 +505,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.stateMachineNode.getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
           }
 
-          List<PathSegment> choicePaths =
+          final List<PathSegment> choicePaths =
               find(nextPath, nextTree, elemQName);
 
           if (choicePaths != null) {
@@ -512,86 +527,88 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         break;
       }
     case ANY:
-      /* If the XmlSchemaAny namespace and processing rules
-       * apply, this element matches.  False otherwise.
-       */
-      if (traversedElements.size() < 2) {
-        throw new IllegalStateException("Reached a wildcard element while searching for " + elemQName + ", but we've only seen " + traversedElements.size() + " element(s)!");
-      }
-
-      final XmlSchemaAny any = state.getAny();
-
-      if (any.getNamespace() == null) {
-        throw new IllegalStateException("The XmlSchemaAny element traversed when searching for " + elemQName + " does not have a namespace!");
-      }
-
-      boolean needTargetNamespace = false;
-      boolean matches = false;
-
-      List<String> validNamespaces = null;
-
-      if ( any.getNamespace().equals("##any") ) {
-        // Any namespace is valid.  This matches.
-        matches = true;
-
-      } else if ( any.getNamespace().equals("##other") ) {
-        needTargetNamespace = true;
-        validNamespaces = new ArrayList<String>(1);
-
-      } else {
-        final String[] namespaces = any.getNamespace().trim().split(" ");
-        validNamespaces = new ArrayList<String>(namespaces.length);
-        for (String namespace : namespaces) {
-          if (namespace.equals("##targetNamespace")) {
-            needTargetNamespace = true;
-
-          } else if (namespace.equals("##local")
-              && (elemQName.getNamespaceURI() == null)) {
-
-            matches = true;
-
-          } else {
-            validNamespaces.add(namespace);
-          }
-        }
-      }
-
-      if (!matches) {
-        /* At this time, it is not possible to determine the XmlSchemaAny's
-         * original target namespace without knowing the original element
-         * that owned it.  Likewise, unless the XmlSchemaAny's namespace is
-         * an actual namespace, or ##any, or ##local, there is no way to
-         * validate it.
-         *
-         * The work-around is to walk upwards through the tree and find
-         * the owning element, then use its namespace as the target namespace.
+      {
+        /* If the XmlSchemaAny namespace and processing rules
+         * apply, this element matches.  False otherwise.
          */
-        if (needTargetNamespace) {
-          StateMachineTreeWithState iter = tree;
-          while ( !iter
-                    .stateMachineNode
-                    .getNodeType()
-                    .equals(SchemaStateMachineNode.Type.ELEMENT) ) {
+        if (traversedElements.size() < 2) {
+          throw new IllegalStateException("Reached a wildcard element while searching for " + elemQName + ", but we've only seen " + traversedElements.size() + " element(s)!");
+        }
 
-            iter = iter.parent;
+        final XmlSchemaAny any = state.getAny();
 
-            if (iter == null) {
-              throw new IllegalStateException("Walking up the StateMachineTreeWithState to determine the target namespace of a wildcard element, and reached the root without finding any elements.  Searching for " + elemQName + '.');
+        if (any.getNamespace() == null) {
+          throw new IllegalStateException("The XmlSchemaAny element traversed when searching for " + elemQName + " does not have a namespace!");
+        }
+
+        boolean needTargetNamespace = false;
+        boolean matches = false;
+
+        List<String> validNamespaces = null;
+
+        if ( any.getNamespace().equals("##any") ) {
+          // Any namespace is valid.  This matches.
+          matches = true;
+
+        } else if ( any.getNamespace().equals("##other") ) {
+          needTargetNamespace = true;
+          validNamespaces = new ArrayList<String>(1);
+
+        } else {
+          final String[] namespaces = any.getNamespace().trim().split(" ");
+          validNamespaces = new ArrayList<String>(namespaces.length);
+          for (String namespace : namespaces) {
+            if (namespace.equals("##targetNamespace")) {
+              needTargetNamespace = true;
+
+            } else if (namespace.equals("##local")
+                && (elemQName.getNamespaceURI() == null)) {
+
+              matches = true;
+
+            } else {
+              validNamespaces.add(namespace);
             }
           }
-
-          validNamespaces.add(
-              iter.stateMachineNode.getElement().getQName().getNamespaceURI());
         }
 
-        matches = validNamespaces.contains( elemQName.getNamespaceURI() );
-      }
+        if (!matches) {
+          /* At this time, it is not possible to determine the XmlSchemaAny's
+           * original target namespace without knowing the original element
+           * that owned it.  Likewise, unless the XmlSchemaAny's namespace is
+           * an actual namespace, or ##any, or ##local, there is no way to
+           * validate it.
+           *
+           * The work-around is to walk upwards through the tree and find
+           * the owning element, then use its namespace as the target
+           * namespace.
+           */
+          if (needTargetNamespace) {
+            StateMachineTreeWithState iter = tree;
+            while ( !iter
+                      .stateMachineNode
+                      .getNodeType()
+                      .equals(SchemaStateMachineNode.Type.ELEMENT) ) {
 
-      if (matches) {
-        choices = new ArrayList<PathSegment>(1);
-        choices.add( createPathSegment(startNode) );
-      }
+              iter = iter.parent;
 
+              if (iter == null) {
+                throw new IllegalStateException("Walking up the StateMachineTreeWithState to determine the target namespace of a wildcard element, and reached the root without finding any elements.  Searching for " + elemQName + '.');
+              }
+            }
+
+            validNamespaces.add(
+              iter.stateMachineNode.getElement().getQName().getNamespaceURI());
+          }
+
+          matches = validNamespaces.contains( elemQName.getNamespaceURI() );
+        }
+
+        if (matches) {
+          choices = new ArrayList<PathSegment>(1);
+          choices.add( createPathSegment(startNode) );
+        }
+      }
       break;
     default:
       throw new IllegalStateException("Unrecognized node type " + state.getNodeType() + " when processing element " + elemQName);
@@ -638,7 +655,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       tree.children = null;
       tree.currIteration = 0;
       tree.currPositionInSeqGroup = -1;
-      tree.visitedChildrenOfAllGroup = null;
 
       return tree;
     }
