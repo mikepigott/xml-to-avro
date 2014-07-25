@@ -474,6 +474,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           if ((nextTree.stateMachineNode != nextState)
               || (nextPath.getStateMachineNode() != nextState)) {
             throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.stateMachineNode.getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
+
+          } else if (nextTree.currIteration >= nextState.getMaxOccurs()) {
+            throw new IllegalStateException("Reached a sequence group when searching for " + elemQName + " whose iteration at the current position (" + nextTree.currIteration + ") was already maxed out (" + nextState.getMaxOccurs() + ").  Was at position " + stateIndex + "; tree node's starting position was " + tree.currPositionInSeqGroup);
           }
 
           final List<PathSegment> seqPaths =
