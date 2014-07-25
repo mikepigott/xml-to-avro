@@ -59,24 +59,32 @@ final class DocumentPathNode {
 
   /**
    * Generates a hash code to represent this <code>DocumentPathNode</code>.
+   * This does not perform a deep search, as that would be expensive for long
+   * paths.  This only checks the hash codes of the local data members of its
+   * neighbors.
    *
    * @see java.lang.Object#hashCode()
    */
   @Override
   public int hashCode() {
     final int prime = 31;
-    int result = 1;
-    result = prime * result + iterationNum;
-    result = prime * result + ((nextNode == null) ? 0 : nextNode.hashCode());
-    result = prime * result + nextNodeStateIndex;
-    result = prime * result + ((prevNode == null) ? 0 : prevNode.hashCode());
-    result = prime * result
-        + ((schemaNode == null) ? 0 : schemaNode.hashCode());
+    int result = localHashCode(prime);
+    result =
+        prime * result
+        + ((nextNode == null) ? 0 : nextNode.localHashCode(prime));
+
+    result =
+        prime * result
+        + ((prevNode == null) ? 0 : prevNode.localHashCode(prime));
+
     return result;
   }
 
   /**
    * Compares this to another <code>DocumentPathNode</code> for equality.
+   * This does not perform a deep equality check, as that would be expensive
+   * for long paths.  This only checks the equality of local data members of
+   * its neighbors.
    *
    * @see java.lang.Object#equals(java.lang.Object)
    */
@@ -92,31 +100,21 @@ final class DocumentPathNode {
       return false;
     }
     final DocumentPathNode other = (DocumentPathNode) obj;
-    if (iterationNum != other.iterationNum) {
+    if (!localEquals(other)) {
       return false;
     }
     if (nextNode == null) {
       if (other.nextNode != null) {
         return false;
       }
-    } else if (!nextNode.equals(other.nextNode)) {
-      return false;
-    }
-    if (nextNodeStateIndex != other.nextNodeStateIndex) {
+    } else if (!nextNode.localEquals(other.nextNode)) {
       return false;
     }
     if (prevNode == null) {
       if (other.prevNode != null) {
         return false;
       }
-    } else if (!prevNode.equals(other.prevNode)) {
-      return false;
-    }
-    if (schemaNode == null) {
-      if (other.schemaNode != null) {
-        return false;
-      }
-    } else if (!schemaNode.equals(other.schemaNode)) {
+    } else if (!prevNode.localEquals(other.prevNode)) {
       return false;
     }
     return true;
@@ -210,6 +208,32 @@ final class DocumentPathNode {
     nextNode = null;
 
     return oldNext;
+  }
+
+  private int localHashCode(int prime) {
+    int result = 1;
+    result = prime * result + iterationNum;
+    result = prime * result + nextNodeStateIndex;
+    result = prime * result
+        + ((schemaNode == null) ? 0 : schemaNode.hashCode());
+    return result;
+  }
+
+  private boolean localEquals(DocumentPathNode other) {
+    if (iterationNum != other.iterationNum) {
+      return false;
+    }
+    if (nextNodeStateIndex != other.nextNodeStateIndex) {
+      return false;
+    }
+    if (schemaNode == null) {
+      if (other.schemaNode != null) {
+        return false;
+      }
+    } else if (!schemaNode.equals(other.schemaNode)) {
+      return false;
+    }
+    return false;
   }
 
   private SchemaStateMachineNode schemaNode;

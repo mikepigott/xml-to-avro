@@ -199,6 +199,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     public int compareTo(PathSegment o) {
       return 0;
     }
+
+    private int localHashCode(int prime) {
+      return 0;
+    }
+
+    private boolean localEquals(PathSegment other) {
+      return false;
+    }
   }
 
   /**
