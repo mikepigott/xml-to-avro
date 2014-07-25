@@ -53,12 +53,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    * Path segments may also be recycled when a decision point is refuted.
    */
   private final class PathSegment implements Comparable<PathSegment> {
-    PathSegment() {
-      start = null;
-      end = null;
-      length = 0;
-    }
-
     PathSegment(DocumentPathNode node) {
       set(node);
     }
@@ -115,6 +109,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     }
 
     final void set(DocumentPathNode node) {
+      if (node == null) {
+        throw new IllegalArgumentException("DocumentPathNode cannot be null.");
+      }
+
       this.start = node;
       this.end = node;
       this.afterStart = null;
@@ -164,8 +162,15 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       final PathSegment other = (PathSegment) obj;
 
-      if ( !start.equals(other.getStart()) ) {
+      if (start != other.getStart()) {
+        /* PathSegments are implemented such that all common PathSegments
+         * share the same start node in memory, but all following nodes in
+         * the path are clones of each other.  Likewise, if the first nodes
+         * do not point to the same memory location, these two paths cannot
+         * be equivalent.
+         */
         return false;
+
       } else if ((afterStart == null) && (other.getAfterStart() != null)) {
         return false;
       } else if ((afterStart != null) && (other.getAfterStart() == null)) {
@@ -197,6 +202,32 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     @Override
     public int compareTo(PathSegment o) {
+      /* Paths which end in a wildcard element are of lower
+       * rank (higher order) than those that end in elements.
+       */
+      if ( !end
+              .getStateMachineNode()
+              .getNodeType()
+              .equals( o.getEnd().getStateMachineNode().getNodeType() ) ) {
+
+        if ( end
+              .getStateMachineNode()
+              .equals(SchemaStateMachineNode.Type.ANY) ) {
+          return 1;
+
+        } else if ( o.getEnd()
+                     .getStateMachineNode()
+                     .getNodeType()
+                     .equals(SchemaStateMachineNode.Type.ANY) ) {
+          return -1;
+
+        } else {
+          throw new IllegalStateException("The end nodes do not have the same machine node type, so one should be an ELEMENT and the other should be an ANY.  However, this end node is a " + end.getStateMachineNode().getNodeType() + " while the other has an end node of type " + o.getEnd().getStateMachineNode().getNodeType() + ".");
+        }
+      }
+
+      // TODO: Finish comparison check.
+
       return 0;
     }
 
