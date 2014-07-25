@@ -341,8 +341,7 @@ final class SchemaStateMachineNode {
 
       return true;
 
-    } else if ( possibleNextStates.size()
-        != other.possibleNextStates.size() ) {
+    } else if (possibleNextStates.size() != other.possibleNextStates.size()) {
 
       return false;
     }
