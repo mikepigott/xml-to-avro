@@ -57,6 +57,71 @@ final class DocumentPathNode {
     iterationNum = iteration;
   }
 
+  /**
+   * Generates a hash code to represent this <code>DocumentPathNode</code>.
+   *
+   * @see java.lang.Object#hashCode()
+   */
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + iterationNum;
+    result = prime * result + ((nextNode == null) ? 0 : nextNode.hashCode());
+    result = prime * result + nextNodeStateIndex;
+    result = prime * result + ((prevNode == null) ? 0 : prevNode.hashCode());
+    result = prime * result
+        + ((schemaNode == null) ? 0 : schemaNode.hashCode());
+    return result;
+  }
+
+  /**
+   * Compares this to another <code>DocumentPathNode</code> for equality.
+   *
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof DocumentPathNode)) {
+      return false;
+    }
+    final DocumentPathNode other = (DocumentPathNode) obj;
+    if (iterationNum != other.iterationNum) {
+      return false;
+    }
+    if (nextNode == null) {
+      if (other.nextNode != null) {
+        return false;
+      }
+    } else if (!nextNode.equals(other.nextNode)) {
+      return false;
+    }
+    if (nextNodeStateIndex != other.nextNodeStateIndex) {
+      return false;
+    }
+    if (prevNode == null) {
+      if (other.prevNode != null) {
+        return false;
+      }
+    } else if (!prevNode.equals(other.prevNode)) {
+      return false;
+    }
+    if (schemaNode == null) {
+      if (other.schemaNode != null) {
+        return false;
+      }
+    } else if (!schemaNode.equals(other.schemaNode)) {
+      return false;
+    }
+    return true;
+  }
+
   SchemaStateMachineNode getStateMachineNode() {
     return schemaNode;
   }

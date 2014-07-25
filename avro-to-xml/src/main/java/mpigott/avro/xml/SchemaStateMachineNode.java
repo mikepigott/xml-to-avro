@@ -288,19 +288,17 @@ final class SchemaStateMachineNode {
   @Override
   public int hashCode() {
     final int prime = 31;
-    int result = 1;
-    result = prime * result + ((any == null) ? 0 : any.hashCode());
-    result = prime * result
-        + ((attributes == null) ? 0 : attributes.hashCode());
-    result = prime * result
-        + ((avroSchema == null) ? 0 : avroSchema.hashCode());
-    result = prime * result + ((element == null) ? 0 : element.hashCode());
-    result = prime * result + (int) (maxOccurs ^ (maxOccurs >>> 32));
-    result = prime * result + (int) (minOccurs ^ (minOccurs >>> 32));
-    result = prime * result + ((nodeType == null) ? 0 : nodeType.hashCode());
-    result = prime * result
-        + ((possibleNextStates == null) ? 0 : possibleNextStates.hashCode());
-    result = prime * result + ((typeInfo == null) ? 0 : typeInfo.hashCode());
+    int result = localHashCode(prime);
+
+    /* The state machine can have cycles, so we cannot
+     * perform a deep walk when generating the hash code.
+     */
+    if (possibleNextStates != null) {
+      for (SchemaStateMachineNode nextState : possibleNextStates) {
+        result = result * prime + nextState.localHashCode(prime);
+      }
+    }
+
     return result;
   }
 
@@ -322,6 +320,61 @@ final class SchemaStateMachineNode {
       return false;
     }
     SchemaStateMachineNode other = (SchemaStateMachineNode) obj;
+
+    if ( !localEquals(other) ) {
+      return false;
+    }
+
+    /* The state machine can have cycles, so we cannot
+     * perform a deep walk when determining equality.
+     */
+    if ((possibleNextStates == null) && (other.possibleNextStates != null)) {
+      return false;
+
+    } else if ((possibleNextStates != null)
+        && other.possibleNextStates == null) {
+
+      return false;
+
+    } else if ((possibleNextStates == null)
+        && (other.possibleNextStates == null)) {
+
+      return true;
+
+    } else if ( possibleNextStates.size()
+        != other.possibleNextStates.size() ) {
+
+      return false;
+    }
+
+    for (int index = 0; index < possibleNextStates.size(); ++index) {
+      if ( !possibleNextStates
+              .get(index)
+              .localEquals( other.possibleNextStates.get(index) ) ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private int localHashCode(int prime) {
+    int result = 1;
+    result = prime * result + ((any == null) ? 0 : any.hashCode());
+    result = prime * result
+        + ((attributes == null) ? 0 : attributes.hashCode());
+    result = prime * result
+        + ((avroSchema == null) ? 0 : avroSchema.hashCode());
+    result = prime * result + ((element == null) ? 0 : element.hashCode());
+    result = prime * result + (int) (maxOccurs ^ (maxOccurs >>> 32));
+    result = prime * result + (int) (minOccurs ^ (minOccurs >>> 32));
+    result = prime * result + ((nodeType == null) ? 0 : nodeType.hashCode());
+    result = prime * result + ((typeInfo == null) ? 0 : typeInfo.hashCode());
+
+    return result;
+  }
+
+  private boolean localEquals(SchemaStateMachineNode other) {
     if (any == null) {
       if (other.any != null) {
         return false;
@@ -357,13 +410,6 @@ final class SchemaStateMachineNode {
       return false;
     }
     if (nodeType != other.nodeType) {
-      return false;
-    }
-    if (possibleNextStates == null) {
-      if (other.possibleNextStates != null) {
-        return false;
-      }
-    } else if (!possibleNextStates.equals(other.possibleNextStates)) {
       return false;
     }
     if (typeInfo == null) {
