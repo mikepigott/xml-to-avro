@@ -438,8 +438,76 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       break;
 
     case SEQUENCE:
-      // Find the next one in the sequence that matches.
-      break;
+      {
+        // Find the next one in the sequence that matches.
+        int position = tree.currPositionInSeqGroup;
+        if (position < 0) {
+          // Let's just do ourselves a favor and add in all the children now.
+          if ( !tree.children.isEmpty() ) {
+            throw new IllegalStateException("When searching for " + elemQName + ", reached a sequence group with a negative position but with children defined.");
+          }
+
+          for (SchemaStateMachineNode nextState : state.getPossibleNextStates()) {
+            tree.children.add( createTreeNode(tree, nextState) );
+          }
+
+          position = 0;
+        }
+
+        for (int stateIndex = position;
+            stateIndex < tree.children.size();
+            ++stateIndex) {
+
+          // Process child.
+          final StateMachineTreeWithState nextTree =
+              tree.children.get(stateIndex);
+
+          final SchemaStateMachineNode nextState = nextTree.stateMachineNode;
+
+          final DocumentPathNode nextPath =
+              createDocumentPathNode(startNode, nextState);
+          nextPath.setIteration(nextTree.currIteration);
+
+          /* Both the tree node's and the document path node's state machine
+           * nodes should point to the same state machine node in memory.
+           */
+          if ((nextTree.stateMachineNode != nextState)
+              || (nextPath.getStateMachineNode() != nextState)) {
+            throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.stateMachineNode.getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
+          }
+
+          final List<PathSegment> seqPaths =
+              find(nextPath, nextTree, elemQName);
+
+          if (seqPaths != null) {
+            for (PathSegment seqPath : seqPaths) {
+              seqPath.prepend(startNode, stateIndex);
+            }
+
+            // nextPath was cloned by all path segments, so it can be recycled.
+            recyclePathNode(nextPath);
+
+            if (choices == null) {
+              choices = seqPaths;
+            } else {
+              choices.addAll(seqPaths);
+            }
+          }
+
+          if (nextTree.currIteration
+                < nextTree.stateMachineNode.getMinOccurs()) {
+
+            /* If we have not traversed this node in the sequence the minimum
+             * number of times, we cannot advance to the next node in the
+             * sequence.
+             */
+            break;
+          }
+        }
+
+        break;
+      }
+
     case ALL:
     case SUBSTITUTION_GROUP:
     case CHOICE:
@@ -475,8 +543,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
           final DocumentPathNode nextPath =
               createDocumentPathNode(startNode, nextState);
-
-          startNode.setNextNode(stateIndex, nextPath);
 
           StateMachineTreeWithState nextTree = null;
 
