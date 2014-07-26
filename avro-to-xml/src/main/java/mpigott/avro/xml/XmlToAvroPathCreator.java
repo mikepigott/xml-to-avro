@@ -340,6 +340,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       }
     }
 
+    List<PathSegment> getAllChoices() {
+      return choices;
+    }
+
     XmlSchemaDocumentPathNode getDecisionPoint() {
       return decisionPoint;
     }
@@ -472,6 +476,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
              * Remove it and try the next prior decision point.
              */
             decisionPoints.remove(decisionPoints.size() - 1);
+
+            // Recycle all of its paths.
+            for (PathSegment incorrectPath : priorPoint.getAllChoices()) {
+              recyclePathSegment(incorrectPath);
+            }
+
             continue;
           }
 
@@ -1024,17 +1034,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       unusedPathSegmentPool = new ArrayList<PathSegment>();
     }
 
-    if (segment.getAfterStart() != null) {
-      /* All of the nodes starting with afterStart
-       * were cloned; we can recycle them.
-       */
-      for (XmlSchemaDocumentPathNode iter = segment.getAfterStart();
-          iter != null;
-          iter = iter.getNext()) {
-  
-        recyclePathNode(iter);
-      }
-    }
+    /* All of the path nodes inside the segment have been recycled already as
+     * part of the call to unfollowPriorPath().  So we just need to recycle the
+     * PathSegments themselves.
+     */
 
     unusedPathSegmentPool.add(segment);
   }
