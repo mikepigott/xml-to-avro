@@ -39,6 +39,12 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 final class XmlToAvroPathCreator extends DefaultHandler {
 
+  /* If a group loops back on itself, we don't want to loop
+   * until the stack overflows looking for a valid match.
+   * We will stop looking once we reach MAX_DEPTH.
+   */
+  private static final int MAX_DEPTH = 256;
+
   /* We want to keep track of all of the valid path segments to a particular
    * element, but we do not want to stomp on the very first node until we
    * know which path we want to follow.  Likewise, we want to keep the
@@ -414,7 +420,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   
       // 1. Find possible paths.
       List<PathSegment> possiblePaths =
-          find(currentPath, currentPosition, elemQName);
+          find(currentPath, currentPosition, elemQName, 0);
 
       PathSegment nextPath = null;
   
@@ -488,7 +494,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                 find(
                     currentPath,
                     currentPosition,
-                    traversedElements.get(index).elemName);
+                    traversedElements.get(index).elemName,
+                    0);
                     // TODO: Handle starts vs. ends.
 
             if ((possiblePaths == null) || possiblePaths.isEmpty()) {
@@ -623,9 +630,17 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   private List<PathSegment> find(
       XmlSchemaDocumentPathNode startNode,
       XmlSchemaDocumentNode tree,
-      QName elemQName) {
+      QName elemQName,
+      int currDepth) {
 
-    if (startNode.getStateMachineNode()
+    if (currDepth > MAX_DEPTH) {
+      /* We are likely in an infinite recursive loop looking for an element in
+       * a group whose definition includes itself.  Likewise, we'll stop here
+       * and say we were unable to find the element we were looking for.
+       */
+      return null;
+
+    } else if (startNode.getStateMachineNode()
         != currentPosition.getStateMachineNode()) {
 
       throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode state machine (" + startNode.getStateMachineNode().getNodeType() + ") does not match the tree node (" + tree.getStateMachineNode().getNodeType() + ").");
@@ -642,7 +657,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       throw new IllegalStateException("While processing a sequence group in search of " + elemQName + ", the current position in the DocumentPathNode (" + startNode.getIndexOfNextNodeState() + ") was not kept up-to-date with the tree node's position in the sequence group (" + tree.getCurrPositionInSequence() + ").");
 
-    } else if (tree.getStateMachineNode().getMaxOccurs() > tree.getCurrIteration()) {
+    } else if (tree.getStateMachineNode().getMaxOccurs() < tree.getCurrIteration()) {
 
       throw new IllegalStateException("While searching for " + elemQName + " found that a node of type " + tree.getStateMachineNode().getNodeType() + " had more iterations in the tree (" + tree.getCurrIteration() + ") than were the maximum allowed for the state machine node (" + tree.getStateMachineNode().getMaxOccurs() + ").");
 
@@ -731,7 +746,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           }
 
           final List<PathSegment> seqPaths =
-              find(nextPath, nextTree, elemQName);
+              find(nextPath, nextTree, elemQName, currDepth + 1);
 
           if (seqPaths != null) {
             for (PathSegment seqPath : seqPaths) {
@@ -829,7 +844,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           }
 
           final List<PathSegment> choicePaths =
-              find(nextPath, nextTree, elemQName);
+              find(nextPath, nextTree, elemQName, currDepth + 1);
 
           if (choicePaths != null) {
             for (PathSegment choicePath : choicePaths) {
@@ -1089,7 +1104,49 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   }
 
   private void unfollowPriorPath(XmlSchemaDocumentPathNode start) {
-    // TODO: Implement Me!
+    /* We need to walk from currentPosition back to start, undoing
+     * iteration increments and sequence group walks along the way.
+     */
+    XmlSchemaDocumentPathNode revIter = currentPath;
+    currentPath = start;
+    currentPosition = start.getDocumentNode();
+
+    while (revIter != start) {
+
+      // As before, only entering counts; exiting does not.
+      if (revIter
+            .getDirection()
+            .equals(XmlSchemaDocumentPathNode.Direction.CHILD)) {
+
+        final XmlSchemaDocumentNode docNode = revIter.getDocumentNode();
+        docNode.setCurrIteration(docNode.getCurrIteration() - 1);
+        if (docNode
+              .getStateMachineNode()
+              .getNodeType()
+              .equals(SchemaStateMachineNode.Type.SEQUENCE)) {
+
+          int priorPosition = revIter.getPriorSequencePosition();
+          if (priorPosition < 0) {
+            /* A negative sequence position indicates that the sequence has not
+             * been traversed yet, and children need to be created.  Since the
+             * node has been traversed and children have been created, we just
+             * want to indicate we're in the first position.
+             */
+            priorPosition = 0;
+          }
+          docNode.setCurrPositionInSequence(priorPosition);
+        }
+      }
+
+      /* While this segment of the path is no longer valid, the underlying
+       * document node is, and will likely be traversed again.  Likewise,
+       * we only want to recycle the path node, and leave the document node
+       * in place.
+       */
+      final XmlSchemaDocumentPathNode nodeToRecycle = revIter;
+      revIter = revIter.getPrevious();
+      recyclePathNode(nodeToRecycle);
+    }
   }
 
   private String getElementsTraversedAsString() {

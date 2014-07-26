@@ -34,33 +34,19 @@ final class XmlSchemaDocumentPathNode {
     direction = dir;
     schemaNode = node;
     nextNodeStateIndex = -1;
+    priorSequencePosition = node.getCurrPositionInSequence();
     iterationNum = 0;
     prevNode = null;
     nextNode = null;
   }
 
-  XmlSchemaDocumentPathNode(Direction dir, XmlSchemaDocumentPathNode previous, XmlSchemaDocumentNode node) {
+  XmlSchemaDocumentPathNode(
+      Direction dir,
+      XmlSchemaDocumentPathNode previous,
+      XmlSchemaDocumentNode node) {
+
     this(dir, node);
     prevNode = previous;
-  }
-
-  XmlSchemaDocumentPathNode(
-      XmlSchemaDocumentPathNode previous,
-      XmlSchemaDocumentPathNode copyOf) {
-
-    schemaNode = copyOf.schemaNode;
-    nextNodeStateIndex = -1;
-    prevNode = previous;
-    nextNode = null;
-  }
-
-  XmlSchemaDocumentPathNode(
-      XmlSchemaDocumentPathNode previous,
-      XmlSchemaDocumentPathNode copyOf,
-      int iteration) {
-
-    this(previous, copyOf);
-    iterationNum = iteration;
   }
 
   /**
@@ -146,6 +132,15 @@ final class XmlSchemaDocumentPathNode {
     return iterationNum;
   }
 
+  /**
+   * When unfollowing a <code>XmlSchemaDocumentPathNode</code>, we need to
+   * reset the child position of a {@link XmlSchemaDocumentNode} representing
+   * an XML Schema Sequence group.
+   */
+  int getPriorSequencePosition() {
+    return priorSequencePosition;
+  }
+
   XmlSchemaDocumentPathNode getPrevious() {
     return prevNode;
   }
@@ -223,6 +218,7 @@ final class XmlSchemaDocumentPathNode {
     direction = newDirection;
     schemaNode = newNode;
     nextNodeStateIndex = -1;
+    priorSequencePosition = newNode.getCurrPositionInSequence();
     iterationNum = 0;
 
     prevNode = newPrevious;
@@ -237,6 +233,7 @@ final class XmlSchemaDocumentPathNode {
     int result = 1;
     result = prime * result + iterationNum;
     result = prime * result + nextNodeStateIndex;
+    result = prime * result + priorSequencePosition;
     result = prime * result + ((direction == null) ? 0 : direction.hashCode());
     result = prime * result
         + ((schemaNode == null) ? 0 : schemaNode.hashCode());
@@ -253,6 +250,9 @@ final class XmlSchemaDocumentPathNode {
     if (nextNodeStateIndex != other.nextNodeStateIndex) {
       return false;
     }
+    if (priorSequencePosition != other.priorSequencePosition) {
+      return false;
+    }
     if (schemaNode == null) {
       if (other.schemaNode != null) {
         return false;
@@ -266,6 +266,7 @@ final class XmlSchemaDocumentPathNode {
   private Direction direction;
   private XmlSchemaDocumentNode schemaNode;
   private int nextNodeStateIndex;
+  private int priorSequencePosition;
   private int iterationNum;
 
   private XmlSchemaDocumentPathNode prevNode;
