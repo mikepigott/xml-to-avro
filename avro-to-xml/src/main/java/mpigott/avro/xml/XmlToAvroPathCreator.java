@@ -78,6 +78,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       // We need to clone start and make it the afterStart.
       final XmlSchemaDocumentPathNode clonedStartNode =
           createDocumentPathNode(
+              start.getDirection(),
               start.getPrevious(),
               start.getDocumentNode());
 
@@ -262,8 +263,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    */
   XmlToAvroPathCreator(SchemaStateMachineNode root) {
     rootNode = root;
-    rootStateNode = new XmlSchemaDocumentNode(rootNode);
-    rootPathNode = new XmlSchemaDocumentPathNode(rootStateNode);
+    rootTreeNode = new XmlSchemaDocumentNode(rootNode);
+
+    rootPathNode =
+        new XmlSchemaDocumentPathNode(
+            XmlSchemaDocumentPathNode.Direction.CHILD,
+            rootTreeNode);
 
     traversedElements = new ArrayList<QName>();
     currentPosition = null;
@@ -277,7 +282,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
   @Override
   public void startDocument() throws SAXException {
-    currentPosition = rootStateNode;
+    currentPosition = rootTreeNode;
     currentPath = rootPathNode;
 
     traversedElements.clear();
@@ -434,7 +439,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    *         the XML Document against its XML Schema.
    */
   XmlSchemaDocumentNode getRootOfInternalTree() {
-    return rootStateNode;
+    return rootTreeNode;
   }
 
   private List<PathSegment> find(
@@ -529,7 +534,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           final SchemaStateMachineNode nextState = nextTree.stateMachineNode;
 
           final XmlSchemaDocumentPathNode nextPath =
-              createDocumentPathNode(startNode, nextTree);
+              createDocumentPathNode(
+                  XmlSchemaDocumentPathNode.Direction.CHILD,
+                  startNode,
+                  nextTree);
           nextPath.setIteration(nextTree.currIteration);
 
           /* Both the tree node's and the document path node's state machine
@@ -622,7 +630,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           }
 
           final XmlSchemaDocumentPathNode nextPath =
-              createDocumentPathNode(startNode, nextTree);
+              createDocumentPathNode(
+                  XmlSchemaDocumentPathNode.Direction.CHILD,
+                  startNode,
+                  nextTree);
 
           /* At this stage, we are only collecting possible paths to follow.
            * Likewise, we do not want to increment the iteration number yet
@@ -754,15 +765,16 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   }
 
   private XmlSchemaDocumentPathNode createDocumentPathNode(
+      XmlSchemaDocumentPathNode.Direction direction,
       XmlSchemaDocumentPathNode previous,
       XmlSchemaDocumentNode state) {
 
     if ((unusedNodePool != null) && !unusedNodePool.isEmpty()) {
       XmlSchemaDocumentPathNode node = unusedNodePool.remove(unusedNodePool.size() - 1);
-      node.update(previous, state);
+      node.update(direction, previous, state);
       return node;
     } else {
-      return new XmlSchemaDocumentPathNode(previous, state);
+      return new XmlSchemaDocumentPathNode(direction, previous, state);
     }
   }
 
@@ -849,7 +861,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
   private final SchemaStateMachineNode rootNode;
   private XmlSchemaDocumentPathNode rootPathNode;
-  private XmlSchemaDocumentNode rootStateNode;
+  private XmlSchemaDocumentNode rootTreeNode;
 
   private XmlSchemaDocumentNode currentPosition;
   private XmlSchemaDocumentPathNode currentPath;

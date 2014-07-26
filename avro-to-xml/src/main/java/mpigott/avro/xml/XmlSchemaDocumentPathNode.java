@@ -25,7 +25,13 @@ import javax.xml.namespace.QName;
  */
 final class XmlSchemaDocumentPathNode {
 
-  XmlSchemaDocumentPathNode(XmlSchemaDocumentNode node) {
+  enum Direction {
+    PARENT,
+    CHILD
+  }
+
+  XmlSchemaDocumentPathNode(Direction dir, XmlSchemaDocumentNode node) {
+    direction = dir;
     schemaNode = node;
     nextNodeStateIndex = -1;
     iterationNum = 0;
@@ -33,8 +39,8 @@ final class XmlSchemaDocumentPathNode {
     nextNode = null;
   }
 
-  XmlSchemaDocumentPathNode(XmlSchemaDocumentPathNode previous, XmlSchemaDocumentNode node) {
-    this(node);
+  XmlSchemaDocumentPathNode(Direction dir, XmlSchemaDocumentPathNode previous, XmlSchemaDocumentNode node) {
+    this(dir, node);
     prevNode = previous;
   }
 
@@ -128,6 +134,10 @@ final class XmlSchemaDocumentPathNode {
     return schemaNode.stateMachineNode;
   }
 
+  Direction getDirection() {
+    return direction;
+  }
+
   int getIndexOfNextNodeState() {
     return nextNodeStateIndex;
   }
@@ -204,9 +214,11 @@ final class XmlSchemaDocumentPathNode {
    *         be discarded internally. 
    */
   XmlSchemaDocumentPathNode update(
+      XmlSchemaDocumentPathNode.Direction newDirection,
       XmlSchemaDocumentPathNode newPrevious,
       XmlSchemaDocumentNode newNode) {
 
+    direction = newDirection;
     schemaNode = newNode;
     nextNodeStateIndex = -1;
     iterationNum = 0;
@@ -223,12 +235,16 @@ final class XmlSchemaDocumentPathNode {
     int result = 1;
     result = prime * result + iterationNum;
     result = prime * result + nextNodeStateIndex;
+    result = prime * result + ((direction == null) ? 0 : direction.hashCode());
     result = prime * result
         + ((schemaNode == null) ? 0 : schemaNode.hashCode());
     return result;
   }
 
   private boolean localEquals(XmlSchemaDocumentPathNode other) {
+    if (direction != other.direction) {
+      return false;
+    }
     if (iterationNum != other.iterationNum) {
       return false;
     }
@@ -245,6 +261,7 @@ final class XmlSchemaDocumentPathNode {
     return false;
   }
 
+  private Direction direction;
   private XmlSchemaDocumentNode schemaNode;
   private int nextNodeStateIndex;
   private int iterationNum;
