@@ -159,10 +159,14 @@ final class XmlSchemaDocumentPathNode {
       XmlSchemaDocumentPathNode newNext) {
 
     if ((nextNodeIndex == -1)
-        && newNext.getDirection().equals(Direction.CONTENT)) {
+        && (newNext.getDirection().equals(Direction.CONTENT)
+            || newNext.getDirection().equals(Direction.PARENT))) {
 
-      /* This is a content node; no validation is needed because
+      /* If this is a content node; no validation is needed because
        * we didn't change our position in the document tree.
+       *
+       * If this is a parent node, no validation is possible because
+       * we do not track the prior state in the state machine.
        */
 
     } else if ((nextNodeIndex < 0)

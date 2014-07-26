@@ -556,36 +556,45 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
             nextPath = null;
 
-            possiblePaths =
-                find(
-                    currentPath,
-                    currentPosition,
-                    traversedElements.get(index).elemName,
-                    0);
-                    // TODO: Handle starts vs. ends.
+            final TraversedElement te = traversedElements.get(index);
 
-            if ((possiblePaths == null) || possiblePaths.isEmpty()) {
-              break;
-
-            } else if (possiblePaths.size() > 1) {
-              final DecisionPoint decisionPoint =
-                  new DecisionPoint(
+            if (te.traversal.equals(TraversedElement.Traversal.START)) {
+              possiblePaths =
+                  find(
                       currentPath,
-                      possiblePaths,
-                      traversedElements.size() - 1);
-              decisionPoints.add(decisionPoint);
-              nextPath = decisionPoint.tryNextPath();
+                      currentPosition,
+                      traversedElements.get(index).elemName,
+                      0);
+
+              if ((possiblePaths == null) || possiblePaths.isEmpty()) {
+                break;
+
+              } else if (possiblePaths.size() > 1) {
+                final DecisionPoint decisionPoint =
+                    new DecisionPoint(
+                        currentPath,
+                        possiblePaths,
+                        traversedElements.size() - 1);
+                decisionPoints.add(decisionPoint);
+                nextPath = decisionPoint.tryNextPath();
+
+              } else {
+                nextPath = possiblePaths.get(0);
+              }
+
+              if (nextPath == null) {
+                throw new IllegalStateException("Somehow after finding a new path to follow, that path is null.");
+              }
+
+              // If we find (a) path(s) that match(es), success!  Follow it.
+              followPath(nextPath);
+
+            } else if ( te.traversal.equals(TraversedElement.Traversal.END) ) {
+              walkUpTree(te.elemName);
 
             } else {
-              nextPath = possiblePaths.get(0);
+              throw new IllegalStateException("Unrecognized element traversal direction for " + te.elemName + " of " + te.traversal + '.');
             }
-
-            if (nextPath == null) {
-              throw new IllegalStateException("Somehow after finding a new path to follow, that path is null.");
-            }
-
-            // If we find (a) path(s) that match(es), success!  Follow it.
-            followPath(nextPath);
           }
 
           if ((possiblePaths == null) || possiblePaths.isEmpty()) {
@@ -655,17 +664,17 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       final String text = new String(ch, start, length).trim();
 
-      final boolean elemHasContent =
+      final boolean elemExpectsContent =
           (elemTypeInfo != null) && (elemTypeInfo.getAvroType() != null);
 
-      if (!elemHasContent && text.isEmpty()) {
+      if (!elemExpectsContent && text.isEmpty()) {
         // Nothing to see here.
         return;
 
-      } else if (!elemHasContent && !text.isEmpty()) {
+      } else if (!elemExpectsContent && !text.isEmpty()) {
         throw new IllegalStateException("Element " + state.getElement().getQName() + " has no content, but we received \"" + text + "\" for it.");
 
-      } else if (elemHasContent
+      } else if (elemExpectsContent
                    && text.isEmpty()
                    && !state.getElement().isNillable()) {
         // TODO: Also handle mixed content; some of it could be empty.
@@ -680,7 +689,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
        *       wait until a refactor to remove the Avro-specific information
        *       from XmlSchemaTypeInfo.
        *
-       *       This check likely belongs in the Utils class.
+       *       This check likely belongs as a static method in the Utils class.
        */
       currentPosition.setReceivedContent(true);
 
@@ -737,7 +746,32 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     try {
       verifyCurrentPositionIsAtElement("Ended element " + elemQName);
-      // Do stuff.
+
+      final SchemaStateMachineNode state =
+          currentPosition.getStateMachineNode();
+
+      if ( state.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT) ) {
+
+        // 1. Is this the element we are looking for?
+        if (!state.getElement().getQName().equals(elemQName) ) {
+          throw new IllegalStateException("We are ending element " + traversedElements.get(traversedElements.size() - 1).elemName + " but our current position is for element " + state.getElement().getQName() + " !!");
+        }
+
+        // 2. Check the element received the expected content, if any.
+        final XmlSchemaTypeInfo elemTypeInfo = state.getElementType();
+
+        final boolean elemExpectsContent =
+            (elemTypeInfo != null) && (elemTypeInfo.getAvroType() != null);
+
+        if (elemExpectsContent
+            && !state.getElement().isNillable()
+            && !currentPosition.getReceivedContent()) {
+          throw new IllegalStateException("We are ending element " + elemQName + "; it expected to receive content but did not.");
+        }
+      }
+
+      walkUpTree(elemQName);
+
     } catch (Exception e) {
       throw new SAXException("Error occurred while ending element " + elemQName + "; traversed path was " + getElementsTraversedAsString(), e);
     }
@@ -1090,76 +1124,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return choices;
   }
 
-  private XmlSchemaDocumentPathNode createDocumentPathNode(
-      XmlSchemaDocumentPathNode.Direction direction,
-      XmlSchemaDocumentPathNode previous,
-      XmlSchemaDocumentNode state) {
-
-    if ((unusedNodePool != null) && !unusedNodePool.isEmpty()) {
-      XmlSchemaDocumentPathNode node = unusedNodePool.remove(unusedNodePool.size() - 1);
-      node.update(direction, previous, state);
-      return node;
-    } else {
-      return new XmlSchemaDocumentPathNode(direction, previous, state);
-    }
-  }
-
-  private void recyclePathNode(XmlSchemaDocumentPathNode toReuse) {
-    if (unusedNodePool == null) {
-      unusedNodePool = new ArrayList<XmlSchemaDocumentPathNode>();
-    }
-    unusedNodePool.add(toReuse);
-  }
-
-  private XmlSchemaDocumentNode createTreeNode(
-      XmlSchemaDocumentNode parent,
-      SchemaStateMachineNode node) {
-
-    if ((unusedTreePool == null) || unusedTreePool.isEmpty()) {
-      return new XmlSchemaDocumentNode(parent, node);
-    } else {
-      XmlSchemaDocumentNode tree =
-          unusedTreePool.remove(unusedTreePool.size() - 1);
-
-      tree.set(parent, node);
-
-      return tree;
-    }
-  }
-
-  private void recycleTreeNode(XmlSchemaDocumentNode tree) {
-    if (unusedTreePool == null) {
-      unusedTreePool = new ArrayList<XmlSchemaDocumentNode>();
-    }
-    unusedTreePool.add(tree);
-  }
-
-  private PathSegment createPathSegment(XmlSchemaDocumentPathNode endPathNode) {
-    PathSegment segment = null;
-    if ((unusedPathSegmentPool != null) && !unusedPathSegmentPool.isEmpty()) {
-      segment =
-          unusedPathSegmentPool.remove(unusedPathSegmentPool.size() - 1);
-      segment.set(endPathNode);
-
-    } else {
-      segment = new PathSegment(endPathNode);
-    }
-    return segment;
-  }
-
-  private void recyclePathSegment(PathSegment segment) {
-    if (unusedPathSegmentPool == null) {
-      unusedPathSegmentPool = new ArrayList<PathSegment>();
-    }
-
-    /* All of the path nodes inside the segment have been recycled already as
-     * part of the call to unfollowPriorPath().  So we just need to recycle the
-     * PathSegments themselves.
-     */
-
-    unusedPathSegmentPool.add(segment);
-  }
-
   private void followPath(PathSegment path) {
     switch (path.getEnd().getStateMachineNode().getNodeType()) {
     case ELEMENT:
@@ -1258,6 +1222,124 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       revIter = revIter.getPrevious();
       recyclePathNode(nodeToRecycle);
     }
+  }
+
+  /* Walks up the tree from the current element to the prior one.
+   * Confirms the provided QName matches the current one before traversing.
+   *
+   * If currElem is null, the current position must be a wildcard element.
+   */
+  private void walkUpTree(QName currElem) {
+    final SchemaStateMachineNode state = currentPosition.getStateMachineNode();
+    switch (state.getNodeType()) {
+    case ANY:
+      break;
+    case ELEMENT:
+      if ( !state.getElement().getQName().equals(currElem) ) {
+        throw new IllegalStateException("We expected to walk upwards from element " + currElem + ", but our current element is " + state.getElement().getQName());
+      }
+      break;
+    default:
+      throw new IllegalStateException("We expected to walk upwards from element " + currElem + ", but our current position is in a node of type " + state.getNodeType());
+    }
+
+    XmlSchemaDocumentNode iter = currentPosition;
+    XmlSchemaDocumentPathNode path = currentPath;
+
+    do {
+      iter = iter.getParent();
+
+      // If iter is null, it means we ended the root, and we're done!
+      if (iter == null) {
+        break;
+      }
+
+      final XmlSchemaDocumentPathNode nextPath =
+          createDocumentPathNode(
+              XmlSchemaDocumentPathNode.Direction.PARENT,
+              path,
+              iter);
+
+      path.setNextNode(-1, nextPath);
+      path = nextPath;
+
+    } while (!iter
+                .getStateMachineNode()
+                .getNodeType()
+                .equals(SchemaStateMachineNode.Type.ELEMENT));
+
+    currentPath = path;
+    currentPosition = iter;
+  }
+
+  private XmlSchemaDocumentPathNode createDocumentPathNode(
+      XmlSchemaDocumentPathNode.Direction direction,
+      XmlSchemaDocumentPathNode previous,
+      XmlSchemaDocumentNode state) {
+
+    if ((unusedNodePool != null) && !unusedNodePool.isEmpty()) {
+      XmlSchemaDocumentPathNode node = unusedNodePool.remove(unusedNodePool.size() - 1);
+      node.update(direction, previous, state);
+      return node;
+    } else {
+      return new XmlSchemaDocumentPathNode(direction, previous, state);
+    }
+  }
+
+  private void recyclePathNode(XmlSchemaDocumentPathNode toReuse) {
+    if (unusedNodePool == null) {
+      unusedNodePool = new ArrayList<XmlSchemaDocumentPathNode>();
+    }
+    unusedNodePool.add(toReuse);
+  }
+
+  private XmlSchemaDocumentNode createTreeNode(
+      XmlSchemaDocumentNode parent,
+      SchemaStateMachineNode node) {
+
+    if ((unusedTreePool == null) || unusedTreePool.isEmpty()) {
+      return new XmlSchemaDocumentNode(parent, node);
+    } else {
+      XmlSchemaDocumentNode tree =
+          unusedTreePool.remove(unusedTreePool.size() - 1);
+
+      tree.set(parent, node);
+
+      return tree;
+    }
+  }
+
+  private void recycleTreeNode(XmlSchemaDocumentNode tree) {
+    if (unusedTreePool == null) {
+      unusedTreePool = new ArrayList<XmlSchemaDocumentNode>();
+    }
+    unusedTreePool.add(tree);
+  }
+
+  private PathSegment createPathSegment(XmlSchemaDocumentPathNode endPathNode) {
+    PathSegment segment = null;
+    if ((unusedPathSegmentPool != null) && !unusedPathSegmentPool.isEmpty()) {
+      segment =
+          unusedPathSegmentPool.remove(unusedPathSegmentPool.size() - 1);
+      segment.set(endPathNode);
+
+    } else {
+      segment = new PathSegment(endPathNode);
+    }
+    return segment;
+  }
+
+  private void recyclePathSegment(PathSegment segment) {
+    if (unusedPathSegmentPool == null) {
+      unusedPathSegmentPool = new ArrayList<PathSegment>();
+    }
+
+    /* All of the path nodes inside the segment have been recycled already as
+     * part of the call to unfollowPriorPath().  So we just need to recycle the
+     * PathSegments themselves.
+     */
+
+    unusedPathSegmentPool.add(segment);
   }
 
   /* Perhaps this would be better implemented as a bunch of starting and
