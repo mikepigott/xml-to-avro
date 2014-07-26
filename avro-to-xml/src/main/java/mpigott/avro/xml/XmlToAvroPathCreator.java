@@ -298,7 +298,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   private static class DecisionPoint {
     DecisionPoint(
         XmlSchemaDocumentPathNode decisionPoint,
-        List<PathSegment> choices) {
+        List<PathSegment> choices,
+        int traversedElementIndex) {
 
       if (decisionPoint == null) {
         throw new IllegalArgumentException("The decision point path node cannot be null.");
@@ -310,7 +311,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       this.decisionPoint = decisionPoint;
       this.choices = choices;
-      this.traversedElementIndex = -1;
+      this.traversedElementIndex = traversedElementIndex;
+      this.currChoice = -1;
       java.util.Collections.sort(choices);
     }
 
@@ -320,7 +322,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
      * have been followed.
      */
     PathSegment tryNextPath() {
-      ++traversedElementIndex;
+      ++currChoice;
       if (choices.size() <= traversedElementIndex) {
         return null;
       } else {
@@ -334,7 +336,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     private final XmlSchemaDocumentPathNode decisionPoint;
     private final List<PathSegment> choices;
-    private int traversedElementIndex;
+    private final int traversedElementIndex;
+    private int currChoice;
   }
 
   /**
@@ -387,55 +390,131 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     final QName elemQName = new QName(uri, localName);
 
     try {
-      traversedElements.add(elemQName);
-  
       final SchemaStateMachineNode state = currentPosition.stateMachineNode;
   
       // 1. Find possible paths.
       List<PathSegment> possiblePaths =
           find(currentPath, currentPosition, elemQName);
+
+      PathSegment nextPath = null;
   
-      if (possiblePaths != null) {
-        // 2. Build path segments from those paths.
-  
-        /* 3. If multiple paths were returned, add a DecisionPoint.
+      if ((possiblePaths != null) && !possiblePaths.isEmpty()) {
+
+        /* 2. If multiple paths were returned, add a DecisionPoint.
          *    Sort the paths where paths ending in elements are favored over
          *    element wild cards, and shorter paths are favored over longer
          *    paths.
          */
-  
-        /* 4. Choose the highest-rank path and build the
-         *    StateMachineTreeWithState accordingly.
-         */
-  
-        /* 5. Confirm the attributes of the element
-         *    match what is expected from the schema.
-         */
-  
+        if (possiblePaths.size() > 1) {
+          final DecisionPoint decisionPoint =
+              new DecisionPoint(
+                  currentPath,
+                  possiblePaths,
+                  traversedElements.size());
+
+          if (decisionPoints == null) {
+            decisionPoints = new ArrayList<DecisionPoint>(4);
+          }
+          decisionPoints.add(decisionPoint);
+
+          nextPath = decisionPoint.tryNextPath();
+        } else {
+          nextPath = possiblePaths.get(0);
+        }
+
+        if (nextPath == null) {
+          throw new IllegalStateException("When searching for " + elemQName + ", received a set of path choices of size " + possiblePaths.size() + ", but the next path is null.");
+        }
+
+        followPath(nextPath);
+
       } else {
         // OR: If no paths are returned:
-  
-        /* 2a. Backtrack to the most recent decision point.
-         *     Remove the top path (the one we just tried),
-         *     and select the next one.
-         */
-  
-        /* 3a. Walk through the traversedElements list again from that
-         *     index and see if we traverse through all of the elements
-         *     in the list, including this one.  If not, repeat step 2a,
-         *     removing decision points from the stack as we refute them.
-         */
-  
-        // 4a. If we find (a) path(s) that match(es), success!  Return to step 2.
-  
-        /* OR: If we go through all prior decision points and are unable to find
-         *     one or more paths through the XML Schema that match the document,
-         *     throw an error.  There is nothing more we can do here.
-         *
-         * TODO: When discarding an existing path segment, remember
-         *       to walk through the tree and undo what the path did.
-         */
+
+        while ((decisionPoints != null) && !decisionPoints.isEmpty()) {
+          /* 2a. Backtrack to the most recent decision point.
+           *     Remove the top path (the one we just tried),
+           *     and select the next one.
+           */
+          final DecisionPoint priorPoint =
+              decisionPoints.get(decisionPoints.size() - 1);
+
+          nextPath = priorPoint.tryNextPath();
+
+          if (nextPath == null) {
+            /* We have tried all paths at this decision point.
+             * Remove it and try the next prior decision point.
+             */
+            decisionPoints.remove(decisionPoints.size() - 1);
+            continue;
+          }
+
+          unfollowPriorPath( priorPoint.getDecisionPoint() );
+
+          /* Walk through the traversedElements list again from that
+           * index and see if we traverse through all of the elements
+           * in the list, including this one.  If not, repeat step 2a,
+           * removing decision points from the stack as we refute them.
+           */
+          followPath(nextPath);
+
+          for (int index = priorPoint.traversedElementIndex + 1;
+              index < traversedElements.size();
+              ++index) {
+
+            nextPath = null;
+
+            possiblePaths =
+                find(
+                    currentPath,
+                    currentPosition,
+                    traversedElements.get(index));
+
+            if ((possiblePaths == null) || possiblePaths.isEmpty()) {
+              break;
+
+            } else if (possiblePaths.size() > 1) {
+              final DecisionPoint decisionPoint =
+                  new DecisionPoint(
+                      currentPath,
+                      possiblePaths,
+                      traversedElements.size() - 1);
+              decisionPoints.add(decisionPoint);
+              nextPath = decisionPoint.tryNextPath();
+
+            } else {
+              nextPath = possiblePaths.get(0);
+            }
+
+            if (nextPath == null) {
+              throw new IllegalStateException("Somehow after finding a new path to follow, that path is null.");
+            }
+
+            // If we find (a) path(s) that match(es), success!  Follow it.
+            followPath(nextPath);
+          }
+
+          if ((possiblePaths == null) || possiblePaths.isEmpty()) {
+            /* This attempt is also incorrect.  However, we may have introduced
+             * new decision points along the way, and we want to follow them
+             * first.  So let's go back around for another try.
+             */
+            continue;
+          }
+        }
       }
+
+      if (nextPath != null) {
+        traversedElements.add(elemQName);
+
+      } else {
+        /* If we go through all prior decision points and are unable to find
+         * one or more paths through the XML Schema that match the document,
+         * throw an error.  There is nothing more we can do here.
+         */
+        throw new IllegalStateException("Walked through XML Schema and could not find a traversal that represented this XML Document.");
+      }
+
     } catch (Exception e) {
       throw new SAXException("Error occurred while starting element " + elemQName + "; traversed path is " + getElementsTraversedAsString(), e);
     }
@@ -922,8 +1001,15 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     unusedPathSegmentPool.add(segment);
   }
 
-  private String getElementsTraversedAsString() {
+  private void followPath(PathSegment path) {
+    // TODO: Implement Me!
+  }
 
+  private void unfollowPriorPath(XmlSchemaDocumentPathNode start) {
+    // TODO: Implement Me!
+  }
+
+  private String getElementsTraversedAsString() {
     final StringBuilder traversed = new StringBuilder("[");
     if ((traversedElements != null) && !traversedElements.isEmpty()) {
       for (int i = 0; i < traversedElements.size() - 1; ++i) {
