@@ -53,13 +53,13 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    * Path segments may also be recycled when a decision point is refuted.
    */
   private final class PathSegment implements Comparable<PathSegment> {
-    PathSegment(DocumentPathNode node) {
+    PathSegment(XmlSchemaDocumentPathNode node) {
       set(node);
     }
 
     int getLength() {
       if ((length == 0) && (start != end)) {
-        for (DocumentPathNode iter = afterStart;
+        for (XmlSchemaDocumentPathNode iter = afterStart;
             iter != end;
             iter = iter.getNext()) {
           ++length;
@@ -74,12 +74,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
      * We also need to know the newStart's path index to reach the
      * clonedStartNode, so we know how to properly link them later.
      */
-    void prepend(DocumentPathNode newStart, int pathIndexToNextNode) {
+    void prepend(XmlSchemaDocumentPathNode newStart, int pathIndexToNextNode) {
       // We need to clone start and make it the afterStart.
-      final DocumentPathNode clonedStartNode =
+      final XmlSchemaDocumentPathNode clonedStartNode =
           createDocumentPathNode(
               start.getPrevious(),
-              start.getStateMachineNode());
+              start.getDocumentNode());
 
       if (afterStart != null) {
         afterStart.setPreviousNode(clonedStartNode);
@@ -96,19 +96,19 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       afterStartPathIndex = pathIndexToNextNode;
     }
 
-    DocumentPathNode getStart() {
+    XmlSchemaDocumentPathNode getStart() {
       return start;
     }
 
-    DocumentPathNode getEnd() {
+    XmlSchemaDocumentPathNode getEnd() {
       return end;
     }
 
-    DocumentPathNode getAfterStart() {
+    XmlSchemaDocumentPathNode getAfterStart() {
       return afterStart;
     }
 
-    final void set(DocumentPathNode node) {
+    final void set(XmlSchemaDocumentPathNode node) {
       if (node == null) {
         throw new IllegalArgumentException("DocumentPathNode cannot be null.");
       }
@@ -120,9 +120,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       this.length = 0;
     }
 
-    private DocumentPathNode start;
-    private DocumentPathNode end;
-    private DocumentPathNode afterStart;
+    private XmlSchemaDocumentPathNode start;
+    private XmlSchemaDocumentPathNode end;
+    private XmlSchemaDocumentPathNode afterStart;
     private int length;
     private int afterStartPathIndex;
 
@@ -136,7 +136,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       int result = prime + start.hashCode();
 
       if (afterStart != null) {
-        for (DocumentPathNode iter = afterStart;
+        for (XmlSchemaDocumentPathNode iter = afterStart;
             iter != null;
             iter = iter.getNext()) {
           result = prime * result + iter.hashCode();
@@ -179,8 +179,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         return true;
       }
 
-      DocumentPathNode thisIter = afterStart;
-      DocumentPathNode thatIter = other.getAfterStart();
+      XmlSchemaDocumentPathNode thisIter = afterStart;
+      XmlSchemaDocumentPathNode thatIter = other.getAfterStart();
 
       while (thisIter != null) {
         if (thatIter == null) {
@@ -251,56 +251,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    * a path that successfully navigates both the document and the schema.
    */
   private static class DecisionPoint {
-    DocumentPathNode decisionPoint;
+    XmlSchemaDocumentPathNode decisionPoint;
     List<PathSegment> choices;
     int traversedElementIndex;
-  }
-
-  /**
-   * Represents the state machine as a tree with the current iteration of each
-   * node, and additional state information for All and Sequence groups.
-   *
-   * If the node represents a sequence group, we need to know which child we
-   * visit next.  Once we visit a node the maximum number of occurrences (or
-   * we visit the minimum number of occurrences and the element name does not
-   * match), this index will be incremented to the next child.
-   *
-   * This class is package-protected, and not private, to allow an external
-   * graph generator to build a visualization of the tree.
-   */
-  static class StateMachineTreeWithState {
-    StateMachineTreeWithState(SchemaStateMachineNode stateMachineNode) {
-      this.stateMachineNode = stateMachineNode;
-
-      if ((this.stateMachineNode.getPossibleNextStates() == null)
-          || this.stateMachineNode.getPossibleNextStates().isEmpty()) {
-        this.children = null;
-
-      } else {
-        this.children =
-            new ArrayList<StateMachineTreeWithState>(
-                this.stateMachineNode.getPossibleNextStates().size() );
-      }
-
-      this.parent = null;
-      this.currIteration = 0;
-      this.currPositionInSeqGroup = -1;
-    }
-
-    StateMachineTreeWithState(
-        StateMachineTreeWithState parent,
-        SchemaStateMachineNode stateMachineNode) {
-
-      this(stateMachineNode);
-      this.parent = parent;
-    }
-
-    SchemaStateMachineNode stateMachineNode;
-    StateMachineTreeWithState parent;
-    List<StateMachineTreeWithState> children;
-
-    int currIteration;
-    int currPositionInSeqGroup;
   }
 
   /**
@@ -309,8 +262,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    */
   XmlToAvroPathCreator(SchemaStateMachineNode root) {
     rootNode = root;
-    rootStateNode = new StateMachineTreeWithState(rootNode);
-    rootPathNode = new DocumentPathNode(root);
+    rootStateNode = new XmlSchemaDocumentNode(rootNode);
+    rootPathNode = new XmlSchemaDocumentPathNode(rootStateNode);
 
     traversedElements = new ArrayList<QName>();
     currentPosition = null;
@@ -480,13 +433,13 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    * @return The root node of the tree built internally to represent
    *         the XML Document against its XML Schema.
    */
-  StateMachineTreeWithState getRootOfInternalTree() {
+  XmlSchemaDocumentNode getRootOfInternalTree() {
     return rootStateNode;
   }
 
   private List<PathSegment> find(
-      DocumentPathNode startNode,
-      StateMachineTreeWithState tree,
+      XmlSchemaDocumentPathNode startNode,
+      XmlSchemaDocumentNode tree,
       QName elemQName) {
 
     if (startNode.getStateMachineNode()
@@ -570,13 +523,13 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             ++stateIndex) {
 
           // Process child.
-          final StateMachineTreeWithState nextTree =
+          final XmlSchemaDocumentNode nextTree =
               tree.children.get(stateIndex);
 
           final SchemaStateMachineNode nextState = nextTree.stateMachineNode;
 
-          final DocumentPathNode nextPath =
-              createDocumentPathNode(startNode, nextState);
+          final XmlSchemaDocumentPathNode nextPath =
+              createDocumentPathNode(startNode, nextTree);
           nextPath.setIteration(nextTree.currIteration);
 
           /* Both the tree node's and the document path node's state machine
@@ -655,10 +608,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             throw new IllegalStateException("While searching for " + elemQName + ", encountered an All group which contained a child of type " + nextState.getNodeType() + '.');
           }
 
-          final DocumentPathNode nextPath =
-              createDocumentPathNode(startNode, nextState);
-
-          StateMachineTreeWithState nextTree = null;
+          XmlSchemaDocumentNode nextTree = null;
 
           if (tree.children.size() < stateIndex) {
             throw new IllegalStateException("In group of type " + state.getNodeType() + " when searching for " + elemQName + ", StateMachineTreeWithState contained fewer children (" + tree.children.size() + ") than the next possible state index, " + stateIndex);
@@ -670,6 +620,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           } else {
             nextTree = tree.children.get(stateIndex);
           }
+
+          final XmlSchemaDocumentPathNode nextPath =
+              createDocumentPathNode(startNode, nextTree);
 
           /* At this stage, we are only collecting possible paths to follow.
            * Likewise, we do not want to increment the iteration number yet
@@ -764,7 +717,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
            * namespace.
            */
           if (needTargetNamespace) {
-            StateMachineTreeWithState iter = tree;
+            XmlSchemaDocumentNode iter = tree;
             while ( !iter
                       .stateMachineNode
                       .getNodeType()
@@ -800,34 +753,34 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return choices;
   }
 
-  private DocumentPathNode createDocumentPathNode(
-      DocumentPathNode previous,
-      SchemaStateMachineNode state) {
+  private XmlSchemaDocumentPathNode createDocumentPathNode(
+      XmlSchemaDocumentPathNode previous,
+      XmlSchemaDocumentNode state) {
 
     if ((unusedNodePool != null) && !unusedNodePool.isEmpty()) {
-      DocumentPathNode node = unusedNodePool.remove(unusedNodePool.size() - 1);
+      XmlSchemaDocumentPathNode node = unusedNodePool.remove(unusedNodePool.size() - 1);
       node.update(previous, state);
       return node;
     } else {
-      return new DocumentPathNode(previous, state);
+      return new XmlSchemaDocumentPathNode(previous, state);
     }
   }
 
-  private void recyclePathNode(DocumentPathNode toReuse) {
+  private void recyclePathNode(XmlSchemaDocumentPathNode toReuse) {
     if (unusedNodePool == null) {
-      unusedNodePool = new ArrayList<DocumentPathNode>();
+      unusedNodePool = new ArrayList<XmlSchemaDocumentPathNode>();
     }
     unusedNodePool.add(toReuse);
   }
 
-  private StateMachineTreeWithState createTreeNode(
-      StateMachineTreeWithState parent,
+  private XmlSchemaDocumentNode createTreeNode(
+      XmlSchemaDocumentNode parent,
       SchemaStateMachineNode node) {
 
     if ((unusedTreePool == null) || unusedTreePool.isEmpty()) {
-      return new StateMachineTreeWithState(parent, node);
+      return new XmlSchemaDocumentNode(parent, node);
     } else {
-      StateMachineTreeWithState tree =
+      XmlSchemaDocumentNode tree =
           unusedTreePool.remove(unusedTreePool.size() - 1);
 
       tree.parent = parent;
@@ -840,14 +793,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     }
   }
 
-  private void recycleTreeNode(StateMachineTreeWithState tree) {
+  private void recycleTreeNode(XmlSchemaDocumentNode tree) {
     if (unusedTreePool == null) {
-      unusedTreePool = new ArrayList<StateMachineTreeWithState>();
+      unusedTreePool = new ArrayList<XmlSchemaDocumentNode>();
     }
     unusedTreePool.add(tree);
   }
 
-  private PathSegment createPathSegment(DocumentPathNode endPathNode) {
+  private PathSegment createPathSegment(XmlSchemaDocumentPathNode endPathNode) {
     PathSegment segment = null;
     if ((unusedPathSegmentPool != null) && !unusedPathSegmentPool.isEmpty()) {
       segment =
@@ -869,7 +822,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       /* All of the nodes starting with afterStart
        * were cloned; we can recycle them.
        */
-      for (DocumentPathNode iter = segment.getAfterStart();
+      for (XmlSchemaDocumentPathNode iter = segment.getAfterStart();
           iter != null;
           iter = iter.getNext()) {
   
@@ -895,14 +848,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   }
 
   private final SchemaStateMachineNode rootNode;
-  private DocumentPathNode rootPathNode;
-  private StateMachineTreeWithState rootStateNode;
+  private XmlSchemaDocumentPathNode rootPathNode;
+  private XmlSchemaDocumentNode rootStateNode;
 
-  private StateMachineTreeWithState currentPosition;
-  private DocumentPathNode currentPath;
+  private XmlSchemaDocumentNode currentPosition;
+  private XmlSchemaDocumentPathNode currentPath;
 
-  private List<DocumentPathNode> unusedNodePool;
-  private List<StateMachineTreeWithState> unusedTreePool;
+  private List<XmlSchemaDocumentPathNode> unusedNodePool;
+  private List<XmlSchemaDocumentNode> unusedTreePool;
   private List<PathSegment> unusedPathSegmentPool;
 
   private ArrayList<QName> traversedElements;

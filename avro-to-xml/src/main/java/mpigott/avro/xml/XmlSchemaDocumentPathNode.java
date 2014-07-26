@@ -23,9 +23,9 @@ import javax.xml.namespace.QName;
  *
  * @author  Mike Pigott
  */
-final class DocumentPathNode {
+final class XmlSchemaDocumentPathNode {
 
-  DocumentPathNode(SchemaStateMachineNode node) {
+  XmlSchemaDocumentPathNode(XmlSchemaDocumentNode node) {
     schemaNode = node;
     nextNodeStateIndex = -1;
     iterationNum = 0;
@@ -33,14 +33,14 @@ final class DocumentPathNode {
     nextNode = null;
   }
 
-  DocumentPathNode(DocumentPathNode previous, SchemaStateMachineNode node) {
+  XmlSchemaDocumentPathNode(XmlSchemaDocumentPathNode previous, XmlSchemaDocumentNode node) {
     this(node);
     prevNode = previous;
   }
 
-  DocumentPathNode(
-      DocumentPathNode previous,
-      DocumentPathNode copyOf) {
+  XmlSchemaDocumentPathNode(
+      XmlSchemaDocumentPathNode previous,
+      XmlSchemaDocumentPathNode copyOf) {
 
     schemaNode = copyOf.schemaNode;
     nextNodeStateIndex = -1;
@@ -48,9 +48,9 @@ final class DocumentPathNode {
     nextNode = null;
   }
 
-  DocumentPathNode(
-      DocumentPathNode previous,
-      DocumentPathNode copyOf,
+  XmlSchemaDocumentPathNode(
+      XmlSchemaDocumentPathNode previous,
+      XmlSchemaDocumentPathNode copyOf,
       int iteration) {
 
     this(previous, copyOf);
@@ -96,10 +96,10 @@ final class DocumentPathNode {
     if (obj == null) {
       return false;
     }
-    if (!(obj instanceof DocumentPathNode)) {
+    if (!(obj instanceof XmlSchemaDocumentPathNode)) {
       return false;
     }
-    final DocumentPathNode other = (DocumentPathNode) obj;
+    final XmlSchemaDocumentPathNode other = (XmlSchemaDocumentPathNode) obj;
     if (!localEquals(other)) {
       return false;
     }
@@ -120,8 +120,12 @@ final class DocumentPathNode {
     return true;
   }
 
-  SchemaStateMachineNode getStateMachineNode() {
+  XmlSchemaDocumentNode getDocumentNode() {
     return schemaNode;
+  }
+
+  SchemaStateMachineNode getStateMachineNode() {
+    return schemaNode.stateMachineNode;
   }
 
   int getIndexOfNextNodeState() {
@@ -132,11 +136,11 @@ final class DocumentPathNode {
     return iterationNum;
   }
 
-  DocumentPathNode getPrevious() {
+  XmlSchemaDocumentPathNode getPrevious() {
     return prevNode;
   }
 
-  DocumentPathNode getNext() {
+  XmlSchemaDocumentPathNode getNext() {
     return nextNode;
   }
 
@@ -144,15 +148,20 @@ final class DocumentPathNode {
     iterationNum = newIteration;
   }
 
-  DocumentPathNode setNextNode(int nextNodeIndex, DocumentPathNode newNext) {
+  XmlSchemaDocumentPathNode setNextNode(
+      int nextNodeIndex,
+      XmlSchemaDocumentPathNode newNext) {
+
     if ((nextNodeIndex < 0)
-        || (nextNodeIndex >= schemaNode.getPossibleNextStates().size())) {
-      throw new IllegalArgumentException("The node index (" + nextNodeIndex + ") is not within the range of " + schemaNode.getPossibleNextStates().size() + " possible next states.");
+        || (nextNodeIndex >=
+              schemaNode.stateMachineNode.getPossibleNextStates().size())) {
+      throw new IllegalArgumentException("The node index (" + nextNodeIndex + ") is not within the range of " + schemaNode.stateMachineNode.getPossibleNextStates().size() + " possible next states.");
 
     } else if (newNext == null) {
       throw new IllegalArgumentException("The next node must be defined.");
 
     } else if ( !schemaNode
+                   .stateMachineNode
                    .getPossibleNextStates()
                    .get(nextNodeIndex)
                    .equals( newNext.getStateMachineNode() ) ) {
@@ -162,7 +171,7 @@ final class DocumentPathNode {
 
     nextNodeStateIndex = nextNodeIndex;
 
-    final DocumentPathNode oldNext = nextNode;
+    final XmlSchemaDocumentPathNode oldNext = nextNode;
     nextNode = newNext;
 
     return oldNext;
@@ -175,8 +184,8 @@ final class DocumentPathNode {
    * @param newPrevious The new previous node.
    * @return The old previous node.
    */
-  DocumentPathNode setPreviousNode(DocumentPathNode newPrevious) {
-    final DocumentPathNode oldPrevious = prevNode;
+  XmlSchemaDocumentPathNode setPreviousNode(XmlSchemaDocumentPathNode newPrevious) {
+    final XmlSchemaDocumentPathNode oldPrevious = prevNode;
     prevNode = newPrevious;
     return oldPrevious;
   }
@@ -194,9 +203,9 @@ final class DocumentPathNode {
    * @return The next node in the path that this node referred to, as it will
    *         be discarded internally. 
    */
-  DocumentPathNode update(
-      DocumentPathNode newPrevious,
-      SchemaStateMachineNode newNode) {
+  XmlSchemaDocumentPathNode update(
+      XmlSchemaDocumentPathNode newPrevious,
+      XmlSchemaDocumentNode newNode) {
 
     schemaNode = newNode;
     nextNodeStateIndex = -1;
@@ -204,7 +213,7 @@ final class DocumentPathNode {
 
     prevNode = newPrevious;
 
-    final DocumentPathNode oldNext = nextNode;
+    final XmlSchemaDocumentPathNode oldNext = nextNode;
     nextNode = null;
 
     return oldNext;
@@ -219,7 +228,7 @@ final class DocumentPathNode {
     return result;
   }
 
-  private boolean localEquals(DocumentPathNode other) {
+  private boolean localEquals(XmlSchemaDocumentPathNode other) {
     if (iterationNum != other.iterationNum) {
       return false;
     }
@@ -236,10 +245,10 @@ final class DocumentPathNode {
     return false;
   }
 
-  private SchemaStateMachineNode schemaNode;
+  private XmlSchemaDocumentNode schemaNode;
   private int nextNodeStateIndex;
   private int iterationNum;
 
-  private DocumentPathNode prevNode;
-  private DocumentPathNode nextNode;
+  private XmlSchemaDocumentPathNode prevNode;
+  private XmlSchemaDocumentPathNode nextNode;
 }
