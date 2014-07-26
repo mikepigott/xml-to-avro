@@ -131,7 +131,7 @@ final class XmlSchemaDocumentPathNode {
   }
 
   SchemaStateMachineNode getStateMachineNode() {
-    return schemaNode.stateMachineNode;
+    return schemaNode.getStateMachineNode();
   }
 
   Direction getDirection() {
@@ -164,14 +164,16 @@ final class XmlSchemaDocumentPathNode {
 
     if ((nextNodeIndex < 0)
         || (nextNodeIndex >=
-              schemaNode.stateMachineNode.getPossibleNextStates().size())) {
-      throw new IllegalArgumentException("The node index (" + nextNodeIndex + ") is not within the range of " + schemaNode.stateMachineNode.getPossibleNextStates().size() + " possible next states.");
+              schemaNode
+                .getStateMachineNode()
+                .getPossibleNextStates().size())) {
+      throw new IllegalArgumentException("The node index (" + nextNodeIndex + ") is not within the range of " + schemaNode.getStateMachineNode().getPossibleNextStates().size() + " possible next states.");
 
     } else if (newNext == null) {
       throw new IllegalArgumentException("The next node must be defined.");
 
     } else if ( !schemaNode
-                   .stateMachineNode
+                   .getStateMachineNode()
                    .getPossibleNextStates()
                    .get(nextNodeIndex)
                    .equals( newNext.getStateMachineNode() ) ) {

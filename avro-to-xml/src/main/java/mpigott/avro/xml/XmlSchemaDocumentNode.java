@@ -15,9 +15,49 @@ import java.util.List;
  * This class is package-protected, and not private, to allow an external
  * graph generator to build a visualization of the tree.
  */
-class XmlSchemaDocumentNode {
+final class XmlSchemaDocumentNode {
   XmlSchemaDocumentNode(SchemaStateMachineNode stateMachineNode) {
-    this.stateMachineNode = stateMachineNode;
+    set(null, stateMachineNode);
+  }
+
+  XmlSchemaDocumentNode(
+      XmlSchemaDocumentNode parent,
+      SchemaStateMachineNode stateMachineNode) {
+
+    set(parent, stateMachineNode);
+  }
+
+  SchemaStateMachineNode getStateMachineNode() {
+    return stateMachineNode;
+  }
+
+  XmlSchemaDocumentNode getParent() {
+    return parent;
+  }
+
+  List<XmlSchemaDocumentNode> getChildren() {
+    return children;
+  }
+
+  int getCurrIteration() {
+    return currIteration;
+  }
+
+  int getCurrPositionInSequence() {
+    return currPositionInSeqGroup;
+  }
+
+  void setCurrIteration(int newIteration) {
+    currIteration = newIteration;
+  }
+
+  void setCurrPositionInSequence(int newPosition) {
+    currPositionInSeqGroup = newPosition;
+  }
+
+  final void set(
+      XmlSchemaDocumentNode parent,
+      SchemaStateMachineNode stateMachineNode) {
 
     if ((this.stateMachineNode.getPossibleNextStates() == null)
         || this.stateMachineNode.getPossibleNextStates().isEmpty()) {
@@ -29,23 +69,16 @@ class XmlSchemaDocumentNode {
               this.stateMachineNode.getPossibleNextStates().size() );
     }
 
-    this.parent = null;
+    this.parent = parent;
+    this.stateMachineNode = stateMachineNode;
     this.currIteration = 0;
     this.currPositionInSeqGroup = -1;
   }
 
-  XmlSchemaDocumentNode(
-      XmlSchemaDocumentNode parent,
-      SchemaStateMachineNode stateMachineNode) {
+  private SchemaStateMachineNode stateMachineNode;
+  private XmlSchemaDocumentNode parent;
+  private List<XmlSchemaDocumentNode> children;
 
-    this(stateMachineNode);
-    this.parent = parent;
-  }
-
-  SchemaStateMachineNode stateMachineNode;
-  XmlSchemaDocumentNode parent;
-  List<XmlSchemaDocumentNode> children;
-
-  int currIteration;
-  int currPositionInSeqGroup;
+  private int currIteration;
+  private int currPositionInSeqGroup;
 }

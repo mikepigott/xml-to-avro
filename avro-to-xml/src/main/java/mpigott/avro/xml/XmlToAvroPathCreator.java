@@ -266,6 +266,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       return afterStart;
     }
 
+    int getAfterStartPathIndex() {
+      return afterStartPathIndex;
+    }
+
     final void set(XmlSchemaDocumentPathNode node) {
       if (node == null) {
         throw new IllegalArgumentException("DocumentPathNode cannot be null.");
@@ -405,7 +409,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     final QName elemQName = new QName(uri, localName);
 
     try {
-      final SchemaStateMachineNode state = currentPosition.stateMachineNode;
+      final SchemaStateMachineNode state =
+          currentPosition.getStateMachineNode();
   
       // 1. Find possible paths.
       List<PathSegment> possiblePaths =
@@ -621,34 +626,34 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       QName elemQName) {
 
     if (startNode.getStateMachineNode()
-        != currentPosition.stateMachineNode) {
+        != currentPosition.getStateMachineNode()) {
 
-      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode state machine (" + startNode.getStateMachineNode().getNodeType() + ") does not match the tree node (" + tree.stateMachineNode.getNodeType() + ").");
+      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode state machine (" + startNode.getStateMachineNode().getNodeType() + ") does not match the tree node (" + tree.getStateMachineNode().getNodeType() + ").");
 
-    } else if (startNode.getIteration() != tree.currIteration) {
-      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") was not kept up-to-date with the tree node's iteration (" + tree.currIteration + ").  Current state machine position is " + tree.stateMachineNode.getNodeType());
+    } else if (startNode.getIteration() != tree.getCurrIteration()) {
+      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") was not kept up-to-date with the tree node's iteration (" + tree.getCurrIteration() + ").  Current state machine position is " + tree.getStateMachineNode().getNodeType());
 
     } else if (tree
-                 .stateMachineNode
+                 .getStateMachineNode()
                  .getNodeType()
                  .equals(SchemaStateMachineNode.Type.SEQUENCE)
         && (startNode.getIndexOfNextNodeState()
-            != tree.currPositionInSeqGroup)) {
+            != tree.getCurrPositionInSequence())) {
 
-      throw new IllegalStateException("While processing a sequence group in search of " + elemQName + ", the current position in the DocumentPathNode (" + startNode.getIndexOfNextNodeState() + ") was not kept up-to-date with the tree node's position in the sequence group (" + tree.currPositionInSeqGroup + ").");
+      throw new IllegalStateException("While processing a sequence group in search of " + elemQName + ", the current position in the DocumentPathNode (" + startNode.getIndexOfNextNodeState() + ") was not kept up-to-date with the tree node's position in the sequence group (" + tree.getCurrPositionInSequence() + ").");
 
-    } else if (tree.stateMachineNode.getMaxOccurs() > tree.currIteration) {
+    } else if (tree.getStateMachineNode().getMaxOccurs() > tree.getCurrIteration()) {
 
-      throw new IllegalStateException("While searching for " + elemQName + " found that a node of type " + tree.stateMachineNode.getNodeType() + " had more iterations in the tree (" + tree.currIteration + ") than were the maximum allowed for the state machine node (" + tree.stateMachineNode.getMaxOccurs() + ").");
+      throw new IllegalStateException("While searching for " + elemQName + " found that a node of type " + tree.getStateMachineNode().getNodeType() + " had more iterations in the tree (" + tree.getCurrIteration() + ") than were the maximum allowed for the state machine node (" + tree.getStateMachineNode().getMaxOccurs() + ").");
 
-    } else if (tree.stateMachineNode.getMaxOccurs() == tree.currIteration) {
+    } else if (tree.getStateMachineNode().getMaxOccurs() == tree.getCurrIteration()) {
       /* We already traversed this node the maximum number of times.
        * This path cannot be followed.
        */
       return null;
     }
 
-    final SchemaStateMachineNode state = currentPosition.stateMachineNode;
+    final SchemaStateMachineNode state = currentPosition.getStateMachineNode();
 
     // If this is a group, confirm it has children.
     if ( !state.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT)
@@ -659,7 +664,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
         throw new IllegalStateException("Group " + state.getNodeType() + " has no children.  Found when processing " + elemQName);
 
-      } else if (tree.children == null) {
+      } else if (tree.getChildren() == null) {
         throw new IllegalStateException("StateMachineTreeWithState node represents a " + state.getNodeType() + ", but has no children.  Found when searching for " + elemQName);
       }
 
@@ -682,46 +687,47 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     case SEQUENCE:
       {
         // Find the next one in the sequence that matches.
-        int position = tree.currPositionInSeqGroup;
+        int position = tree.getCurrPositionInSequence();
         if (position < 0) {
           // Let's just do ourselves a favor and add in all the children now.
-          if ( !tree.children.isEmpty() ) {
+          if ( !tree.getChildren().isEmpty() ) {
             throw new IllegalStateException("When searching for " + elemQName + ", reached a sequence group with a negative position but with children defined.");
           }
 
           for (SchemaStateMachineNode nextState : state.getPossibleNextStates()) {
-            tree.children.add( createTreeNode(tree, nextState) );
+            tree.getChildren().add( createTreeNode(tree, nextState) );
           }
 
           position = 0;
         }
 
         for (int stateIndex = position;
-            stateIndex < tree.children.size();
+            stateIndex < tree.getChildren().size();
             ++stateIndex) {
 
           // Process child.
           final XmlSchemaDocumentNode nextTree =
-              tree.children.get(stateIndex);
+              tree.getChildren().get(stateIndex);
 
-          final SchemaStateMachineNode nextState = nextTree.stateMachineNode;
+          final SchemaStateMachineNode nextState =
+              nextTree.getStateMachineNode();
 
           final XmlSchemaDocumentPathNode nextPath =
               createDocumentPathNode(
                   XmlSchemaDocumentPathNode.Direction.CHILD,
                   startNode,
                   nextTree);
-          nextPath.setIteration(nextTree.currIteration);
+          nextPath.setIteration(nextTree.getCurrIteration());
 
           /* Both the tree node's and the document path node's state machine
            * nodes should point to the same state machine node in memory.
            */
-          if ((nextTree.stateMachineNode != nextState)
+          if ((nextTree.getStateMachineNode() != nextState)
               || (nextPath.getStateMachineNode() != nextState)) {
-            throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.stateMachineNode.getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
+            throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.getStateMachineNode().getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
 
-          } else if (nextTree.currIteration >= nextState.getMaxOccurs()) {
-            throw new IllegalStateException("Reached a sequence group when searching for " + elemQName + " whose iteration at the current position (" + nextTree.currIteration + ") was already maxed out (" + nextState.getMaxOccurs() + ").  Was at position " + stateIndex + "; tree node's starting position was " + tree.currPositionInSeqGroup);
+          } else if (nextTree.getCurrIteration() >= nextState.getMaxOccurs()) {
+            throw new IllegalStateException("Reached a sequence group when searching for " + elemQName + " whose iteration at the current position (" + nextTree.getCurrIteration() + ") was already maxed out (" + nextState.getMaxOccurs() + ").  Was at position " + stateIndex + "; tree node's starting position was " + tree.getCurrPositionInSequence());
           }
 
           final List<PathSegment> seqPaths =
@@ -742,8 +748,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             }
           }
 
-          if (nextTree.currIteration
-                < nextTree.stateMachineNode.getMinOccurs()) {
+          if (nextTree.getCurrIteration()
+                < nextTree.getStateMachineNode().getMinOccurs()) {
 
             /* If we have not traversed this node in the sequence the minimum
              * number of times, we cannot advance to the next node in the
@@ -791,15 +797,15 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
           XmlSchemaDocumentNode nextTree = null;
 
-          if (tree.children.size() < stateIndex) {
-            throw new IllegalStateException("In group of type " + state.getNodeType() + " when searching for " + elemQName + ", StateMachineTreeWithState contained fewer children (" + tree.children.size() + ") than the next possible state index, " + stateIndex);
+          if (tree.getChildren().size() < stateIndex) {
+            throw new IllegalStateException("In group of type " + state.getNodeType() + " when searching for " + elemQName + ", StateMachineTreeWithState contained fewer children (" + tree.getChildren().size() + ") than the next possible state index, " + stateIndex);
 
-          } else if (tree.children.size() == stateIndex) {
+          } else if (tree.getChildren().size() == stateIndex) {
             nextTree = createTreeNode(tree, nextState);
-            tree.children.add(nextTree);
+            tree.getChildren().add(nextTree);
 
           } else {
-            nextTree = tree.children.get(stateIndex);
+            nextTree = tree.getChildren().get(stateIndex);
           }
 
           final XmlSchemaDocumentPathNode nextPath =
@@ -812,14 +818,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
            * Likewise, we do not want to increment the iteration number yet
            * (or have any other side effects on the tree).
            */
-          nextPath.setIteration(nextTree.currIteration);
+          nextPath.setIteration(nextTree.getCurrIteration());
 
           /* Both the tree node's and the document path node's state machine
            * nodes should point to the same state machine node in memory.
            */
-          if ((nextTree.stateMachineNode != nextState)
+          if ((nextTree.getStateMachineNode() != nextState)
               || (nextPath.getStateMachineNode() != nextState)) {
-            throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.stateMachineNode.getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
+            throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.getStateMachineNode().getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
           }
 
           final List<PathSegment> choicePaths =
@@ -903,11 +909,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           if (needTargetNamespace) {
             XmlSchemaDocumentNode iter = tree;
             while ( !iter
-                      .stateMachineNode
+                      .getStateMachineNode()
                       .getNodeType()
                       .equals(SchemaStateMachineNode.Type.ELEMENT) ) {
 
-              iter = iter.parent;
+              iter = iter.getParent();
 
               if (iter == null) {
                 throw new IllegalStateException("Walking up the StateMachineTreeWithState to determine the target namespace of a wildcard element, and reached the root without finding any elements.  Searching for " + elemQName + '.');
@@ -915,7 +921,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             }
 
             validNamespaces.add(
-              iter.stateMachineNode.getElement().getQName().getNamespaceURI());
+              iter
+                .getStateMachineNode()
+                .getElement()
+                .getQName()
+                .getNamespaceURI());
           }
 
           matches = validNamespaces.contains( elemQName.getNamespaceURI() );
@@ -968,11 +978,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       XmlSchemaDocumentNode tree =
           unusedTreePool.remove(unusedTreePool.size() - 1);
 
-      tree.parent = parent;
-      tree.stateMachineNode = node;
-      tree.children = null;
-      tree.currIteration = 0;
-      tree.currPositionInSeqGroup = -1;
+      tree.set(parent, node);
 
       return tree;
     }
@@ -1019,7 +1025,67 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   }
 
   private void followPath(PathSegment path) {
-    // TODO: Implement Me!
+    switch (path.getEnd().getStateMachineNode().getNodeType()) {
+    case ELEMENT:
+    case ANY:
+      break;
+    default:
+      throw new IllegalStateException("Path does not end in an element or a wildcard element.");
+    }
+
+    // Join the start element with the new path.
+    XmlSchemaDocumentPathNode iter = path.getStart();
+
+    if (path.getAfterStart() != null) {
+      iter.setNextNode(path.getAfterStartPathIndex(), path.getAfterStart());
+    }
+
+    // Walk the path and update the underlying document node accordingly.
+    while (iter != null) {
+      final XmlSchemaDocumentNode docNode = iter.getDocumentNode();
+
+      // We only update when we're entering, not when we're leaving.
+      if (iter
+            .getDirection()
+            .equals(XmlSchemaDocumentPathNode.Direction.CHILD)) {
+
+        docNode.setCurrIteration(docNode.getCurrIteration() + 1);
+
+        if (docNode.getCurrIteration()
+            > docNode.getStateMachineNode().getMaxOccurs()) {
+
+          String elemName = "a wildcard element";
+          if (path
+                .getEnd()
+                .getStateMachineNode()
+                .getNodeType()
+                .equals(SchemaStateMachineNode.Type.ELEMENT) ) {
+
+            elemName =
+                path
+                  .getEnd()
+                  .getStateMachineNode()
+                  .getElement()
+                  .getQName()
+                  .toString();
+          }
+          throw new IllegalStateException("When walking the path to " + elemName + ", we incremented the iteration of a " + docNode.getStateMachineNode().getNodeType() + " (" + docNode.getCurrIteration() + ") beyond its maximum (" + docNode.getStateMachineNode().getMaxOccurs() + ").");
+        }
+
+        if (docNode
+              .getStateMachineNode()
+              .getNodeType()
+              .equals(SchemaStateMachineNode.Type.SEQUENCE)) {
+
+          docNode.setCurrPositionInSequence(iter.getIndexOfNextNodeState());
+        }
+      }
+
+      iter = iter.getNext();
+    }
+
+    currentPath = path.getEnd();
+    currentPosition = path.getEnd().getDocumentNode();
   }
 
   private void unfollowPriorPath(XmlSchemaDocumentPathNode start) {
