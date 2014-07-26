@@ -779,6 +779,21 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
   @Override
   public void endDocument() throws SAXException {
+    if (unusedNodePool != null) {
+      unusedNodePool.clear();
+    }
+
+    if (unusedTreePool != null) {
+      unusedTreePool.clear();
+    }
+
+    if (unusedPathSegmentPool != null) {
+      unusedPathSegmentPool.clear();
+    }
+
+    if (decisionPoints != null) {
+      decisionPoints.clear();
+    }
   }
 
   XmlSchemaDocumentNode getXmlSchemaDocumentRoot() {
