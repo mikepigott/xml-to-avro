@@ -27,7 +27,8 @@ final class XmlSchemaDocumentPathNode {
 
   enum Direction {
     PARENT,
-    CHILD
+    CHILD,
+    CONTENT
   }
 
   XmlSchemaDocumentPathNode(Direction dir, XmlSchemaDocumentNode node) {
@@ -157,11 +158,18 @@ final class XmlSchemaDocumentPathNode {
       int nextNodeIndex,
       XmlSchemaDocumentPathNode newNext) {
 
-    if ((nextNodeIndex < 0)
-        || (nextNodeIndex >=
-              schemaNode
-                .getStateMachineNode()
-                .getPossibleNextStates().size())) {
+    if ((nextNodeIndex == -1)
+        && newNext.getDirection().equals(Direction.CONTENT)) {
+
+      /* This is a content node; no validation is needed because
+       * we didn't change our position in the document tree.
+       */
+
+    } else if ((nextNodeIndex < 0)
+                || (nextNodeIndex
+                    >= schemaNode
+                         .getStateMachineNode()
+                         .getPossibleNextStates().size())) {
       throw new IllegalArgumentException("The node index (" + nextNodeIndex + ") is not within the range of " + schemaNode.getStateMachineNode().getPossibleNextStates().size() + " possible next states.");
 
     } else if (newNext == null) {

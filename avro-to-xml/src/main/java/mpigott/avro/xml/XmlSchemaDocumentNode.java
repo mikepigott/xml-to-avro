@@ -47,12 +47,23 @@ final class XmlSchemaDocumentNode {
     return currPositionInSeqGroup;
   }
 
+  /**
+   * Indicates whether an element has text in it.
+   */
+  boolean getReceivedContent() {
+    return receivedContent;
+  }
+
   void setCurrIteration(int newIteration) {
     currIteration = newIteration;
   }
 
   void setCurrPositionInSequence(int newPosition) {
     currPositionInSeqGroup = newPosition;
+  }
+
+  void setReceivedContent(boolean receivedContent) {
+    this.receivedContent = receivedContent;
   }
 
   final void set(
@@ -73,6 +84,7 @@ final class XmlSchemaDocumentNode {
     this.stateMachineNode = stateMachineNode;
     this.currIteration = 0;
     this.currPositionInSeqGroup = -1;
+    this.receivedContent = false;
   }
 
   private SchemaStateMachineNode stateMachineNode;
@@ -81,4 +93,5 @@ final class XmlSchemaDocumentNode {
 
   private int currIteration;
   private int currPositionInSeqGroup;
+  private boolean receivedContent;
 }
