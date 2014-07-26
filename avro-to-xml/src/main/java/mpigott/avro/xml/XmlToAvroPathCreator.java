@@ -431,15 +431,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   public void endDocument() throws SAXException {
   }
 
-  /**
-   * This can be used to generate an external representation of the
-   * internal state tree for visualization (and debugging) purposes.
-   *
-   * @return The root node of the tree built internally to represent
-   *         the XML Document against its XML Schema.
-   */
-  XmlSchemaDocumentNode getRootOfInternalTree() {
+  XmlSchemaDocumentNode getXmlSchemaDocumentRoot() {
     return rootTreeNode;
+  }
+
+  XmlSchemaDocumentPathNode getXmlSchemaDocumentPath() {
+    return rootPathNode;
   }
 
   private List<PathSegment> find(
