@@ -656,14 +656,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       final String text = new String(ch, start, length).trim();
 
       final boolean elemHasContent =
-          (elemTypeInfo == null) || (elemTypeInfo.getAvroType() == null);
+          (elemTypeInfo != null) && (elemTypeInfo.getAvroType() != null);
 
       if (!elemHasContent && text.isEmpty()) {
         // Nothing to see here.
         return;
 
-      } else if (elemHasContent && !text.isEmpty()) {
-        throw new IllegalStateException("Element " + state.getElement().getQName() + " has no type, but we received \"" + text + "\" for it.");
+      } else if (!elemHasContent && !text.isEmpty()) {
+        throw new IllegalStateException("Element " + state.getElement().getQName() + " has no content, but we received \"" + text + "\" for it.");
 
       } else if (elemHasContent
                    && text.isEmpty()
