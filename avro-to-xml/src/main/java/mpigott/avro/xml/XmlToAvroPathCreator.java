@@ -340,6 +340,21 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     private int currChoice;
   }
 
+  private static class TraversedElement {
+    enum Traversal {
+      START,
+      END
+    }
+
+    TraversedElement(QName elemName, Traversal traversal) {
+      this.elemName = elemName;
+      this.traversal = traversal;
+    }
+
+    QName elemName;
+    Traversal traversal;
+  }
+
   /**
    * Creates a new <code>XmlToAvroPathCreator</code> with the root
    * {@link SchemaStateMachineNode} to start from when evaluating documents.
@@ -353,7 +368,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             XmlSchemaDocumentPathNode.Direction.CHILD,
             rootTreeNode);
 
-    traversedElements = new ArrayList<QName>();
+    traversedElements = new ArrayList<TraversedElement>();
     currentPosition = null;
     currentPath = null;
     decisionPoints = null; // Hopefully there won't be any!
@@ -468,7 +483,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                 find(
                     currentPath,
                     currentPosition,
-                    traversedElements.get(index));
+                    traversedElements.get(index).elemName);
+                    // TODO: Handle starts vs. ends.
 
             if ((possiblePaths == null) || possiblePaths.isEmpty()) {
               break;
@@ -505,7 +521,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       }
 
       if (nextPath != null) {
-        traversedElements.add(elemQName);
+        traversedElements.add(
+            new TraversedElement(elemQName, TraversedElement.Traversal.START));
 
       } else {
         /* If we go through all prior decision points and are unable to find
@@ -1033,6 +1050,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   private List<XmlSchemaDocumentNode> unusedTreePool;
   private List<PathSegment> unusedPathSegmentPool;
 
-  private ArrayList<QName> traversedElements;
+  private ArrayList<TraversedElement> traversedElements;
   private ArrayList<DecisionPoint> decisionPoints;
 }
