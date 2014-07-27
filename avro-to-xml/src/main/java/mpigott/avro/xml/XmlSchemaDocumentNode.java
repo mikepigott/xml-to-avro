@@ -70,6 +70,12 @@ final class XmlSchemaDocumentNode {
       XmlSchemaDocumentNode parent,
       SchemaStateMachineNode stateMachineNode) {
 
+    this.parent = parent;
+    this.stateMachineNode = stateMachineNode;
+    this.currIteration = 0;
+    this.currPositionInSeqGroup = -1;
+    this.receivedContent = false;
+
     if ((this.stateMachineNode.getPossibleNextStates() == null)
         || this.stateMachineNode.getPossibleNextStates().isEmpty()) {
       this.children = null;
@@ -79,12 +85,6 @@ final class XmlSchemaDocumentNode {
           new ArrayList<XmlSchemaDocumentNode>(
               this.stateMachineNode.getPossibleNextStates().size() );
     }
-
-    this.parent = parent;
-    this.stateMachineNode = stateMachineNode;
-    this.currIteration = 0;
-    this.currPositionInSeqGroup = -1;
-    this.receivedContent = false;
   }
 
   private SchemaStateMachineNode stateMachineNode;

@@ -65,6 +65,7 @@ public class TestSchemaStateMachineGenerator {
 
     assertNotNull( generator.getStartNode() );
 
+    // 3. To replace with something more sophisticated: draw a graph of the state machine.
     StringTemplateGroup templates = null;
     FileReader fr = null;
     try {
