@@ -424,6 +424,17 @@ final class XmlToAvroPathCreator extends DefaultHandler {
          */
         currentPosition = rootTreeNode;
         currentPath = rootPathNode;
+
+      } else if (currentPosition
+                   .getStateMachineNode()
+                   .getNodeType()
+                   .equals(SchemaStateMachineNode.Type.ANY)) {
+        /* If we are currently following a wildcard element node, we don't know
+         * anything about the element or its children.  So it does not make
+         * sense to follow the children or grandchildren of this element.
+         */
+        return;
+
       } else {
         /* We are at an element in an existing document.  This
          * is the start node of a child.  Likewise we need to
