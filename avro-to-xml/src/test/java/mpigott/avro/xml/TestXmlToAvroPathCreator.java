@@ -86,6 +86,8 @@ public class TestXmlToAvroPathCreator {
 
     // 3. Build a path through an XML document.
     XmlToAvroPathCreator pathCreator = new XmlToAvroPathCreator(root);
+
+    
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {

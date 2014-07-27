@@ -164,25 +164,21 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         }
       }
 
-      // Shorter paths are preferred over longer ones.
       final int thisLength = getLength();
       final int thatLength = o.getLength();
 
-      if (thisLength < thatLength) {
-        return -1;
-      } else if (thisLength > thatLength) {
-        return 1;
-      }
-
-      /* If both paths are the same length, check if one starts with
-       * an earlier child in a sequence group than a later child.
+      /* Paths that walk through earlier sequence group children are
+       * preferred over paths that walk through later sequence group
+       * children.  They provide more options later.
+       *
+       * Shorter paths are also preferred over longer ones.
        */
-      if (thisLength > 0) {
+      if ((thisLength > 0) && (thatLength > 0)) {
         // Both paths have more than just one element.
         XmlSchemaDocumentPathNode thisIter = afterStart;
         XmlSchemaDocumentPathNode thatIter = o.getAfterStart();
 
-        while (thisIter != null) {
+        while ((thisIter != null) && (thatIter != null)) {
           if (thisIter.getIndexOfNextNodeState()
                 < thatIter.getIndexOfNextNodeState()) {
             return -1;
@@ -195,7 +191,25 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           thisIter = thisIter.getNext();
           thatIter = thatIter.getNext();
         }
+
+        if ((thisIter == null) && (thatIter != null)) {
+          // This path is shorter.
+          return -1;
+        } else if ((thisIter != null) && (thatIter == null)) {
+          // That path is shorter.
+          return 1;
+        }
+
+      } else if ((thisLength == 0) && (thatLength > 0)) {
+        // This path is shorter.
+        return -1;
+
+      } else if ((thisLength > 0) && (thatLength == 0)) {
+        // That path is shorter.
+        return 1;
+
       } else {
+        // Both paths have exactly one element.
         if (end.getIndexOfNextNodeState()
               < o.getEnd().getIndexOfNextNodeState()) {
 
