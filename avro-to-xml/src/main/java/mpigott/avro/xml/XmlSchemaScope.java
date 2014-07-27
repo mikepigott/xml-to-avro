@@ -550,7 +550,6 @@ final class XmlSchemaScope {
       XmlSchemaComplexContentRestriction rstr = (XmlSchemaComplexContentRestriction) content;
       XmlSchema schema = schemasByNamespace.get( rstr.getBaseTypeName().getNamespaceURI() );
       XmlSchemaType baseType = schema.getTypeByName( rstr.getBaseTypeName() );
-      Map<QName, XmlSchemaAttribute> parentAttrs = null;
 
       if (baseType != null) {
         XmlSchemaScope parentScope = getScope(baseType);

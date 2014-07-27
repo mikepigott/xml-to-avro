@@ -469,7 +469,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         }
 
         final XmlSchemaDocumentNode childNode =
-            createTreeNode(
+            new XmlSchemaDocumentNode(
                 currentPosition,
                 currentPosition
                   .getStateMachineNode()
@@ -892,7 +892,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           }
 
           for (SchemaStateMachineNode nextState : state.getPossibleNextStates()) {
-            tree.getChildren().add( createTreeNode(tree, nextState) );
+            tree.getChildren().add( new XmlSchemaDocumentNode(tree, nextState) );
           }
 
           position = 0;
@@ -998,7 +998,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             throw new IllegalStateException("In group of type " + state.getNodeType() + " when searching for " + elemQName + ", StateMachineTreeWithState contained fewer children (" + tree.getChildren().size() + ") than the next possible state index, " + stateIndex);
 
           } else if (tree.getChildren().size() == stateIndex) {
-            nextTree = createTreeNode(tree, nextState);
+            nextTree = new XmlSchemaDocumentNode(tree, nextState);
             tree.getChildren().add(nextTree);
 
           } else {
@@ -1311,29 +1311,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       unusedNodePool = new ArrayList<XmlSchemaDocumentPathNode>();
     }
     unusedNodePool.add(toReuse);
-  }
-
-  private XmlSchemaDocumentNode createTreeNode(
-      XmlSchemaDocumentNode parent,
-      SchemaStateMachineNode node) {
-
-    if ((unusedTreePool == null) || unusedTreePool.isEmpty()) {
-      return new XmlSchemaDocumentNode(parent, node);
-    } else {
-      XmlSchemaDocumentNode tree =
-          unusedTreePool.remove(unusedTreePool.size() - 1);
-
-      tree.set(parent, node);
-
-      return tree;
-    }
-  }
-
-  private void recycleTreeNode(XmlSchemaDocumentNode tree) {
-    if (unusedTreePool == null) {
-      unusedTreePool = new ArrayList<XmlSchemaDocumentNode>();
-    }
-    unusedTreePool.add(tree);
   }
 
   private PathSegment createPathSegment(XmlSchemaDocumentPathNode endPathNode) {
