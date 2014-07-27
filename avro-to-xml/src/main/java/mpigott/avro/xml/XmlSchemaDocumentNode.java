@@ -36,7 +36,15 @@ final class XmlSchemaDocumentNode {
   }
 
   List<XmlSchemaDocumentNode> getChildren() {
-    return children;
+    return getChildren(currIteration);
+  }
+
+  List<XmlSchemaDocumentNode> getChildren(int iteration) {
+    if ((children.size() < iteration) || (iteration < 1)) {
+      return null;
+    } else {
+      return children.get(iteration - 1);
+    }
   }
 
   int getCurrIteration() {
@@ -82,14 +90,18 @@ final class XmlSchemaDocumentNode {
 
     } else {
       this.children =
+          new ArrayList<List<XmlSchemaDocumentNode>>(1);
+
+      children.set(
+          0,
           new ArrayList<XmlSchemaDocumentNode>(
-              this.stateMachineNode.getPossibleNextStates().size() );
+              this.stateMachineNode.getPossibleNextStates().size()));
     }
   }
 
   private SchemaStateMachineNode stateMachineNode;
   private XmlSchemaDocumentNode parent;
-  private List<XmlSchemaDocumentNode> children;
+  private List<List<XmlSchemaDocumentNode>> children;
 
   private int currIteration;
   private int currPositionInSeqGroup;
