@@ -33,10 +33,16 @@ final class XmlSchemaDocumentPathNode {
     direction = dir;
     schemaNode = node;
     nextNodeStateIndex = -1;
-    priorSequencePosition = node.getCurrPositionInSequence();
     iterationNum = 0;
     prevNode = null;
     nextNode = null;
+
+    // Node is null if we are exiting the root.
+    if (node != null) {
+      priorSequencePosition = node.getCurrPositionInSequence();
+    } else {
+      priorSequencePosition = -1;
+    }
   }
 
   XmlSchemaDocumentPathNode(
@@ -116,7 +122,11 @@ final class XmlSchemaDocumentPathNode {
   }
 
   SchemaStateMachineNode getStateMachineNode() {
-    return schemaNode.getStateMachineNode();
+    if (schemaNode == null) {
+      return null;
+    } else {
+      return schemaNode.getStateMachineNode();
+    }
   }
 
   Direction getDirection() {
@@ -228,10 +238,16 @@ final class XmlSchemaDocumentPathNode {
     direction = newDirection;
     schemaNode = newNode;
     nextNodeStateIndex = -1;
-    priorSequencePosition = newNode.getCurrPositionInSequence();
     iterationNum = 0;
 
     prevNode = newPrevious;
+
+    // newNode is null when exiting the root.
+    if (newNode != null) {
+      priorSequencePosition = newNode.getCurrPositionInSequence();
+    } else {
+      priorSequencePosition = -1;
+    }
 
     final XmlSchemaDocumentPathNode oldNext = nextNode;
     nextNode = null;

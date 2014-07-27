@@ -1195,6 +1195,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
           docNode.setCurrPositionInSequence(iter.getIndexOfNextNodeState());
         }
+
+        iter.setIteration( docNode.getCurrIteration() );
       }
 
       iter = iter.getNext();
@@ -1278,11 +1280,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     do {
       iter = iter.getParent();
 
-      // If iter is null, it means we ended the root, and we're done!
-      if (iter == null) {
-        break;
-      }
-
       final XmlSchemaDocumentPathNode nextPath =
           createDocumentPathNode(
               XmlSchemaDocumentPathNode.Direction.PARENT,
@@ -1292,10 +1289,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       path.setNextNode(-1, nextPath);
       path = nextPath;
 
-    } while (!iter
-                .getStateMachineNode()
-                .getNodeType()
-                .equals(SchemaStateMachineNode.Type.ELEMENT));
+    } while ((iter != null)
+              && !iter
+                   .getStateMachineNode()
+                   .getNodeType()
+                   .equals(SchemaStateMachineNode.Type.ELEMENT));
 
     currentPath = path;
     currentPosition = iter;
