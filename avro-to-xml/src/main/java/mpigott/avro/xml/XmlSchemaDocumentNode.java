@@ -64,6 +64,12 @@ final class XmlSchemaDocumentNode {
 
   void setCurrIteration(int newIteration) {
     currIteration = newIteration;
+    if (children.size() < currIteration) {
+      for (int index = children.size(); index < currIteration; ++index) {
+        children.add( new ArrayList<XmlSchemaDocumentNode>(
+            this.stateMachineNode.getPossibleNextStates().size() ) );
+      }
+    }
   }
 
   void setCurrPositionInSequence(int newPosition) {
@@ -92,8 +98,7 @@ final class XmlSchemaDocumentNode {
       this.children =
           new ArrayList<List<XmlSchemaDocumentNode>>(1);
 
-      children.set(
-          0,
+      children.add(
           new ArrayList<XmlSchemaDocumentNode>(
               this.stateMachineNode.getPossibleNextStates().size()));
     }
