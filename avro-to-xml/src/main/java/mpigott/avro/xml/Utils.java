@@ -150,6 +150,8 @@ class Utils {
 
     case LONG:
       return JsonNodeFactory.instance.numberNode( Long.parseLong(value) );
+
+    default:
     }
 
     throw new IllegalArgumentException("Could not parse the value \"" + value + "\" using the provided schema " + type);

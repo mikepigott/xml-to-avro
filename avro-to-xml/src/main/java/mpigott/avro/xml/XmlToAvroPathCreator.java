@@ -17,15 +17,11 @@
 package mpigott.avro.xml;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.XmlSchemaAny;
-import org.apache.ws.commons.schema.XmlSchemaContentProcessing;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -153,6 +149,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
         if ( end
               .getStateMachineNode()
+              .getNodeType()
               .equals(SchemaStateMachineNode.Type.ANY) ) {
           return 1;
 
@@ -492,9 +489,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         currentPath = childPath;
       }
 
-      final SchemaStateMachineNode state =
-          currentPosition.getStateMachineNode();
-  
       // 1. Find possible paths.
       List<PathSegment> possiblePaths =
           find(currentPath, currentPosition, elemQName, 0);

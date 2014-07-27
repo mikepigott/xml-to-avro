@@ -44,6 +44,7 @@ class XmlSchemaMultiBaseUriResolver extends DefaultURIResolver {
    *
    * @see org.apache.ws.commons.schema.resolver.URIResolver#resolveEntity(String, String, String)
    */
+  @SuppressWarnings("unused")
   public InputSource resolveEntity(String namespace, String schemaLocation, String baseUri) {
     InputSource source = null;
     if ((baseUri != null) && !baseUri.isEmpty()) {

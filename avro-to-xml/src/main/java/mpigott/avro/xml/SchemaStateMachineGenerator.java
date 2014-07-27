@@ -754,7 +754,6 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     }
 
-    Schema readerType = null, writerType = null;
     if (xmlIsWritten) {
       return confirmEquivalent(avroType, xmlType.getAvroType());
     } else {

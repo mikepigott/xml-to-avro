@@ -22,9 +22,7 @@ import org.apache.avro.Schema;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
-import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
 
 /**
  * Reads an XML {@link Document} and writes it to an {@link Encoder}.

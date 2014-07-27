@@ -20,8 +20,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import javax.xml.namespace.QName;
-
 import org.antlr.stringtemplate.StringTemplate;
 import org.antlr.stringtemplate.StringTemplateGroup;
 import org.apache.ws.commons.schema.XmlSchemaAll;
@@ -295,19 +293,11 @@ public class GraphGenerationVisitor implements XmlSchemaVisitor {
     return edgeSt;
   }
 
-  private StringTemplate getNodeSt(String name, QName text) {
-    return getNodeSt(name, text.getLocalPart());
-  }
-
   private StringTemplate getNodeSt(String name, String text) {
     StringTemplate tmpl = templates.getInstanceOf("node");
     tmpl.setAttribute("name", name);
     tmpl.setAttribute("text", text.replace('\"', '\''));
     return tmpl;
-  }
-
-  private String getSchemaNodeName(int num) {
-    return "xmlSchema" + num;
   }
 
   private String getElemNodeName(int num) {
@@ -320,18 +310,6 @@ public class GraphGenerationVisitor implements XmlSchemaVisitor {
 
   private String getGroupNodeName(int num) {
     return "group" + num;
-  }
-
-  private String getAttrGroupNodeName(int num) {
-    return "attrGroup" + num;
-  }
-
-  private String getTypeNodeName(int num) {
-    return "type" + num;
-  }
-
-  private String getParticleNodeName(int num) {
-    return "particle" + num;
   }
 
   private StringTemplateGroup templates;

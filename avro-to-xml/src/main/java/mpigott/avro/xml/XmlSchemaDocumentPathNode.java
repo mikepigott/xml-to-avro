@@ -16,8 +16,6 @@
 
 package mpigott.avro.xml;
 
-import javax.xml.namespace.QName;
-
 /**
  * This represents a node in the path when walking an XML or Avro document.
  *

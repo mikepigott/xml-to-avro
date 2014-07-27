@@ -16,9 +16,6 @@
 
 package mpigott.avro.xml;
 
-import java.util.Collection;
-import java.util.List;
-
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;

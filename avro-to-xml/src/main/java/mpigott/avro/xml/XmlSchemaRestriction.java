@@ -48,7 +48,7 @@ class XmlSchemaRestriction {
 		LENGTH_MIN,
 		DIGITS_FRACTION,
 		DIGITS_TOTAL;
-	};
+	}
 
 	XmlSchemaRestriction(XmlSchemaFacet facet) {
     if (facet instanceof XmlSchemaEnumerationFacet) {

@@ -63,7 +63,6 @@ public class Main {
       collection = new XmlSchemaCollection();
       collection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
       collection.setBaseUri("http://xbrl.fasb.org/us-gaap/2013/elts/");
-      InputStream urlStream = url.openStream();
       collection.read(new StreamSource(url.openStream(), url.toString()));
       //FileReader fileReader = new FileReader(file);
       //collection.read(new StreamSource(fileReader, file.getAbsolutePath()));
