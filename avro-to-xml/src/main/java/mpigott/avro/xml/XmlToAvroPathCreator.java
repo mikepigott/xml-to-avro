@@ -384,7 +384,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     decisionPoints = null; // Hopefully there won't be any!
 
     unusedNodePool = null;
-    unusedTreePool = null;
     unusedPathSegmentPool = null;
   }
 
@@ -786,10 +785,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   public void endDocument() throws SAXException {
     if (unusedNodePool != null) {
       unusedNodePool.clear();
-    }
-
-    if (unusedTreePool != null) {
-      unusedTreePool.clear();
     }
 
     if (unusedPathSegmentPool != null) {
@@ -1394,7 +1389,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   private XmlSchemaDocumentPathNode currentPath;
 
   private List<XmlSchemaDocumentPathNode> unusedNodePool;
-  private List<XmlSchemaDocumentNode> unusedTreePool;
   private List<PathSegment> unusedPathSegmentPool;
 
   private ArrayList<TraversedElement> traversedElements;
