@@ -34,6 +34,7 @@ import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
@@ -98,15 +99,16 @@ public class TestXmlToAvroPathCreator {
     pathCreator = new XmlToAvroPathCreator(root);
   }
 
-  @Test
-  public void test() throws Exception {
+  @Test // @Ignore
+  public void testRoot() throws Exception {
     final File xsdFile = new File("src\\test\\resources\\test1_root.xml");
     saxParser.parse(xsdFile, pathCreator);
 
     XmlSchemaDocumentPathNode rootPath =
         pathCreator.getXmlSchemaDocumentPath();
 
-    XmlSchemaDocumentNode rootDoc = pathCreator.getXmlSchemaDocumentRoot();
+    XmlSchemaDocumentNode rootDoc =
+        pathCreator.getXmlSchemaDocumentRoot();
 
     assertNotNull(rootPath);
     assertNotNull(rootDoc);
@@ -139,23 +141,64 @@ public class TestXmlToAvroPathCreator {
     assertNull(rootPath.getPrevious());
     assertEquals(rootPath.getPriorSequencePosition(), -1);
     assertTrue(rootPath.getStateMachineNode() == root);
-    assertNotNull( rootPath.getNext() );
+    assertNull( rootPath.getNext() );
+  }
 
-    XmlSchemaDocumentPathNode nextPath = rootPath.getNext();
+  @Test
+  public void testChildren() throws Exception {
+    final File xsdFile = new File("src\\test\\resources\\test2_children.xml");
+
+    try {
+      saxParser.parse(xsdFile, pathCreator);
+    } catch (SAXException e) {
+      e.printStackTrace();
+      throw e;
+    }
+
+    XmlSchemaDocumentPathNode rootPath =
+        pathCreator.getXmlSchemaDocumentPath();
+
+    XmlSchemaDocumentNode rootDoc =
+        pathCreator.getXmlSchemaDocumentRoot();
+
+    assertNotNull(rootPath);
+    assertNotNull(rootDoc);
+
+    assertTrue(
+        (rootDoc.getChildren() != null)
+        && !rootDoc.getChildren().isEmpty());
+
+    for (int i = 0; i < rootDoc.getChildren().size(); ++i) {
+      System.out.println( rootDoc.getChildren().get(i).getStateMachineNode().getNodeType() );
+    }
+
+    assertEquals(1, rootDoc.getChildren().size());
+    assertEquals(1, rootDoc.getCurrIteration());
+    assertEquals(-1, rootDoc.getCurrPositionInSequence());
+    assertNull( rootDoc.getParent() );
+    assertFalse(rootDoc.getReceivedContent());
+    assertNotNull(rootDoc.getStateMachineNode());
 
     assertEquals(
-        XmlSchemaDocumentPathNode.Direction.PARENT,
-        nextPath.getDirection());
+        SchemaStateMachineNode.Type.ELEMENT,
+        rootDoc.getStateMachineNode().getNodeType());
 
-    assertNull( nextPath.getDocumentNode() );
-    assertEquals(-1, nextPath.getIndexOfNextNodeState());
+    assertTrue(rootDoc.getStateMachineNode() == root);
 
-    assertEquals(0, nextPath.getIteration());
+    assertEquals(
+        XmlSchemaDocumentPathNode.Direction.CHILD,
+        rootPath.getDirection());
 
-    assertTrue(nextPath.getPrevious() == rootPath);
-    assertEquals(nextPath.getPriorSequencePosition(), -1);
-    assertNull( nextPath.getStateMachineNode() );
-    assertNull( nextPath.getNext() );
+    assertTrue(rootPath.getDocumentNode() == rootDoc);
+    assertEquals(-1, rootPath.getIndexOfNextNodeState());
+
+    assertEquals(1, rootPath.getIteration());
+
+    assertNull(rootPath.getPrevious());
+    assertEquals(rootPath.getPriorSequencePosition(), -1);
+    assertTrue(rootPath.getStateMachineNode() == root);
+    assertNotNull( rootPath.getNext() );
+
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {

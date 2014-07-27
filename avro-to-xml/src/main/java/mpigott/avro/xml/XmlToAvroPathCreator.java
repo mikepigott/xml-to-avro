@@ -393,6 +393,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             rootTreeNode);
 
     traversedElements = new ArrayList<TraversedElement>();
+    elementStack = new ArrayList<QName>();
     currentPosition = null;
     currentPath = null;
     decisionPoints = null; // Hopefully there won't be any!
@@ -407,6 +408,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     currentPath = null;
 
     traversedElements.clear();
+    elementStack.clear();
 
     if (decisionPoints != null) {
       decisionPoints.clear();
@@ -445,7 +447,17 @@ final class XmlToAvroPathCreator extends DefaultHandler {
          */
         return;
 
-      } else {
+      } else if (
+          currentPosition
+            .getStateMachineNode()
+            .getNodeType()
+            .equals(SchemaStateMachineNode.Type.ELEMENT)
+          && currentPosition
+               .getStateMachineNode()
+               .getElement()
+               .getQName()
+               .equals( elementStack.get(elementStack.size() - 1) )) {
+
         /* We are at an element in an existing document.  This
          * is the start node of a child.  Likewise we need to
          * move down one level to the children.
@@ -454,18 +466,18 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
         if (currentPosition
              .getStateMachineNode()
-             .getPossibleNextStates() != null) {
-          
+             .getPossibleNextStates() == null) {
+
           final String elemName =
               getLeafNodeName( currentPosition.getStateMachineNode() );
 
           throw new IllegalStateException("Element " + elemName + " has null children!  Exactly one is expected.");
 
-        } else if (!currentPosition
+        } else if (currentPosition
                   .getStateMachineNode()
                   .getPossibleNextStates()
                   .isEmpty()) {
-          
+
           final String elemName =
               getLeafNodeName( currentPosition.getStateMachineNode() );
 
@@ -481,13 +493,25 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           throw new IllegalStateException("Element " + elemName + " has " + currentPosition.getStateMachineNode().getPossibleNextStates().size() + " children!  Only one was expected.");
         }
 
-        final XmlSchemaDocumentNode childNode =
+        XmlSchemaDocumentNode childNode = null;
+        if ((currentPosition.getChildren() != null)
+          && !currentPosition.getChildren().isEmpty()) {
+
+          if (currentPosition.getChildren().size() > 1) {
+            throw new IllegalStateException("There are multiple children in the document node for element " + currentPosition.getStateMachineNode().getElement().getQName());
+          }
+
+          childNode = currentPosition.getChildren().get(0);
+
+        } else {
+          childNode =
             new XmlSchemaDocumentNode(
                 currentPosition,
                 currentPosition
                   .getStateMachineNode()
                   .getPossibleNextStates()
                   .get(0));
+        }
 
         final XmlSchemaDocumentPathNode childPath =
             createDocumentPathNode(
@@ -500,11 +524,18 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
         currentPath.setNextNode(0, childPath);
         currentPath = childPath;
+        currentPath.setIteration( childNode.getCurrIteration() );
+
+        if (currentPosition
+              .getStateMachineNode()
+              .getNodeType()
+              .equals(SchemaStateMachineNode.Type.SEQUENCE)) {
+        }
       }
 
       // 1. Find possible paths.
       List<PathSegment> possiblePaths =
-          find(currentPath, currentPosition, elemQName, 0);
+          find(currentPath, currentPosition, elemQName);
 
       PathSegment nextPath = null;
   
@@ -581,8 +612,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                   find(
                       currentPath,
                       currentPosition,
-                      traversedElements.get(index).elemName,
-                      0);
+                      traversedElements.get(index).elemName);
 
               if ((possiblePaths == null) || possiblePaths.isEmpty()) {
                 break;
@@ -628,7 +658,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       if (nextPath != null) {
         traversedElements.add(
             new TraversedElement(elemQName, TraversedElement.Traversal.START));
-
+        elementStack.add(elemQName);
       } else {
         /* If we go through all prior decision points and are unable to find
          * one or more paths through the XML Schema that match the document,
@@ -638,8 +668,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       }
 
     } catch (Exception e) {
-      throw new SAXException("Error occurred while starting element " + elemQName + "; traversed path is " + getElementsTraversedAsString(), e);
+      /* A SAX Exception cannot be thrown because it is caught, and its
+       * internal exception is thrown instead. Likewise, any useful info
+       * about the error reported in the wrapper SAXException is lost.
+       */
+      throw new RuntimeException("Error occurred while starting element " + elemQName + "; traversed path is " + getElementsTraversedAsString(), e);
     }
+
+    //System.err.println( currentPosition.getStateMachineNode().getElement().getQName() );
   }
 
   /**
@@ -658,24 +694,19 @@ final class XmlToAvroPathCreator extends DefaultHandler {
      */
 
     try {
-      verifyCurrentPositionIsAtElement("Received characters");
-
       final SchemaStateMachineNode state =
           currentPosition.getStateMachineNode();
 
-      /* If this represents a wildcard element, we don't
-       * care - we won't be processing the content.
-       */
       if ( state.getNodeType().equals(SchemaStateMachineNode.Type.ANY) ) {
+        /* If this represents a wildcard element, we don't
+         * care - we won't be processing the content.
+         */
         return;
-      } else if (!state
-                    .getElement()
-                    .getQName()
-                    .equals( traversedElements
-                               .get(traversedElements.size() - 1)
-                               .elemName) ) {
 
-        throw new IllegalStateException("We are processing characters for " + traversedElements.get(traversedElements.size() - 1).elemName + " but our current position is for element " + state.getElement().getQName() + " !!");
+      } else if (!getQNameOfOwningElement()
+                   .equals(elementStack.get(elementStack.size() - 1))) {
+
+        throw new IllegalStateException("We are processing characters for " + elementStack.get(elementStack.size() - 1) + " but our current position is for element " + state.getElement().getQName() + " !!");
       }
 
       final XmlSchemaTypeInfo elemTypeInfo = state.getElementType();
@@ -721,7 +752,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       currentPath = contentPath;
 
     } catch (Exception e) {
-      throw new SAXException("Error occurred while processing characters; traversed path was " + getElementsTraversedAsString(), e);
+      throw new RuntimeException("Error occurred while processing characters; traversed path was " + getElementsTraversedAsString(), e);
     }
   }
 
@@ -765,6 +796,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     try {
       verifyCurrentPositionIsAtElement("Ended element " + elemQName);
 
+      if ( !elementStack.get(elementStack.size() - 1).equals(elemQName) ) {
+        throw new IllegalStateException("Attempting to end element " + elemQName + " but the stack is expecting " + elementStack.get(elementStack.size() - 1));
+      }
+
       final SchemaStateMachineNode state =
           currentPosition.getStateMachineNode();
 
@@ -790,8 +825,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       walkUpTree(elemQName);
 
+      traversedElements.add(
+          new TraversedElement(elemQName, TraversedElement.Traversal.END));
+      elementStack.remove(elementStack.size() - 1);
+
     } catch (Exception e) {
-      throw new SAXException("Error occurred while ending element " + elemQName + "; traversed path was " + getElementsTraversedAsString(), e);
+      throw new RuntimeException("Error occurred while ending element " + elemQName + "; traversed path was " + getElementsTraversedAsString(), e);
     }
   }
 
@@ -818,6 +857,92 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return rootPathNode;
   }
 
+  private List<PathSegment> find (
+      XmlSchemaDocumentPathNode startNode,
+      XmlSchemaDocumentNode startTree,
+      QName elemQName) {
+
+    // First, try searching down the tree.
+    List<PathSegment> choices = find(startNode, startTree, elemQName, 0);
+    List<PathSegment> currChoices = null;
+
+    XmlSchemaDocumentNode tree = startTree.getParent();
+
+    if (tree == null) {
+      // This is the root element; there is no parent.
+      return choices;
+    }
+
+    ArrayList<XmlSchemaDocumentPathNode> parentPathStack =
+        new ArrayList<XmlSchemaDocumentPathNode>();
+
+    parentPathStack.add(startNode);
+
+    XmlSchemaDocumentPathNode path =
+        createDocumentPathNode(
+            XmlSchemaDocumentPathNode.Direction.PARENT,
+            startNode,
+            tree);
+    path.setIteration(tree.getCurrIteration());
+
+    parentPathStack.add(path);
+
+    /* We may continue traversing up the tree and collecting
+     * choices until we reach our owning element.
+     */
+    while (!tree
+              .getStateMachineNode()
+              .getNodeType()
+              .equals(SchemaStateMachineNode.Type.ELEMENT)
+             || !tree
+                   .getStateMachineNode()
+                   .getElement()
+                   .getQName()
+                   .equals(elementStack.get(elementStack.size() - 1))) {
+
+      currChoices = find(path, tree, elemQName, 0);
+
+      if (currChoices != null) {
+        for (PathSegment currChoice : currChoices) {
+
+          for (int parentIndex = parentPathStack.size() - 2;
+              parentIndex >= 0;
+              --parentIndex) {
+
+            /* We need to prepend all of the nodes in the path that we
+             * traversed to get to this level.  The most recent node
+             * we traversed was already prepended, so we start from
+             * the one before it.
+             */
+            currChoice.prepend(parentPathStack.get(parentIndex), -1);
+          }
+        }
+
+        if (choices == null) {
+          choices = currChoices;
+        } else {
+          choices.addAll(currChoices);
+        }
+      }
+
+      final XmlSchemaDocumentNode nextTree = tree.getParent();
+
+      final XmlSchemaDocumentPathNode nextPath =
+          createDocumentPathNode(
+              XmlSchemaDocumentPathNode.Direction.PARENT,
+              path,
+              nextTree);
+
+      nextPath.setIteration(nextTree.getCurrIteration());
+
+      tree = nextTree;
+      path = nextPath;
+      parentPathStack.add(path);
+    }
+
+    return choices;
+  }
+
   private List<PathSegment> find(
       XmlSchemaDocumentPathNode startNode,
       XmlSchemaDocumentNode tree,
@@ -832,7 +957,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       return null;
 
     } else if (startNode.getStateMachineNode()
-        != currentPosition.getStateMachineNode()) {
+                != tree.getStateMachineNode()) {
 
       throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode state machine (" + startNode.getStateMachineNode().getNodeType() + ") does not match the tree node (" + tree.getStateMachineNode().getNodeType() + ").");
 
@@ -852,14 +977,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       throw new IllegalStateException("While searching for " + elemQName + " found that a node of type " + tree.getStateMachineNode().getNodeType() + " had more iterations in the tree (" + tree.getCurrIteration() + ") than were the maximum allowed for the state machine node (" + tree.getStateMachineNode().getMaxOccurs() + ").");
 
-    } else if (tree.getStateMachineNode().getMaxOccurs() == tree.getCurrIteration()) {
-      /* We already traversed this node the maximum number of times.
-       * This path cannot be followed.
-       */
-      return null;
+    /*} else if (tree.getStateMachineNode().getMaxOccurs() == tree.getCurrIteration()) {
+      System.err.println("Path to " + tree.getStateMachineNode().getNodeType() + " was already followed the max number of times.");
+      return null;*/
     }
 
-    final SchemaStateMachineNode state = currentPosition.getStateMachineNode();
+    final SchemaStateMachineNode state = tree.getStateMachineNode();
 
     // If this is a group, confirm it has children.
     if ( !state.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT)
@@ -886,6 +1009,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
           choices = new ArrayList<PathSegment>(1);
           choices.add( createPathSegment(startNode) );
+
+        } else if ( state.getElement().getQName().equals(elemQName) ) {
+          System.err.println("Could not match " + elemQName + " because the current iteration " + startNode.getIteration() + " is greater than or equal to the max occurs " + state.getMaxOccurs());
         }
       }
       break;
@@ -1278,7 +1404,17 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     XmlSchemaDocumentPathNode path = currentPath;
 
     do {
+      if (iter.getCurrIteration()
+            < iter.getStateMachineNode().getMaxOccurs()) {
+        break;
+      }
+
       iter = iter.getParent();
+
+      if (iter == null) {
+        // We are exiting the root node.  Nothing to see here!
+        break;
+      }
 
       final XmlSchemaDocumentPathNode nextPath =
           createDocumentPathNode(
@@ -1286,14 +1422,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
               path,
               iter);
 
+      nextPath.setIteration(iter.getCurrIteration());
       path.setNextNode(-1, nextPath);
       path = nextPath;
 
-    } while ((iter != null)
-              && !iter
-                   .getStateMachineNode()
-                   .getNodeType()
-                   .equals(SchemaStateMachineNode.Type.ELEMENT));
+    } while (!iter
+                .getStateMachineNode()
+                .getNodeType()
+                .equals(SchemaStateMachineNode.Type.ELEMENT));
 
     currentPath = path;
     currentPosition = iter;
@@ -1393,6 +1529,24 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return elemName;
   }
 
+  private QName getQNameOfOwningElement() {
+    XmlSchemaDocumentNode iter = currentPosition;
+
+    while ((iter != null)
+            && !iter
+                 .getStateMachineNode()
+                 .getNodeType()
+                 .equals(SchemaStateMachineNode.Type.ELEMENT)) {
+      iter = iter.getParent();
+    }
+
+    if (iter == null) {
+      return null;
+    } else {
+      return iter.getStateMachineNode().getElement().getQName();
+    }
+  }
+
   private final SchemaStateMachineNode rootNode;
   private XmlSchemaDocumentPathNode rootPathNode;
   private XmlSchemaDocumentNode rootTreeNode;
@@ -1405,4 +1559,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
   private ArrayList<TraversedElement> traversedElements;
   private ArrayList<DecisionPoint> decisionPoints;
+
+  private ArrayList<QName> elementStack;
 }
