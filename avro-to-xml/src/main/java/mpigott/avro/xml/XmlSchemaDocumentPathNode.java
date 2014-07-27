@@ -26,7 +26,8 @@ final class XmlSchemaDocumentPathNode {
   enum Direction {
     PARENT,
     CHILD,
-    CONTENT
+    CONTENT,
+    SIBLING
   }
 
   XmlSchemaDocumentPathNode(Direction dir, XmlSchemaDocumentNode node) {
