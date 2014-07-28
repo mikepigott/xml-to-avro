@@ -56,8 +56,8 @@ public class TestSchemaStateMachineGenerator {
     walker.clear();
 
     // 2. Confirm the Avro Schema conforms to the XML Schema
-    SchemaStateMachineGenerator generator =
-        new SchemaStateMachineGenerator(schema, true);
+    XmlSchemaStateMachineGenerator generator =
+        new XmlSchemaStateMachineGenerator(schema, true);
 
     walker.removeVisitor(visitor).addVisitor(generator);
 
@@ -94,25 +94,25 @@ public class TestSchemaStateMachineGenerator {
     System.out.println( fileSt.toString() );
   }
 
-  private int nextNode(SchemaStateMachineNode currNode, int nodeNum, ArrayList<StringTemplate> nodes, ArrayList<StringTemplate> edges, StringTemplateGroup templates, Map<QName, Integer> nodeNums) {
+  private int nextNode(XmlSchemaStateMachineNode currNode, int nodeNum, ArrayList<StringTemplate> nodes, ArrayList<StringTemplate> edges, StringTemplateGroup templates, Map<QName, Integer> nodeNums) {
     int nextNum = nodeNum + 1;
 
     StringBuilder name = new StringBuilder( currNode.getNodeType().name() );
-    if ( currNode.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT) ) {
+    if ( currNode.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
       name.append(": ").append( currNode.getElement().getQName() );
     }
 
     nodes.add( getNodeSt(templates, "node" + nodeNum, name.toString()) );
 
-    if ( currNode.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT) ) {
+    if ( currNode.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
       nodeNums.put(currNode.getElement().getQName(), nodeNum);
     }
 
     if (currNode.getPossibleNextStates() != null) {
-      for (SchemaStateMachineNode nextNode : currNode.getPossibleNextStates()) {
+      for (XmlSchemaStateMachineNode nextNode : currNode.getPossibleNextStates()) {
         int nextNodeNum = nextNum;
 
-        if (nextNode.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT)
+        if (nextNode.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
             && nodeNums.containsKey( nextNode.getElement().getQName() )) {
           nextNodeNum = nodeNums.get( nextNode.getElement().getQName() );
         } else {

@@ -80,8 +80,8 @@ public class TestXmlToAvroPathCreator {
     walker.clear();
 
     // 2. Construct the state machine.
-    SchemaStateMachineGenerator generator =
-        new SchemaStateMachineGenerator(schema, true);
+    XmlSchemaStateMachineGenerator generator =
+        new XmlSchemaStateMachineGenerator(schema, true);
 
     walker.removeVisitor(visitor).addVisitor(generator);
 
@@ -124,7 +124,7 @@ public class TestXmlToAvroPathCreator {
     assertNotNull(rootDoc.getStateMachineNode());
 
     assertEquals(
-        SchemaStateMachineNode.Type.ELEMENT,
+        XmlSchemaStateMachineNode.Type.ELEMENT,
         rootDoc.getStateMachineNode().getNodeType());
 
     assertTrue(rootDoc.getStateMachineNode() == root);
@@ -180,7 +180,7 @@ public class TestXmlToAvroPathCreator {
     assertNotNull(rootDoc.getStateMachineNode());
 
     assertEquals(
-        SchemaStateMachineNode.Type.ELEMENT,
+        XmlSchemaStateMachineNode.Type.ELEMENT,
         rootDoc.getStateMachineNode().getNodeType());
 
     assertTrue(rootDoc.getStateMachineNode() == root);
@@ -215,6 +215,6 @@ public class TestXmlToAvroPathCreator {
   private SAXParser saxParser;
   private XmlToAvroPathCreator pathCreator;
 
-  private static SchemaStateMachineNode root;
+  private static XmlSchemaStateMachineNode root;
   private static SAXParserFactory spf;
 }

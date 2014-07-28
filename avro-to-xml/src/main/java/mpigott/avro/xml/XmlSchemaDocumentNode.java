@@ -16,18 +16,18 @@ import java.util.List;
  * graph generator to build a visualization of the tree.
  */
 final class XmlSchemaDocumentNode {
-  XmlSchemaDocumentNode(SchemaStateMachineNode stateMachineNode) {
+  XmlSchemaDocumentNode(XmlSchemaStateMachineNode stateMachineNode) {
     set(null, stateMachineNode);
   }
 
   XmlSchemaDocumentNode(
       XmlSchemaDocumentNode parent,
-      SchemaStateMachineNode stateMachineNode) {
+      XmlSchemaStateMachineNode stateMachineNode) {
 
     set(parent, stateMachineNode);
   }
 
-  SchemaStateMachineNode getStateMachineNode() {
+  XmlSchemaStateMachineNode getStateMachineNode() {
     return stateMachineNode;
   }
 
@@ -159,7 +159,7 @@ final class XmlSchemaDocumentNode {
 
   final void set(
       XmlSchemaDocumentNode parent,
-      SchemaStateMachineNode stateMachineNode) {
+      XmlSchemaStateMachineNode stateMachineNode) {
 
     this.parent = parent;
     this.stateMachineNode = stateMachineNode;
@@ -182,7 +182,7 @@ final class XmlSchemaDocumentNode {
     }
   }
 
-  private SchemaStateMachineNode stateMachineNode;
+  private XmlSchemaStateMachineNode stateMachineNode;
   private XmlSchemaDocumentNode parent;
   private List<List<XmlSchemaDocumentNode>> children;
   private List<XmlSchemaDocumentPathNode> visitors;

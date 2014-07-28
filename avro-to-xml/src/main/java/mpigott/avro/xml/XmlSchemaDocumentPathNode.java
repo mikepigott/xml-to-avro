@@ -42,6 +42,13 @@ final class XmlSchemaDocumentPathNode {
     update(dir, previous, node);
   }
 
+  XmlSchemaDocumentPathNode(
+      Direction dir,
+      XmlSchemaDocumentPathNode previous,
+      XmlSchemaStateMachineNode stateMachine) {
+
+  }
+
   /**
    * Generates a hash code to represent this <code>DocumentPathNode</code>.
    * This does not perform a deep search, as that would be expensive for long
@@ -109,7 +116,7 @@ final class XmlSchemaDocumentPathNode {
     return schemaNode;
   }
 
-  SchemaStateMachineNode getStateMachineNode() {
+  XmlSchemaStateMachineNode getStateMachineNode() {
     if (schemaNode == null) {
       return null;
     } else {
@@ -207,14 +214,14 @@ final class XmlSchemaDocumentPathNode {
   }
 
   /**
-   * Use this method when changing the the {@link SchemaStateMachineNode}
+   * Use this method when changing the the {@link XmlSchemaStateMachineNode}
    * this <code>DocumentPathNode</code> refers to.  The next node in the
    * path is returned, as it will be discarded internally.
    *
    * @param newPrevious The new previous <code>DocumentPathNode</code> this
    *                    node is traversed from.
    *
-   * @param newNode The new {@link SchemaStateMachineNode} this node refers to.
+   * @param newNode The new {@link XmlSchemaStateMachineNode} this node refers to.
    *
    * @return The next node in the path that this node referred to, as it will
    *         be discarded internally. 
@@ -234,7 +241,7 @@ final class XmlSchemaDocumentPathNode {
     if (newNode
           .getStateMachineNode()
           .getNodeType()
-          .equals(SchemaStateMachineNode.Type.SEQUENCE)) {
+          .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)) {
 
       nextNodeStateIndex = newNode.getCurrPositionInSequence();
     }

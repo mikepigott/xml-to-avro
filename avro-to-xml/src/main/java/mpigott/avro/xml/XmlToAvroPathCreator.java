@@ -150,13 +150,13 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         if ( end
               .getStateMachineNode()
               .getNodeType()
-              .equals(SchemaStateMachineNode.Type.ANY) ) {
+              .equals(XmlSchemaStateMachineNode.Type.ANY) ) {
           return 1;
 
         } else if ( o.getEnd()
                      .getStateMachineNode()
                      .getNodeType()
-                     .equals(SchemaStateMachineNode.Type.ANY) ) {
+                     .equals(XmlSchemaStateMachineNode.Type.ANY) ) {
           return -1;
 
         } else {
@@ -381,9 +381,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
   /**
    * Creates a new <code>XmlToAvroPathCreator</code> with the root
-   * {@link SchemaStateMachineNode} to start from when evaluating documents.
+   * {@link XmlSchemaStateMachineNode} to start from when evaluating documents.
    */
-  XmlToAvroPathCreator(SchemaStateMachineNode root) {
+  XmlToAvroPathCreator(XmlSchemaStateMachineNode root) {
     rootNode = root;
     rootTreeNode = new XmlSchemaDocumentNode(rootNode);
 
@@ -440,7 +440,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       } else if (currentPosition
                    .getStateMachineNode()
                    .getNodeType()
-                   .equals(SchemaStateMachineNode.Type.ANY)) {
+                   .equals(XmlSchemaStateMachineNode.Type.ANY)) {
         /* If we are currently following a wildcard element node, we don't know
          * anything about the element or its children.  So it does not make
          * sense to follow the children or grandchildren of this element.
@@ -451,7 +451,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           currentPosition
             .getStateMachineNode()
             .getNodeType()
-            .equals(SchemaStateMachineNode.Type.ELEMENT)
+            .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
           && currentPosition
                .getStateMachineNode()
                .getElement()
@@ -529,7 +529,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         if (currentPosition
               .getStateMachineNode()
               .getNodeType()
-              .equals(SchemaStateMachineNode.Type.SEQUENCE)) {
+              .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)) {
         }
       }
 
@@ -694,10 +694,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
      */
 
     try {
-      final SchemaStateMachineNode state =
+      final XmlSchemaStateMachineNode state =
           currentPosition.getStateMachineNode();
 
-      if ( state.getNodeType().equals(SchemaStateMachineNode.Type.ANY) ) {
+      if ( state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ANY) ) {
         /* If this represents a wildcard element, we don't
          * care - we won't be processing the content.
          */
@@ -800,10 +800,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         throw new IllegalStateException("Attempting to end element " + elemQName + " but the stack is expecting " + elementStack.get(elementStack.size() - 1));
       }
 
-      final SchemaStateMachineNode state =
+      final XmlSchemaStateMachineNode state =
           currentPosition.getStateMachineNode();
 
-      if ( state.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT) ) {
+      if ( state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
 
         // 1. Is this the element we are looking for?
         if (!state.getElement().getQName().equals(elemQName) ) {
@@ -893,7 +893,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     while (!tree
               .getStateMachineNode()
               .getNodeType()
-              .equals(SchemaStateMachineNode.Type.ELEMENT)
+              .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
              || !tree
                    .getStateMachineNode()
                    .getElement()
@@ -967,7 +967,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     } else if (tree
                  .getStateMachineNode()
                  .getNodeType()
-                 .equals(SchemaStateMachineNode.Type.SEQUENCE)
+                 .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)
         && (startNode.getIndexOfNextNodeState()
             != tree.getCurrPositionInSequence())) {
 
@@ -982,11 +982,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       return null;*/
     }
 
-    final SchemaStateMachineNode state = tree.getStateMachineNode();
+    final XmlSchemaStateMachineNode state = tree.getStateMachineNode();
 
     // If this is a group, confirm it has children.
-    if ( !state.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT)
-        && !state.getNodeType().equals(SchemaStateMachineNode.Type.ANY) ) {
+    if ( !state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+        && !state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ANY) ) {
 
       if (( state.getPossibleNextStates() == null)
           || state.getPossibleNextStates().isEmpty()) {
@@ -1026,7 +1026,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             throw new IllegalStateException("When searching for " + elemQName + ", reached a sequence group with a negative position but with children defined.");
           }
 
-          for (SchemaStateMachineNode nextState : state.getPossibleNextStates()) {
+          for (XmlSchemaStateMachineNode nextState : state.getPossibleNextStates()) {
             tree.getChildren().add( new XmlSchemaDocumentNode(tree, nextState) );
           }
 
@@ -1041,7 +1041,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           final XmlSchemaDocumentNode nextTree =
               tree.getChildren().get(stateIndex);
 
-          final SchemaStateMachineNode nextState =
+          final XmlSchemaStateMachineNode nextState =
               nextTree.getStateMachineNode();
 
           final XmlSchemaDocumentPathNode nextPath =
@@ -1110,19 +1110,19 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             stateIndex < state.getPossibleNextStates().size();
             ++stateIndex) {
 
-          final SchemaStateMachineNode nextState =
+          final XmlSchemaStateMachineNode nextState =
               state.getPossibleNextStates().get(stateIndex);
 
-          if (state.getNodeType().equals(SchemaStateMachineNode.Type.ALL)
+          if (state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ALL)
               && !nextState
                    .getNodeType()
-                   .equals(SchemaStateMachineNode.Type.ELEMENT)
+                   .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
               && !nextState
                    .getNodeType()
-                   .equals(SchemaStateMachineNode.Type.ANY)
+                   .equals(XmlSchemaStateMachineNode.Type.ANY)
               && !nextState
                    .getNodeType()
-                   .equals(SchemaStateMachineNode.Type.SUBSTITUTION_GROUP)) {
+                   .equals(XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP)) {
 
             throw new IllegalStateException("While searching for " + elemQName + ", encountered an All group which contained a child of type " + nextState.getNodeType() + '.');
           }
@@ -1243,7 +1243,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             while ( !iter
                       .getStateMachineNode()
                       .getNodeType()
-                      .equals(SchemaStateMachineNode.Type.ELEMENT) ) {
+                      .equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
 
               iter = iter.getParent();
 
@@ -1317,7 +1317,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         if (docNode
               .getStateMachineNode()
               .getNodeType()
-              .equals(SchemaStateMachineNode.Type.SEQUENCE)) {
+              .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)) {
 
           docNode.setCurrPositionInSequence(iter.getIndexOfNextNodeState());
         }
@@ -1355,7 +1355,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         if (docNode
               .getStateMachineNode()
               .getNodeType()
-              .equals(SchemaStateMachineNode.Type.SEQUENCE)) {
+              .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)) {
 
           int priorPosition = revIter.getPriorSequencePosition();
           if (priorPosition < 0) {
@@ -1387,7 +1387,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    * If currElem is null, the current position must be a wildcard element.
    */
   private void walkUpTree(QName currElem) {
-    final SchemaStateMachineNode state = currentPosition.getStateMachineNode();
+    final XmlSchemaStateMachineNode state = currentPosition.getStateMachineNode();
     switch (state.getNodeType()) {
     case ANY:
       break;
@@ -1429,16 +1429,16 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     } while (!iter
                 .getStateMachineNode()
                 .getNodeType()
-                .equals(SchemaStateMachineNode.Type.ELEMENT));
+                .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
 
     currentPath = path;
     currentPosition = iter;
   }
 
   private boolean isCurrentPositionFulfilled() {
-    final SchemaStateMachineNode state = currentPosition.getStateMachineNode();
+    final XmlSchemaStateMachineNode state = currentPosition.getStateMachineNode();
 
-    final List<SchemaStateMachineNode> nextStates =
+    final List<XmlSchemaStateMachineNode> nextStates =
         state.getPossibleNextStates();
 
     final List<XmlSchemaDocumentNode> children =
@@ -1460,7 +1460,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             stateIndex < nextStates.size();
             ++stateIndex) {
 
-          SchemaStateMachineNode nextState = nextStates.get(stateIndex);
+          XmlSchemaStateMachineNode nextState = nextStates.get(stateIndex);
 
           if (stateIndex < children.size()) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
@@ -1483,7 +1483,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             stateIndex < nextStates.size();
             ++stateIndex) {
 
-          final SchemaStateMachineNode nextState = nextStates.get(stateIndex);
+          final XmlSchemaStateMachineNode nextState = nextStates.get(stateIndex);
           if (stateIndex < children.size()) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
             if (child.getCurrIteration()
@@ -1508,7 +1508,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         }
         for (; stateIndex < nextStates.size(); ++stateIndex) {
 
-          final SchemaStateMachineNode nextState = nextStates.get(stateIndex);
+          final XmlSchemaStateMachineNode nextState = nextStates.get(stateIndex);
           if (stateIndex < children.size()) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
             if (child.getCurrIteration()
@@ -1599,7 +1599,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       while (!tree
                 .getStateMachineNode()
                 .getNodeType()
-                .equals(SchemaStateMachineNode.Type.ELEMENT)
+                .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
                || !tree
                      .getStateMachineNode()
                      .getElement()
@@ -1653,7 +1653,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
   private List<PathSegment> find2(
       XmlSchemaDocumentPathNode startNode,
-      SchemaStateMachineNode state,
+      XmlSchemaStateMachineNode state,
       QName elemQName,
       int currDepth) {
 
@@ -1674,7 +1674,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     } else if (state
                  .getNodeType()
-                 .equals(SchemaStateMachineNode.Type.SEQUENCE)
+                 .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)
         && (startNode.getIndexOfNextNodeState()
             != startNode.getDocumentNode().getSequencePosition())) {
 
@@ -1687,8 +1687,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     }
 
     // If this is a group, confirm it has children.
-    if ( !state.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT)
-        && !state.getNodeType().equals(SchemaStateMachineNode.Type.ANY) ) {
+    if ( !state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+        && !state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ANY) ) {
 
       if (( state.getPossibleNextStates() == null)
           || state.getPossibleNextStates().isEmpty()) {
@@ -1771,26 +1771,26 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     if (!currentPosition
         .getStateMachineNode()
         .getNodeType()
-        .equals(SchemaStateMachineNode.Type.ELEMENT)
+        .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
 
         && !currentPosition
               .getStateMachineNode()
               .getNodeType()
-              .equals(SchemaStateMachineNode.Type.ANY)) {
+              .equals(XmlSchemaStateMachineNode.Type.ANY)) {
 
       throw new IllegalStateException(errMsgPrefix + " when our current position in the tree is a " + currentPosition.getStateMachineNode().getNodeType() + '.');
     }
   }
 
-  private String getLeafNodeName(SchemaStateMachineNode node) {
-    if (!node.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT)
-        && !node.getNodeType().equals(SchemaStateMachineNode.Type.ANY)) {
+  private String getLeafNodeName(XmlSchemaStateMachineNode node) {
+    if (!node.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+        && !node.getNodeType().equals(XmlSchemaStateMachineNode.Type.ANY)) {
 
       throw new IllegalStateException("State machine node needs to be an element or a wildcard element, not a " + currentPosition.getStateMachineNode().getNodeType() + '.');
     }
 
     String elemName = "a wildcard element";
-    if (node.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT) ) {
+    if (node.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
       elemName =
           node.getElement().getQName().toString();
     }
@@ -1804,7 +1804,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             && !iter
                  .getStateMachineNode()
                  .getNodeType()
-                 .equals(SchemaStateMachineNode.Type.ELEMENT)) {
+                 .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
       iter = iter.getParent();
     }
 
@@ -1815,7 +1815,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     }
   }
 
-  private final SchemaStateMachineNode rootNode;
+  private final XmlSchemaStateMachineNode rootNode;
   private XmlSchemaDocumentPathNode rootPathNode;
   private XmlSchemaDocumentNode rootTreeNode;
 

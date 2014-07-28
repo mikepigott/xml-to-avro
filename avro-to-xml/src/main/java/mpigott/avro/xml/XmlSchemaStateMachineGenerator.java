@@ -42,26 +42,26 @@ import org.apache.ws.commons.schema.XmlSchemaUse;
  *
  * @author  Mike Pigott
  */
-final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
+final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
 
   private static class StackEntry {
     StackEntry(boolean isIgnored) {
       this.isIgnored = isIgnored;
       this.node = null;
       this.unionOfChildrenTypes = null;
-      this.nextNodes = new ArrayList<SchemaStateMachineNode>();
+      this.nextNodes = new ArrayList<XmlSchemaStateMachineNode>();
     }
 
-    StackEntry(SchemaStateMachineNode node, boolean isIgnored) {
+    StackEntry(XmlSchemaStateMachineNode node, boolean isIgnored) {
       this.isIgnored = isIgnored;
       this.node = node;
       this.unionOfChildrenTypes = null;
       this.nextNodes = null;
     }
 
-    final SchemaStateMachineNode node;
+    final XmlSchemaStateMachineNode node;
     final boolean isIgnored;
-    final List<SchemaStateMachineNode> nextNodes;
+    final List<XmlSchemaStateMachineNode> nextNodes;
 
     Schema unionOfChildrenTypes;
   }
@@ -69,14 +69,14 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
   private static class ElementInfo {
     ElementInfo(Schema schema) {
       elementSchema = schema;
-      attributes = new ArrayList<SchemaStateMachineNode.Attribute>();
+      attributes = new ArrayList<XmlSchemaStateMachineNode.Attribute>();
     }
 
     void addAttribute(XmlSchemaAttribute attr, XmlSchemaTypeInfo attrType) {
-      attributes.add( new SchemaStateMachineNode.Attribute(attr, attrType) );
+      attributes.add( new XmlSchemaStateMachineNode.Attribute(attr, attrType) );
     }
 
-    final List<SchemaStateMachineNode.Attribute> attributes;
+    final List<XmlSchemaStateMachineNode.Attribute> attributes;
     final Schema elementSchema;
   }
 
@@ -113,7 +113,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    * @throws IllegalArgumentException if <code>avroSchema</code> does not
    *                                  conform to the requirements.
    */
-  SchemaStateMachineGenerator(Schema avroSchema, boolean xmlIsWritten) {
+  XmlSchemaStateMachineGenerator(Schema avroSchema, boolean xmlIsWritten) {
     this.avroSchema = avroSchema;
     this.xmlIsWritten = xmlIsWritten;
 
@@ -122,7 +122,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     conversionCache = new HashMap<Schema.Type, Set<Schema.Type>>();
     elements = new HashMap<QName, ElementInfo>();
-    elementNodes = new HashMap<QName, SchemaStateMachineNode>();
+    elementNodes = new HashMap<QName, XmlSchemaStateMachineNode>();
     stack = new ArrayList<StackEntry>();
 
     if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
@@ -168,7 +168,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     }
   }
 
-  SchemaStateMachineNode getStartNode() {
+  XmlSchemaStateMachineNode getStartNode() {
     return startNode;
   }
 
@@ -329,16 +329,16 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    * <ol>
    *   <li>
    *     If this {@link XmlSchemaElement} is not ignored, checks if a
-   *     {@link SchemaStateMachineNode} was previously created to represent it.
+   *     {@link XmlSchemaStateMachineNode} was previously created to represent it.
    *   </li>
    *   <li>
-   *     If a {@link SchemaStateMachineNode} does not represent this
+   *     If a {@link XmlSchemaStateMachineNode} does not represent this
    *     {@link XmlSchemaElement}, creates a new one representing it
    *     and its {@link XmlSchemaAttribute}s.
    *   </li>
    *   <li>
-   *     Adds the {@link SchemaStateMachineNode} to the list of possible
-   *     future states of the previous {@link SchemaStateMachineNode}.
+   *     Adds the {@link XmlSchemaStateMachineNode} to the list of possible
+   *     future states of the previous {@link XmlSchemaStateMachineNode}.
    *   </li>
    * </ol>
    *
@@ -362,10 +362,10 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     final ElementInfo elemInfo = elements.get( element.getQName() );
 
-    SchemaStateMachineNode node = elementNodes.get( element.getQName() );
+    XmlSchemaStateMachineNode node = elementNodes.get( element.getQName() );
     if (node == null) {
       node =
-        new SchemaStateMachineNode(
+        new XmlSchemaStateMachineNode(
             element,
             elemInfo.attributes,
             typeInfo,
@@ -496,7 +496,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    *     the current position in the Avro {@link Schema}.
    *   </li>
    *   <li>
-   *     Creates a {@link SchemaStateMachineNode}
+   *     Creates a {@link XmlSchemaStateMachineNode}
    *     representing the substitution group.
    *   </li>
    *   <li>
@@ -515,7 +515,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
     if ( !stack.isEmpty() ) {
       pushGroup(
-          SchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
+          XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
           base.getMinOccurs(),
           base.getMaxOccurs());
 
@@ -532,8 +532,8 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
 
       if ( schema.getType().equals(Schema.Type.UNION) ) {
         startNode =
-            new SchemaStateMachineNode(
-                SchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
+            new XmlSchemaStateMachineNode(
+                XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
                 schema,
                 base.getMinOccurs(),
                 base.getMaxOccurs());
@@ -555,7 +555,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onExitSubstitutionGroup(XmlSchemaElement base) {
-    popGroup(SchemaStateMachineNode.Type.SUBSTITUTION_GROUP);
+    popGroup(XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP);
   }
 
   /**
@@ -567,7 +567,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    *     current position in the Avro {@link Schema}.
    *   </li>
    *   <li>
-   *     Creates a {@link SchemaStateMachineNode}
+   *     Creates a {@link XmlSchemaStateMachineNode}
    *     representing the All group.
    *   </li>
    *   <li>
@@ -581,7 +581,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
   @Override
   public void onEnterAllGroup(XmlSchemaAll all) {
     pushGroup(
-        SchemaStateMachineNode.Type.ALL,
+        XmlSchemaStateMachineNode.Type.ALL,
         all.getMinOccurs(),
         all.getMaxOccurs());
   }
@@ -593,7 +593,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onExitAllGroup(XmlSchemaAll all) {
-    popGroup(SchemaStateMachineNode.Type.ALL);
+    popGroup(XmlSchemaStateMachineNode.Type.ALL);
   }
 
   /**
@@ -605,7 +605,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    *     current position in the Avro {@link Schema}.
    *   </li>
    *   <li>
-   *     Creates a {@link SchemaStateMachineNode}
+   *     Creates a {@link XmlSchemaStateMachineNode}
    *     representing the Choice group.
    *   </li>
    *   <li>
@@ -619,7 +619,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
   @Override
   public void onEnterChoiceGroup(XmlSchemaChoice choice) {
     pushGroup(
-        SchemaStateMachineNode.Type.CHOICE,
+        XmlSchemaStateMachineNode.Type.CHOICE,
         choice.getMinOccurs(),
         choice.getMaxOccurs());
   }
@@ -631,7 +631,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onExitChoiceGroup(XmlSchemaChoice choice) {
-    popGroup(SchemaStateMachineNode.Type.CHOICE);
+    popGroup(XmlSchemaStateMachineNode.Type.CHOICE);
   }
 
   /**
@@ -643,7 +643,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    *     the current position in the Avro {@link Schema}.
    *   </li>
    *   <li>
-   *     Creates a {@link SchemaStateMachineNode}
+   *     Creates a {@link XmlSchemaStateMachineNode}
    *     representing the Sequence group.
    *   </li>
    *   <li>
@@ -657,7 +657,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
   @Override
   public void onEnterSequenceGroup(XmlSchemaSequence seq) {
     pushGroup(
-        SchemaStateMachineNode.Type.SEQUENCE,
+        XmlSchemaStateMachineNode.Type.SEQUENCE,
         seq.getMinOccurs(),
         seq.getMaxOccurs());
   }
@@ -669,13 +669,13 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
    */
   @Override
   public void onExitSequenceGroup(XmlSchemaSequence seq) {
-    popGroup(SchemaStateMachineNode.Type.SEQUENCE);
+    popGroup(XmlSchemaStateMachineNode.Type.SEQUENCE);
   }
 
   /**
    * {@link XmlSchemaAny} nodes are skipped in the Avro {@link Schema},
    * but they must be part of the state machine.  Creates a
-   * {@link SchemaStateMachineNode} to represent it, and adds it as
+   * {@link XmlSchemaStateMachineNode} to represent it, and adds it as
    * a possible future state of the previous node.
    *
    * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAny(org.apache.ws.commons.schema.XmlSchemaAny)
@@ -686,7 +686,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
       throw new IllegalStateException("Reached an wildcard with no parent!  The stack is empty.");
     }
 
-    final SchemaStateMachineNode node = new SchemaStateMachineNode(any);
+    final XmlSchemaStateMachineNode node = new XmlSchemaStateMachineNode(any);
 
     final StackEntry entry = stack.get(stack.size() - 1);
 
@@ -866,7 +866,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   private void pushGroup(
-      SchemaStateMachineNode.Type groupType,
+      XmlSchemaStateMachineNode.Type groupType,
       long minOccurs,
       long maxOccurs) {
 
@@ -881,8 +881,8 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     }
 
     final StackEntry parent = stack.get(stack.size() - 1);
-    final SchemaStateMachineNode node =
-        new SchemaStateMachineNode(
+    final XmlSchemaStateMachineNode node =
+        new XmlSchemaStateMachineNode(
             groupType,
             parent.unionOfChildrenTypes,
             minOccurs,
@@ -902,7 +902,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
     stack.add(entry);
   }
 
-  private void popGroup(SchemaStateMachineNode.Type groupType) {
+  private void popGroup(XmlSchemaStateMachineNode.Type groupType) {
     if ( stack.isEmpty() ) {
       throw new IllegalStateException("Exiting an " + groupType + " group, but the stack is empty!");
     }
@@ -925,7 +925,7 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
         validNextElements = parent.unionOfChildrenTypes.getTypes();
       }
     } else if (!groupType.equals(
-                  SchemaStateMachineNode.Type.SUBSTITUTION_GROUP) ) {
+                  XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP) ) {
       throw new IllegalStateException(groupType + " group had no parent!  The stack is empty after removing it.");
     }
 
@@ -939,6 +939,6 @@ final class SchemaStateMachineGenerator implements XmlSchemaVisitor {
   private final Map<Schema.Type, Set<Schema.Type>> conversionCache;
 
   private List<Schema> validNextElements;
-  private SchemaStateMachineNode startNode;
-  private Map<QName, SchemaStateMachineNode> elementNodes;
+  private XmlSchemaStateMachineNode startNode;
+  private Map<QName, XmlSchemaStateMachineNode> elementNodes;
 }

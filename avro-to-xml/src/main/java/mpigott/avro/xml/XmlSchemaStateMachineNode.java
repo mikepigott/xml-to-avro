@@ -49,7 +49,7 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
  *
  * @author  Mike Pigott
  */
-final class SchemaStateMachineNode {
+final class XmlSchemaStateMachineNode {
 
   enum Type {
     ELEMENT,
@@ -96,7 +96,7 @@ final class SchemaStateMachineNode {
    *                                  define an {@link Type#ELEMENT}
    *                                  or an {@link Type#ANY}.
    */
-  SchemaStateMachineNode(
+  XmlSchemaStateMachineNode(
       Type nodeType,
       Schema avroSchema,
       long minOccurs,
@@ -118,7 +118,7 @@ final class SchemaStateMachineNode {
     this.typeInfo = null;
     this.any = null;
 
-    this.possibleNextStates = new ArrayList<SchemaStateMachineNode>();
+    this.possibleNextStates = new ArrayList<XmlSchemaStateMachineNode>();
   }
 
   /**
@@ -136,7 +136,7 @@ final class SchemaStateMachineNode {
    *                   or <code>null</code> if this element should not be
    *                   written to the Avro document.
    */
-  SchemaStateMachineNode(
+  XmlSchemaStateMachineNode(
       XmlSchemaElement elem,
       List<Attribute> attrs,
       XmlSchemaTypeInfo typeInfo,
@@ -152,15 +152,15 @@ final class SchemaStateMachineNode {
 
     this.any = null;
 
-    this.possibleNextStates = new ArrayList<SchemaStateMachineNode>();
+    this.possibleNextStates = new ArrayList<XmlSchemaStateMachineNode>();
   }
 
   /**
-   * Constructs a {@link SchemaStateMachineNode} from the {@link XmlSchemaAny}.
+   * Constructs a {@link XmlSchemaStateMachineNode} from the {@link XmlSchemaAny}.
    *
    * @param any The <code>XmlSchemaAny</code> to construct the node from.
    */
-  SchemaStateMachineNode(XmlSchemaAny any) {
+  XmlSchemaStateMachineNode(XmlSchemaAny any) {
     this.nodeType = Type.ANY;
     this.any = any;
     this.minOccurs = any.getMinOccurs();
@@ -171,7 +171,7 @@ final class SchemaStateMachineNode {
     this.typeInfo = null;
     this.avroSchema = null;
 
-    this.possibleNextStates = new ArrayList<SchemaStateMachineNode>();
+    this.possibleNextStates = new ArrayList<XmlSchemaStateMachineNode>();
   }
 
   /**
@@ -251,7 +251,7 @@ final class SchemaStateMachineNode {
    * @param next A node that could follow this one in the XML document.
    * @return Itself, for chaining.
    */
-  SchemaStateMachineNode addPossibleNextState(SchemaStateMachineNode next) {
+  XmlSchemaStateMachineNode addPossibleNextState(XmlSchemaStateMachineNode next) {
     possibleNextStates.add(next);
     return this;
   }
@@ -265,8 +265,8 @@ final class SchemaStateMachineNode {
    *
    * @return Itself, for chaining.
    */
-  SchemaStateMachineNode addPossibleNextStates(
-      java.util.Collection<SchemaStateMachineNode> nextStates) {
+  XmlSchemaStateMachineNode addPossibleNextStates(
+      java.util.Collection<XmlSchemaStateMachineNode> nextStates) {
 
     possibleNextStates.addAll(nextStates);
     return this;
@@ -275,7 +275,7 @@ final class SchemaStateMachineNode {
   /**
    * All of the known possible states that could follow this one.
    */
-  List<SchemaStateMachineNode> getPossibleNextStates() {
+  List<XmlSchemaStateMachineNode> getPossibleNextStates() {
     return possibleNextStates;
   }
 
@@ -294,7 +294,7 @@ final class SchemaStateMachineNode {
      * perform a deep walk when generating the hash code.
      */
     if (possibleNextStates != null) {
-      for (SchemaStateMachineNode nextState : possibleNextStates) {
+      for (XmlSchemaStateMachineNode nextState : possibleNextStates) {
         result = result * prime + nextState.localHashCode(prime);
       }
     }
@@ -316,10 +316,10 @@ final class SchemaStateMachineNode {
     if (obj == null) {
       return false;
     }
-    if (!(obj instanceof SchemaStateMachineNode)) {
+    if (!(obj instanceof XmlSchemaStateMachineNode)) {
       return false;
     }
-    SchemaStateMachineNode other = (SchemaStateMachineNode) obj;
+    XmlSchemaStateMachineNode other = (XmlSchemaStateMachineNode) obj;
 
     if ( !localEquals(other) ) {
       return false;
@@ -373,7 +373,7 @@ final class SchemaStateMachineNode {
     return result;
   }
 
-  private boolean localEquals(SchemaStateMachineNode other) {
+  private boolean localEquals(XmlSchemaStateMachineNode other) {
     if (any == null) {
       if (other.any != null) {
         return false;
@@ -430,5 +430,5 @@ final class SchemaStateMachineNode {
   private final XmlSchemaAny any;
   private final Schema avroSchema;
 
-  private List<SchemaStateMachineNode> possibleNextStates;
+  private List<XmlSchemaStateMachineNode> possibleNextStates;
 }
