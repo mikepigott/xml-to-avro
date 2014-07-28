@@ -17,6 +17,9 @@
 package mpigott.avro.xml;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Factory for creating {@link XmlSchemaPathNode}s.  This allows
@@ -32,6 +35,7 @@ final class XmlSchemaPathManager {
    */
   public XmlSchemaPathManager() {
     unusedPathNodes = new ArrayList<XmlSchemaPathNode>();
+    unusedDocNodes = new ArrayList<XmlSchemaDocumentNode>();
   }
 
   XmlSchemaPathNode createStartPathNode(
@@ -98,9 +102,9 @@ final class XmlSchemaPathManager {
         startNode.getStateMachineNode();
 
     if (stateMachine.getPossibleNextStates() == null) {
-      throw new IllegalStateException("Cannot follow the branch index");
+      throw new IllegalStateException("Cannot follow the branch index; no possible next states.");
     } else if (stateMachine.getPossibleNextStates().size() <= branchIndex) {
-      throw new IllegalArgumentException("Cannot follow the branch index; ");
+      throw new IllegalArgumentException("Cannot follow the branch index; branch " + branchIndex + " was requested when there are only " + stateMachine.getPossibleNextStates().size() + " branches to follow.");
     }
 
     final XmlSchemaPathNode next =
@@ -111,29 +115,11 @@ final class XmlSchemaPathManager {
 
     final XmlSchemaDocumentNode docNode = startNode.getDocumentNode();
     if ((startNode.getDocumentNode() != null)
-        && (docNode.getChildren() != null)
-        && (docNode.getChildren().size() > branchIndex)) {
-
+        && (docNode.getChildren() != null)) {
       next.setDocumentNode( docNode.getChildren().get(branchIndex) );
     }
 
     return next;
-  }
-
-  XmlSchemaPathNode clone(XmlSchemaPathNode original) {
-    XmlSchemaPathNode clone =
-        createPathNode(
-            original.getDirection(),
-            original.getPrevious(),
-            original.getStateMachineNode());
-
-    if (original.getDocumentNode() != null) {
-      clone.setDocumentNode( original.getDocumentNode() );
-    }
-
-    clone.setIteration(original.getIteration());
-
-    return original;
   }
 
   /**
@@ -145,10 +131,111 @@ final class XmlSchemaPathManager {
     toRecycle.setPreviousNode(null);
 
     if (toRecycle.getNext() != null) {
-      recyclePathNode( toRecycle.getNext() );
+      recyclePathNode(toRecycle.getNext());
     }
 
     unusedPathNodes.add(toRecycle);
+  }
+
+  XmlSchemaPathNode clone(XmlSchemaPathNode original) {
+    final XmlSchemaPathNode clone =
+        createPathNode(
+            original.getDirection(),
+            original.getPrevious(),
+            original.getStateMachineNode());
+
+    clone.setIteration(original.getIteration());
+
+    if (original.getDocumentNode() != null) {
+      clone.setDocumentNode(original.getDocumentNode());
+    }
+
+    return clone;
+  }
+
+  /**
+   * Follows the path starting at <code>startNode</code>, creating
+   * {@link XmlSchemaDocumentNode}s and linking them along the way.
+   *
+   * @param startNode The node to start building the tree from.
+   */
+  void followPath(XmlSchemaPathNode startNode) {
+    if (startNode.getDocumentNode() == null) {
+      if (!startNode
+             .getDirection()
+             .equals(XmlSchemaPathNode.Direction.CHILD)) {
+
+        throw new IllegalStateException("The startNode may only have a null XmlSchemaDocumentNode if it represents the root node, and likewise its only valid direction is CHILD, not " + startNode.getDirection());
+      }
+      // startNode is the root node.
+      XmlSchemaDocumentNode rootDoc =
+          createDocumentNode(null, startNode.getStateMachineNode());
+      startNode.setDocumentNode(rootDoc);
+      rootDoc.addVisitor(startNode);
+    }
+
+    XmlSchemaPathNode prev = startNode;
+    XmlSchemaPathNode iter = prev.getNext();
+    while (iter != null) {
+      if (iter.getDocumentNode() == null) {
+        if ( !iter.getDirection().equals(XmlSchemaPathNode.Direction.CHILD) ) {
+          throw new IllegalStateException("XmlSchemaPathNode has a direction of " + iter.getDirection() + " but it does not have an XmlSchemaDocumentNode to represent its state machine (" + iter.getStateMachineNode() + ").");
+        }
+
+        final XmlSchemaDocumentNode newDocNode = 
+            createDocumentNode(
+                prev.getDocumentNode(),
+                iter.getStateMachineNode());
+
+        iter.setDocumentNode(newDocNode);
+
+        final Map<Integer, XmlSchemaDocumentNode> siblings =
+            prev.getDocumentNode().getChildren();
+
+        if (prev.getIndexOfNextNodeState() < 0) {
+          throw new IllegalStateException("Creating a new document node for a node represented by " + iter.getStateMachineNode() + " but its previous state does not know how to reach me.");
+        }
+
+        siblings.put(prev.getIndexOfNextNodeState(), iter.getDocumentNode());
+      }
+
+      switch (iter.getDirection()) {
+      case CHILD:
+      case SIBLING:
+        iter.getDocumentNode().addVisitor(iter);
+        break;
+      default:
+      }
+
+      if (iter.getIteration() != iter.getDocIteration()) {
+        throw new IllegalStateException("The current path node (representing " + iter.getStateMachineNode() + ") has an iteration of " + iter.getIteration() + ", which does not match the document node iteration of " + iter.getDocIteration() + '.');
+      }
+
+      prev = iter;
+      iter = iter.getNext();
+    }
+  }
+
+  void unfollowPath(XmlSchemaPathNode startNode) {
+    // Walk to the end and work backwards, recycling as we go.
+    XmlSchemaPathNode iter = startNode;
+    XmlSchemaPathNode prev = null;
+
+    while (iter != null) {
+      prev = iter;
+      iter = iter.getNext();
+    }
+
+    while (prev != startNode) {
+      iter = prev;
+      prev = iter.getPrevious();
+
+      iter.getDocumentNode().removeVisitor(iter);
+      if (iter.getDocIteration() == 0) {
+        recycleDocumentNode(iter.getDocumentNode());
+      }
+      recyclePathNode(iter);
+    }
   }
 
   private XmlSchemaPathNode createPathNode(
@@ -166,5 +253,44 @@ final class XmlSchemaPathManager {
     }
   }
 
+  private XmlSchemaDocumentNode createDocumentNode(
+      XmlSchemaDocumentNode parent,
+      XmlSchemaStateMachineNode state) {
+
+    if ( !unusedDocNodes.isEmpty() ) {
+      XmlSchemaDocumentNode node =
+          unusedDocNodes.remove(unusedDocNodes.size() - 1);
+      node.set(parent, state);
+      return node;
+    } else {
+      return new XmlSchemaDocumentNode(parent, state);
+    }
+  }
+
+  // TODO: Can we include a parent's index argument?
+  void recycleDocumentNode(XmlSchemaDocumentNode node) {
+    if (node.getParent() != null) {
+      final Map<Integer, XmlSchemaDocumentNode> siblings =
+          node.getParent().getChildren();
+
+      for (Map.Entry<Integer, XmlSchemaDocumentNode> sibling :
+             siblings.entrySet()) {
+
+        if (sibling.getValue() == node) {
+          siblings.remove(sibling.getKey());
+          break;
+        }
+      }
+
+      if (node.getChildren() != null) {
+        for (Map.Entry<Integer, XmlSchemaDocumentNode> child :
+                node.getChildren().entrySet()) {
+          recycleDocumentNode(child.getValue());
+        }
+      }
+    }
+  }
+
   private ArrayList<XmlSchemaPathNode> unusedPathNodes;
+  private ArrayList<XmlSchemaDocumentNode> unusedDocNodes;
 }

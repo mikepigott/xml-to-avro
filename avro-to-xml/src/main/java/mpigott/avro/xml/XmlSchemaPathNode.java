@@ -16,6 +16,9 @@
 
 package mpigott.avro.xml;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * This represents a node in the path when walking an XML or Avro document.
  *
@@ -58,13 +61,14 @@ final class XmlSchemaPathNode {
   public int hashCode() {
     final int prime = 31;
     int result = localHashCode(prime);
-    result =
-        prime * result
-        + ((nextNode == null) ? 0 : nextNode.localHashCode(prime));
 
     result =
         prime * result
         + ((prevNode == null) ? 0 : prevNode.localHashCode(prime));
+
+    result =
+        prime * result
+        + ((nextNode == null) ? 0 : nextNode.localHashCode(prime));
 
     return result;
   }
@@ -92,18 +96,18 @@ final class XmlSchemaPathNode {
     if (!localEquals(other)) {
       return false;
     }
-    if (nextNode == null) {
-      if (other.nextNode != null) {
-        return false;
-      }
-    } else if (!nextNode.localEquals(other.nextNode)) {
-      return false;
-    }
     if (prevNode == null) {
       if (other.prevNode != null) {
         return false;
       }
     } else if (!prevNode.localEquals(other.prevNode)) {
+      return false;
+    }
+    if (nextNode == null) {
+      if (other.nextNode != null) {
+        return false;
+      }
+    } else if (!nextNode.localEquals(other.nextNode)) {
       return false;
     }
     return true;
@@ -172,9 +176,7 @@ final class XmlSchemaPathNode {
     documentNode = docNode;
   }
 
-  XmlSchemaPathNode setNextNode(
-      int nextNodeIndex,
-      XmlSchemaPathNode newNext) {
+  void setNextNode(int nextNodeIndex, XmlSchemaPathNode newNext) {
 
     if ((nextNodeIndex == -1)
         && ((newNext == null)
@@ -209,11 +211,7 @@ final class XmlSchemaPathNode {
     }
 
     nextNodeStateIndex = nextNodeIndex;
-
-    final XmlSchemaPathNode oldNext = nextNode;
     nextNode = newNext;
-
-    return oldNext;
   }
 
   /**
@@ -242,25 +240,16 @@ final class XmlSchemaPathNode {
    * @return The next node in the path that this node referred to, as it will
    *         be discarded internally. 
    */
-  final XmlSchemaPathNode update(
+  final void update(
       Direction newDirection,
       XmlSchemaPathNode newPrevious,
       XmlSchemaDocumentNode newNode) {
 
-    direction = newDirection;
+    update(newDirection, newPrevious, newNode.getStateMachineNode());
     documentNode = newNode;
-    stateMachineNode = documentNode.getStateMachineNode();
-    nextNodeStateIndex = -1;
-    iterationNum = newNode.getIteration() + 1;
-    prevNode = newPrevious;
-
-    final XmlSchemaPathNode oldNext = nextNode;
-    nextNode = null;
-
-    return oldNext;
   }
 
-  final XmlSchemaPathNode update(
+  final void update(
       Direction newDirection,
       XmlSchemaPathNode newPrevious,
       XmlSchemaStateMachineNode newStateMachineNode) {
@@ -271,11 +260,7 @@ final class XmlSchemaPathNode {
     nextNodeStateIndex = -1;
     iterationNum = 0;
     prevNode = newPrevious;
-
-    final XmlSchemaPathNode oldNext = nextNode;
     nextNode = null;
-
-    return oldNext;
   }
 
   private int localHashCode(int prime) {

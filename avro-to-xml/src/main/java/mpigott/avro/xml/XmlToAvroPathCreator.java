@@ -18,6 +18,7 @@ package mpigott.avro.xml;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.namespace.QName;
 
@@ -257,7 +258,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       if (afterStart != null) {
         afterStart.setPreviousNode(clonedStartNode);
-        clonedStartNode.setNextNode(afterStartPathIndex, afterStart);
+        // TODO: clonedStartNode.setNextNode(afterStartPathIndex, afterStart);
         afterStart = clonedStartNode;
 
       } else {
@@ -520,10 +521,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                 currentPath,
                 childNode);
 
-        currentPosition.getChildren().add(childNode);
+        currentPosition.getChildren().put(0, childNode);
         currentPosition = childNode;
 
-        currentPath.setNextNode(0, childPath);
+        // TODO: currentPath.setNextNode(0, childPath);
         currentPath = childPath;
         currentPath.setIteration( childNode.getIteration() );
 
@@ -745,7 +746,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
               currentPath,
               currentPosition);
 
-      currentPath.setNextNode(-1, contentPath);
+      // TODO: currentPath.setNextNode(-1, contentPath);
       currentPath = contentPath;
 
     } catch (Exception e) {
@@ -860,7 +861,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     final List<XmlSchemaStateMachineNode> nextStates =
         state.getPossibleNextStates();
 
-    final List<XmlSchemaDocumentNode> children =
+    final Map<Integer, XmlSchemaDocumentNode> children =
         currentPosition.getChildren();
 
     boolean fulfilled = true;
@@ -881,7 +882,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
           XmlSchemaStateMachineNode nextState = nextStates.get(stateIndex);
 
-          if (stateIndex < children.size()) {
+          if ( children.containsKey(stateIndex) ) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
             if (child.getIteration()
                 >= nextState.getMinOccurs()) {
@@ -903,7 +904,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             ++stateIndex) {
 
           final XmlSchemaStateMachineNode nextState = nextStates.get(stateIndex);
-          if (stateIndex < children.size()) {
+          if (children.containsKey(stateIndex)) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
             if (child.getIteration()
                 < nextState.getMinOccurs()) {
@@ -928,7 +929,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         for (; stateIndex < nextStates.size(); ++stateIndex) {
 
           final XmlSchemaStateMachineNode nextState = nextStates.get(stateIndex);
-          if (stateIndex < children.size()) {
+          if (children.containsKey(stateIndex)) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
             if (child.getIteration()
                 < nextState.getMinOccurs()) {

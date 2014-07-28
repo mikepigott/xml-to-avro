@@ -2,6 +2,8 @@ package mpigott.avro.xml;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Represents the state machine as a tree with the current iteration of each
@@ -31,11 +33,11 @@ final class XmlSchemaDocumentNode {
     return parent;
   }
 
-  List<XmlSchemaDocumentNode> getChildren() {
+  Map<Integer, XmlSchemaDocumentNode> getChildren() {
     return getChildren(currIteration);
   }
 
-  List<XmlSchemaDocumentNode> getChildren(int iteration) {
+  Map<Integer, XmlSchemaDocumentNode> getChildren(int iteration) {
     if ((children.size() < iteration) || (iteration < 1)) {
       return null;
     } else {
@@ -73,8 +75,7 @@ final class XmlSchemaDocumentNode {
 
     if (children != null) { 
       if (children.size() == visitors.size()) {
-        children.add( new ArrayList<XmlSchemaDocumentNode>(
-          this.stateMachineNode.getPossibleNextStates().size() ) );
+        children.add( new TreeMap<Integer, XmlSchemaDocumentNode>() );
       } else {
         throw new IllegalStateException("Attempted to add a new visitor when the number of occurrences (" + children.size() + ") did not match the number of existing visitors (" + visitors.size() + ").");
       }
@@ -148,17 +149,15 @@ final class XmlSchemaDocumentNode {
 
     } else {
       this.children =
-          new ArrayList<List<XmlSchemaDocumentNode>>(1);
+          new ArrayList<Map<Integer, XmlSchemaDocumentNode>>(1);
 
-      children.add(
-          new ArrayList<XmlSchemaDocumentNode>(
-              this.stateMachineNode.getPossibleNextStates().size()));
+      children.add(new TreeMap<Integer, XmlSchemaDocumentNode>());
     }
   }
 
   private XmlSchemaStateMachineNode stateMachineNode;
   private XmlSchemaDocumentNode parent;
-  private List<List<XmlSchemaDocumentNode>> children;
+  private List<Map<Integer, XmlSchemaDocumentNode>> children;
   private List<XmlSchemaPathNode> visitors;
 
   private int currIteration;
