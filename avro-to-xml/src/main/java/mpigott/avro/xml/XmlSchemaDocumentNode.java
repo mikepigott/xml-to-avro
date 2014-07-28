@@ -2,7 +2,7 @@ package mpigott.avro.xml;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
@@ -33,11 +33,11 @@ final class XmlSchemaDocumentNode {
     return parent;
   }
 
-  Map<Integer, XmlSchemaDocumentNode> getChildren() {
-    return getChildren(currIteration);
+  SortedMap<Integer, XmlSchemaDocumentNode> getChildren() {
+    return getChildren(children.size() - 1);
   }
 
-  Map<Integer, XmlSchemaDocumentNode> getChildren(int iteration) {
+  SortedMap<Integer, XmlSchemaDocumentNode> getChildren(int iteration) {
     if ((children.size() < iteration) || (iteration < 1)) {
       return null;
     } else {
@@ -127,8 +127,12 @@ final class XmlSchemaDocumentNode {
   int getSequencePosition() {
     if (children == null) {
       return -1;
+    } else if (children.isEmpty()) {
+      return 0;
+    } else if (children.get(children.size() - 1).isEmpty()) {
+      return 0;
     } else {
-      return children.get(children.size() - 1).size();
+      return children.get(children.size() - 1).lastKey();
     }
   }
 
@@ -138,8 +142,6 @@ final class XmlSchemaDocumentNode {
 
     this.parent = parent;
     this.stateMachineNode = stateMachineNode;
-    this.currIteration = 0;
-    this.currPositionInSeqGroup = -1;
     this.receivedContent = false;
     this.visitors = null;
 
@@ -149,7 +151,7 @@ final class XmlSchemaDocumentNode {
 
     } else {
       this.children =
-          new ArrayList<Map<Integer, XmlSchemaDocumentNode>>(1);
+          new ArrayList<SortedMap<Integer, XmlSchemaDocumentNode>>(1);
 
       children.add(new TreeMap<Integer, XmlSchemaDocumentNode>());
     }
@@ -157,10 +159,7 @@ final class XmlSchemaDocumentNode {
 
   private XmlSchemaStateMachineNode stateMachineNode;
   private XmlSchemaDocumentNode parent;
-  private List<Map<Integer, XmlSchemaDocumentNode>> children;
+  private List<SortedMap<Integer, XmlSchemaDocumentNode>> children;
   private List<XmlSchemaPathNode> visitors;
-
-  private int currIteration;
-  private int currPositionInSeqGroup;
   private boolean receivedContent;
 }

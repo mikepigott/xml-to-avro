@@ -166,6 +166,11 @@ final class XmlSchemaPathNode {
   }
 
   void setIteration(int newIteration) {
+    if (newIteration < 1) {
+      throw new IllegalArgumentException("The new iteration must be at least one, not " + newIteration + '.');
+    } else if (stateMachineNode.getMaxOccurs() < newIteration) {
+      throw new IllegalStateException("The new iteration for " + stateMachineNode + " of " + newIteration + " is greater than the maximum of " + stateMachineNode.getMaxOccurs());
+    }
     iterationNum = newIteration;
   }
 
