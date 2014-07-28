@@ -21,7 +21,7 @@ package mpigott.avro.xml;
  *
  * @author  Mike Pigott
  */
-final class XmlSchemaDocumentPathNode {
+final class XmlSchemaPathNode {
 
   enum Direction {
     PARENT,
@@ -30,17 +30,17 @@ final class XmlSchemaDocumentPathNode {
     SIBLING
   }
 
-  XmlSchemaDocumentPathNode(
+  XmlSchemaPathNode(
       Direction dir,
-      XmlSchemaDocumentPathNode previous,
+      XmlSchemaPathNode previous,
       XmlSchemaDocumentNode node) {
 
     update(dir, previous, node);
   }
 
-  XmlSchemaDocumentPathNode(
+  XmlSchemaPathNode(
       Direction dir,
-      XmlSchemaDocumentPathNode previous,
+      XmlSchemaPathNode previous,
       XmlSchemaStateMachineNode stateMachine) {
 
     update(dir, previous, stateMachine);
@@ -85,10 +85,10 @@ final class XmlSchemaDocumentPathNode {
     if (obj == null) {
       return false;
     }
-    if (!(obj instanceof XmlSchemaDocumentPathNode)) {
+    if (!(obj instanceof XmlSchemaPathNode)) {
       return false;
     }
-    final XmlSchemaDocumentPathNode other = (XmlSchemaDocumentPathNode) obj;
+    final XmlSchemaPathNode other = (XmlSchemaPathNode) obj;
     if (!localEquals(other)) {
       return false;
     }
@@ -153,11 +153,11 @@ final class XmlSchemaDocumentPathNode {
     }
   }
 
-  XmlSchemaDocumentPathNode getPrevious() {
+  XmlSchemaPathNode getPrevious() {
     return prevNode;
   }
 
-  XmlSchemaDocumentPathNode getNext() {
+  XmlSchemaPathNode getNext() {
     return nextNode;
   }
 
@@ -172,12 +172,13 @@ final class XmlSchemaDocumentPathNode {
     documentNode = docNode;
   }
 
-  XmlSchemaDocumentPathNode setNextNode(
+  XmlSchemaPathNode setNextNode(
       int nextNodeIndex,
-      XmlSchemaDocumentPathNode newNext) {
+      XmlSchemaPathNode newNext) {
 
     if ((nextNodeIndex == -1)
-        && (newNext.getDirection().equals(Direction.CONTENT)
+        && ((newNext == null)
+            || newNext.getDirection().equals(Direction.CONTENT)
             || newNext.getDirection().equals(Direction.PARENT)
             || newNext.getDirection().equals(Direction.SIBLING))) {
 
@@ -186,6 +187,8 @@ final class XmlSchemaDocumentPathNode {
        *
        * If this is a parent node, no validation is possible because
        * we do not track the prior state in the state machine.
+       *
+       * We can also reset lower nodes in the path as necessary.
        */
 
     } else if ((nextNodeIndex < 0)
@@ -207,7 +210,7 @@ final class XmlSchemaDocumentPathNode {
 
     nextNodeStateIndex = nextNodeIndex;
 
-    final XmlSchemaDocumentPathNode oldNext = nextNode;
+    final XmlSchemaPathNode oldNext = nextNode;
     nextNode = newNext;
 
     return oldNext;
@@ -220,8 +223,8 @@ final class XmlSchemaDocumentPathNode {
    * @param newPrevious The new previous node.
    * @return The old previous node.
    */
-  XmlSchemaDocumentPathNode setPreviousNode(XmlSchemaDocumentPathNode newPrevious) {
-    final XmlSchemaDocumentPathNode oldPrevious = prevNode;
+  XmlSchemaPathNode setPreviousNode(XmlSchemaPathNode newPrevious) {
+    final XmlSchemaPathNode oldPrevious = prevNode;
     prevNode = newPrevious;
     return oldPrevious;
   }
@@ -239,9 +242,9 @@ final class XmlSchemaDocumentPathNode {
    * @return The next node in the path that this node referred to, as it will
    *         be discarded internally. 
    */
-  final XmlSchemaDocumentPathNode update(
+  final XmlSchemaPathNode update(
       Direction newDirection,
-      XmlSchemaDocumentPathNode newPrevious,
+      XmlSchemaPathNode newPrevious,
       XmlSchemaDocumentNode newNode) {
 
     direction = newDirection;
@@ -251,15 +254,15 @@ final class XmlSchemaDocumentPathNode {
     iterationNum = newNode.getIteration() + 1;
     prevNode = newPrevious;
 
-    final XmlSchemaDocumentPathNode oldNext = nextNode;
+    final XmlSchemaPathNode oldNext = nextNode;
     nextNode = null;
 
     return oldNext;
   }
 
-  final XmlSchemaDocumentPathNode update(
+  final XmlSchemaPathNode update(
       Direction newDirection,
-      XmlSchemaDocumentPathNode newPrevious,
+      XmlSchemaPathNode newPrevious,
       XmlSchemaStateMachineNode newStateMachineNode) {
 
     direction = newDirection;
@@ -269,7 +272,7 @@ final class XmlSchemaDocumentPathNode {
     iterationNum = 0;
     prevNode = newPrevious;
 
-    final XmlSchemaDocumentPathNode oldNext = nextNode;
+    final XmlSchemaPathNode oldNext = nextNode;
     nextNode = null;
 
     return oldNext;
@@ -287,7 +290,7 @@ final class XmlSchemaDocumentPathNode {
     return result;
   }
 
-  private boolean localEquals(XmlSchemaDocumentPathNode other) {
+  private boolean localEquals(XmlSchemaPathNode other) {
     if (direction != other.direction) {
       return false;
     }
@@ -320,6 +323,6 @@ final class XmlSchemaDocumentPathNode {
   private int nextNodeStateIndex;
   private int iterationNum;
 
-  private XmlSchemaDocumentPathNode prevNode;
-  private XmlSchemaDocumentPathNode nextNode;
+  private XmlSchemaPathNode prevNode;
+  private XmlSchemaPathNode nextNode;
 }

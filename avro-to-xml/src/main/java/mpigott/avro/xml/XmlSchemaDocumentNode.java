@@ -54,7 +54,7 @@ final class XmlSchemaDocumentNode {
     this.receivedContent = receivedContent;
   }
 
-  void addVisitor(XmlSchemaDocumentPathNode path) {
+  void addVisitor(XmlSchemaPathNode path) {
     if (path.getDocumentNode() != this) {
       throw new IllegalArgumentException("Path node must have this XmlSchemaDocumentNode as its document node.");
     }
@@ -68,7 +68,7 @@ final class XmlSchemaDocumentNode {
     }
 
     if (visitors == null) {
-      visitors = new ArrayList<XmlSchemaDocumentPathNode>(4);
+      visitors = new ArrayList<XmlSchemaPathNode>(4);
     }
 
     if (children != null) { 
@@ -83,7 +83,7 @@ final class XmlSchemaDocumentNode {
     visitors.add(path);
   }
 
-  boolean removeVisitor(XmlSchemaDocumentPathNode path) {
+  boolean removeVisitor(XmlSchemaPathNode path) {
     if ((visitors == null) || visitors.isEmpty()) {
       return false;
     }
@@ -159,7 +159,7 @@ final class XmlSchemaDocumentNode {
   private XmlSchemaStateMachineNode stateMachineNode;
   private XmlSchemaDocumentNode parent;
   private List<List<XmlSchemaDocumentNode>> children;
-  private List<XmlSchemaDocumentPathNode> visitors;
+  private List<XmlSchemaPathNode> visitors;
 
   private int currIteration;
   private int currPositionInSeqGroup;

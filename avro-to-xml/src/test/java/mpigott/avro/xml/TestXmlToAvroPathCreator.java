@@ -104,7 +104,7 @@ public class TestXmlToAvroPathCreator {
     final File xsdFile = new File("src\\test\\resources\\test1_root.xml");
     saxParser.parse(xsdFile, pathCreator);
 
-    XmlSchemaDocumentPathNode rootPath =
+    XmlSchemaPathNode rootPath =
         pathCreator.getXmlSchemaDocumentPath();
 
     XmlSchemaDocumentNode rootDoc =
@@ -130,7 +130,7 @@ public class TestXmlToAvroPathCreator {
     assertTrue(rootDoc.getStateMachineNode() == root);
 
     assertEquals(
-        XmlSchemaDocumentPathNode.Direction.CHILD,
+        XmlSchemaPathNode.Direction.CHILD,
         rootPath.getDirection());
 
     assertTrue(rootPath.getDocumentNode() == rootDoc);
@@ -154,7 +154,7 @@ public class TestXmlToAvroPathCreator {
       throw e;
     }
 
-    XmlSchemaDocumentPathNode rootPath =
+    XmlSchemaPathNode rootPath =
         pathCreator.getXmlSchemaDocumentPath();
 
     XmlSchemaDocumentNode rootDoc =
@@ -185,7 +185,7 @@ public class TestXmlToAvroPathCreator {
     assertTrue(rootDoc.getStateMachineNode() == root);
 
     assertEquals(
-        XmlSchemaDocumentPathNode.Direction.CHILD,
+        XmlSchemaPathNode.Direction.CHILD,
         rootPath.getDirection());
 
     assertTrue(rootPath.getDocumentNode() == rootDoc);
