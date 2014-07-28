@@ -86,17 +86,18 @@ final class XmlSchemaPathManager {
       node = new XmlSchemaPathNode(direction, startNode, position);
     }
 
+    if ( direction.equals(XmlSchemaPathNode.Direction.SIBLING) ) {
+      node.setIteration(position.getIteration() + 1);
+    } else {
+      node.setIteration(position.getIteration());
+    }
+
     return node;
   }
 
   XmlSchemaPathNode addChildNodeToPath(
       XmlSchemaPathNode startNode,
-      XmlSchemaPathNode.Direction direction,
       int branchIndex) {
-
-    if (!direction.equals(XmlSchemaPathNode.Direction.CHILD)) {
-      throw new IllegalStateException("This method can only be called if following a child.  Use addParentSiblingOrContentNodeToPath(startNode, direction, position) instead.");
-    }
 
     final XmlSchemaStateMachineNode stateMachine =
         startNode.getStateMachineNode();
@@ -109,7 +110,7 @@ final class XmlSchemaPathManager {
 
     final XmlSchemaPathNode next =
         createPathNode(
-            direction,
+            XmlSchemaPathNode.Direction.CHILD,
             startNode,
             stateMachine.getPossibleNextStates().get(branchIndex));
 
@@ -236,6 +237,11 @@ final class XmlSchemaPathManager {
       }
       recyclePathNode(iter);
     }
+  }
+
+  void clear() {
+    unusedPathNodes.clear();
+    unusedDocNodes.clear();
   }
 
   private XmlSchemaPathNode createPathNode(

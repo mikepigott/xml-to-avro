@@ -250,11 +250,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
      */
     void prepend(XmlSchemaPathNode newStart, int pathIndexToNextNode) {
       // We need to clone start and make it the afterStart.
-      final XmlSchemaPathNode clonedStartNode =
-          createDocumentPathNode(
-              start.getDirection(),
-              start.getPrevious(),
-              start.getDocumentNode());
+      final XmlSchemaPathNode clonedStartNode = pathMgr.clone(start);
 
       if (afterStart != null) {
         afterStart.setPreviousNode(clonedStartNode);
@@ -400,7 +396,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     currentPath = null;
     decisionPoints = null; // Hopefully there won't be any!
 
-    unusedNodePool = null;
+    pathMgr = new XmlSchemaPathManager();
     unusedPathSegmentPool = null;
   }
 
@@ -516,10 +512,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         }
 
         final XmlSchemaPathNode childPath =
-            createDocumentPathNode(
-                XmlSchemaPathNode.Direction.CHILD,
-                currentPath,
-                childNode);
+            pathMgr.addChildNodeToPath(currentPath, 0);
 
         currentPosition.getChildren().put(0, childNode);
         currentPosition = childNode;
@@ -741,10 +734,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       currentPosition.setReceivedContent(true);
 
       final XmlSchemaPathNode contentPath =
-          createDocumentPathNode(
-              XmlSchemaPathNode.Direction.CONTENT,
+          pathMgr.addParentSiblingOrContentNodeToPath(
               currentPath,
-              currentPosition);
+              XmlSchemaPathNode.Direction.CONTENT);
 
       // TODO: currentPath.setNextNode(-1, contentPath);
       currentPath = contentPath;
@@ -834,9 +826,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
   @Override
   public void endDocument() throws SAXException {
-    if (unusedNodePool != null) {
-      unusedNodePool.clear();
-    }
+    pathMgr.clear();
 
     if (unusedPathSegmentPool != null) {
       unusedPathSegmentPool.clear();
@@ -973,11 +963,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       // Try siblings.
       if (startNode.getIteration() < startNode.getMaxOccurs()) {
         XmlSchemaPathNode siblingPath =
-            createDocumentPathNode(
-                XmlSchemaPathNode.Direction.SIBLING,
+            pathMgr.addParentSiblingOrContentNodeToPath(
                 startNode,
-                startNode.getStateMachineNode());
-        siblingPath.setIteration(startNode.getIteration() + 1);
+                XmlSchemaPathNode.Direction.SIBLING);
 
         currChoices = find(siblingPath, elemQName, 0);
         if (currChoices != null) {
@@ -994,9 +982,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       }
 
       // Try parents.
-      XmlSchemaDocumentNode tree = currentPosition.getParent();
-
-      if (tree == null) {
+      if (startNode.getDocumentNode().getParent() == null) {
         // This is the root element; there is no parent.
         return choices;
       }
@@ -1007,22 +993,20 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       parentPathStack.add(startNode);
 
       XmlSchemaPathNode path =
-          createDocumentPathNode(
-              XmlSchemaPathNode.Direction.PARENT,
+          pathMgr.addParentSiblingOrContentNodeToPath(
               startNode,
-              tree);
-      path.setIteration(tree.getIteration());
+              XmlSchemaPathNode.Direction.PARENT);
 
       parentPathStack.add(path);
 
       /* We may continue traversing up the tree and collecting
        * choices until we reach our owning element.
        */
-      while (!tree
+      while (!path
                 .getStateMachineNode()
                 .getNodeType()
                 .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-               || !tree
+               || !path
                      .getStateMachineNode()
                      .getElement()
                      .getQName()
@@ -1053,17 +1037,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           }
         }
 
-        final XmlSchemaDocumentNode nextTree = tree.getParent();
-
         final XmlSchemaPathNode nextPath =
-            createDocumentPathNode(
-                XmlSchemaPathNode.Direction.PARENT,
+            pathMgr.addParentSiblingOrContentNodeToPath(
                 path,
-                nextTree);
+                XmlSchemaPathNode.Direction.PARENT);
 
-        nextPath.setIteration(nextTree.getIteration());
-
-        tree = nextTree;
         path = nextPath;
         parentPathStack.add(path);
       }
@@ -1124,41 +1102,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     List<PathSegment> choices = null;
 
     return choices;
-  }
-
-  private XmlSchemaPathNode createDocumentPathNode(
-      XmlSchemaPathNode.Direction direction,
-      XmlSchemaPathNode previous,
-      XmlSchemaDocumentNode state) {
-
-    if ((unusedNodePool != null) && !unusedNodePool.isEmpty()) {
-      XmlSchemaPathNode node = unusedNodePool.remove(unusedNodePool.size() - 1);
-      node.update(direction, previous, state);
-      return node;
-    } else {
-      return new XmlSchemaPathNode(direction, previous, state);
-    }
-  }
-
-  private XmlSchemaPathNode createDocumentPathNode(
-      XmlSchemaPathNode.Direction direction,
-      XmlSchemaPathNode previous,
-      XmlSchemaStateMachineNode state) {
-
-    if ((unusedNodePool != null) && !unusedNodePool.isEmpty()) {
-      XmlSchemaPathNode node = unusedNodePool.remove(unusedNodePool.size() - 1);
-      node.update(direction, previous, state);
-      return node;
-    } else {
-      return new XmlSchemaPathNode(direction, previous, state);
-    }
-  }
-
-  private void recyclePathNode(XmlSchemaPathNode toReuse) {
-    if (unusedNodePool == null) {
-      unusedNodePool = new ArrayList<XmlSchemaPathNode>();
-    }
-    unusedNodePool.add(toReuse);
   }
 
   private PathSegment createPathSegment(XmlSchemaPathNode endPathNode) {
@@ -1259,11 +1202,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   private XmlSchemaDocumentNode currentPosition;
   private XmlSchemaPathNode currentPath;
 
-  private List<XmlSchemaPathNode> unusedNodePool;
   private List<PathSegment> unusedPathSegmentPool;
 
   private ArrayList<TraversedElement> traversedElements;
   private ArrayList<DecisionPoint> decisionPoints;
 
   private ArrayList<QName> elementStack;
+
+  private XmlSchemaPathManager pathMgr;
 }
