@@ -52,6 +52,7 @@ final class XmlSchemaPathManager {
     XmlSchemaPathNode node =
         createStartPathNode(direction, documentNode.getStateMachineNode());
     node.setDocumentNode(documentNode);
+    node.setIteration(documentNode.getIteration());
 
     return node;
   }
@@ -118,6 +119,9 @@ final class XmlSchemaPathManager {
     if ((startNode.getDocumentNode() != null)
         && (docNode.getChildren() != null)) {
       next.setDocumentNode( docNode.getChildren().get(branchIndex) );
+      next.setIteration(next.getDocIteration() + 1);
+    } else {
+      next.setIteration(1);
     }
 
     return next;
