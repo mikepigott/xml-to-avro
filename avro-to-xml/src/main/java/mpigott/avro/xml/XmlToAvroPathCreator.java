@@ -1536,6 +1536,173 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return fulfilled;
   }
 
+  private List<PathSegment> find2(
+      XmlSchemaDocumentPathNode startNode,
+      XmlSchemaDocumentNode startTree,
+      QName elemQName) {
+
+    // First, try searching down the tree.
+    List<PathSegment> choices = find(startNode, startTree, elemQName, 0);
+
+    // Second, if the node is currently fulfilled, try siblings and parents.
+    if ( isCurrentPositionFulfilled() ) {
+      List<PathSegment> currChoices = null;
+
+      // Try siblings.
+      if (currentPosition.getIteration() < currentPosition.getMaxOccurs()) {
+        XmlSchemaDocumentPathNode siblingPath =
+            createDocumentPathNode(
+                XmlSchemaDocumentPathNode.Direction.SIBLING,
+                startNode,
+                startTree);
+        siblingPath.setIteration(startNode.getIteration() + 1);
+
+        currChoices = find(siblingPath, startTree, elemQName, 0);
+        if (currChoices != null) {
+          for (PathSegment choice : currChoices) {
+            choice.prepend(startNode, -1);
+          }
+
+          if (choices == null) {
+            choices = currChoices;
+          } else {
+            choices.addAll(currChoices);
+          }
+        }
+      }
+
+      // Try parents.
+      XmlSchemaDocumentNode tree = startTree.getParent();
+
+      if (tree == null) {
+        // This is the root element; there is no parent.
+        return choices;
+      }
+
+      ArrayList<XmlSchemaDocumentPathNode> parentPathStack =
+          new ArrayList<XmlSchemaDocumentPathNode>();
+
+      parentPathStack.add(startNode);
+
+      XmlSchemaDocumentPathNode path =
+          createDocumentPathNode(
+              XmlSchemaDocumentPathNode.Direction.PARENT,
+              startNode,
+              tree);
+      path.setIteration(tree.getCurrIteration());
+
+      parentPathStack.add(path);
+
+      /* We may continue traversing up the tree and collecting
+       * choices until we reach our owning element.
+       */
+      while (!tree
+                .getStateMachineNode()
+                .getNodeType()
+                .equals(SchemaStateMachineNode.Type.ELEMENT)
+               || !tree
+                     .getStateMachineNode()
+                     .getElement()
+                     .getQName()
+                     .equals(elementStack.get(elementStack.size() - 1))) {
+
+        currChoices = find(path, tree, elemQName, 0);
+
+        if (currChoices != null) {
+          for (PathSegment currChoice : currChoices) {
+
+            for (int parentIndex = parentPathStack.size() - 2;
+                parentIndex >= 0;
+                --parentIndex) {
+
+              /* We need to prepend all of the nodes in the path that we
+               * traversed to get to this level.  The most recent node
+               * we traversed was already prepended, so we start from
+               * the one before it.
+               */
+              currChoice.prepend(parentPathStack.get(parentIndex), -1);
+            }
+          }
+
+          if (choices == null) {
+            choices = currChoices;
+          } else {
+            choices.addAll(currChoices);
+          }
+        }
+
+        final XmlSchemaDocumentNode nextTree = tree.getParent();
+
+        final XmlSchemaDocumentPathNode nextPath =
+            createDocumentPathNode(
+                XmlSchemaDocumentPathNode.Direction.PARENT,
+                path,
+                nextTree);
+
+        nextPath.setIteration(nextTree.getCurrIteration());
+
+        tree = nextTree;
+        path = nextPath;
+        parentPathStack.add(path);
+      }
+
+    }
+
+    return choices;
+  }
+
+  private List<PathSegment> find2(
+      XmlSchemaDocumentPathNode startNode,
+      SchemaStateMachineNode state,
+      QName elemQName,
+      int currDepth) {
+
+    if (currDepth > MAX_DEPTH) {
+      /* We are likely in an infinite recursive loop looking for an element in
+       * a group whose definition includes itself.  Likewise, we'll stop here
+       * and say we were unable to find the element we were looking for.
+       */
+      return null;
+
+    } else if (startNode.getStateMachineNode() != state) {
+
+      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode state machine (" + startNode.getStateMachineNode().getNodeType() + ") does not match the tree node (" + state.getNodeType() + ").");
+
+    } else if (startNode.getIteration()
+                 <= startNode.getDocumentNode().getIteration()) {
+      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") should be greater than the tree node's iteration (" + startNode.getDocumentNode().getCurrIteration() + ").  Current state machine position is " + state.getNodeType());
+
+    } else if (state
+                 .getNodeType()
+                 .equals(SchemaStateMachineNode.Type.SEQUENCE)
+        && (startNode.getIndexOfNextNodeState()
+            != startNode.getDocumentNode().getSequencePosition())) {
+
+      // TODO: Is this a good / valid check?
+      throw new IllegalStateException("While processing a sequence group in search of " + elemQName + ", the current position in the DocumentPathNode (" + startNode.getIndexOfNextNodeState() + ") was not kept up-to-date with the tree node's position in the sequence group (" + startNode.getDocumentNode().getSequencePosition() + ").");
+
+    } else if (state.getMaxOccurs() < startNode.getIteration()) {
+      System.err.println("Path to " + state.getNodeType() + " was already followed the max number of times.");
+      return null;
+    }
+
+    // If this is a group, confirm it has children.
+    if ( !state.getNodeType().equals(SchemaStateMachineNode.Type.ELEMENT)
+        && !state.getNodeType().equals(SchemaStateMachineNode.Type.ANY) ) {
+
+      if (( state.getPossibleNextStates() == null)
+          || state.getPossibleNextStates().isEmpty()) {
+
+        throw new IllegalStateException("Group " + state.getNodeType() + " has no children.  Found when processing " + elemQName);
+      }
+
+    }
+
+    List<PathSegment> choices = null;
+
+    return choices;
+  }
+
   private XmlSchemaDocumentPathNode createDocumentPathNode(
       XmlSchemaDocumentPathNode.Direction direction,
       XmlSchemaDocumentPathNode previous,

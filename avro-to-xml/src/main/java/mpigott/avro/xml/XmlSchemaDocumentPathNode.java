@@ -156,10 +156,11 @@ final class XmlSchemaDocumentPathNode {
 
     if ((nextNodeIndex == -1)
         && (newNext.getDirection().equals(Direction.CONTENT)
-            || newNext.getDirection().equals(Direction.PARENT))) {
+            || newNext.getDirection().equals(Direction.PARENT)
+            || newNext.getDirection().equals(Direction.SIBLING))) {
 
-      /* If this is a content node; no validation is needed because
-       * we didn't change our position in the document tree.
+      /* If this is either a content node or a sibling node, no validation is
+       * needed because we didn't change our position in the document tree.
        *
        * If this is a parent node, no validation is possible because
        * we do not track the prior state in the state machine.
@@ -226,15 +227,9 @@ final class XmlSchemaDocumentPathNode {
     direction = newDirection;
     schemaNode = newNode;
     nextNodeStateIndex = -1;
-    iterationNum = 0;
+    iterationNum = newNode.getIteration() + 1;
     prevNode = newPrevious;
-
-    // newNode is null when exiting the root.
-    if (newNode != null) {
-      priorSequencePosition = newNode.getCurrPositionInSequence();
-    } else {
-      priorSequencePosition = -1;
-    }
+    priorSequencePosition = newNode.getCurrPositionInSequence();
 
     if (newNode
           .getStateMachineNode()
