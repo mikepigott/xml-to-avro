@@ -110,18 +110,25 @@ final class XmlSchemaWalker {
 
   // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
   void walk(XmlSchemaElement element) {
-    element = getElement(element);
+    element = getElement(element, false);
+
+    final XmlSchemaElement substGroupElem = element;
 
     /* If this element is the root of a
      * substitution group, notify the visitors.
      */
     List<XmlSchemaElement> substitutes = null;
-    if ( elemsBySubstGroup.containsKey(element.getQName()) ) {
+    if ( elemsBySubstGroup.containsKey( getElementQName(element) ) ) {
       substitutes = elemsBySubstGroup.get( element.getQName() );
 
       for (XmlSchemaVisitor visitor : visitors) {
         visitor.onEnterSubstitutionGroup(element);
       }
+
+      // Force a copy to change the min & max occurs.
+      element = getElement(element, true);
+      element.setMinOccurs(XmlSchemaParticle.DEFAULT_MIN_OCCURS);
+      element.setMaxOccurs(XmlSchemaParticle.DEFAULT_MAX_OCCURS);
     }
 
     XmlSchemaType schemaType = element.getSchemaType();
@@ -132,7 +139,8 @@ final class XmlSchemaWalker {
     }
 
     XmlSchemaScope scope = null;
-    if ( (schemaType.getQName() != null) && scopeCache.containsKey( schemaType.getQName()) ) {
+    if ((schemaType.getQName() != null)
+        && scopeCache.containsKey( schemaType.getQName())) {
       scope = scopeCache.get(schemaType.getQName());
     } else {
       scope = new XmlSchemaScope(schemaType, schemasByNamespace, scopeCache);
@@ -147,7 +155,8 @@ final class XmlSchemaWalker {
 
     // 2. for each visitor, call visitor.startElement(element, type);
     final boolean previouslyVisited =
-        (!element.isAnonymous() && visitedElements.contains( element.getQName() ));
+        (!element.isAnonymous()
+            && visitedElements.contains( element.getQName() ));
 
     for (XmlSchemaVisitor visitor : visitors) {
       visitor.onEnterElement(element, typeInfo, previouslyVisited);
@@ -165,10 +174,16 @@ final class XmlSchemaWalker {
         for (XmlSchemaAttribute attr : attrs) {
           XmlSchemaType attrType = attr.getSchemaType();
           XmlSchemaScope attrScope = null;
-          if ((attrType.getQName() != null) && scopeCache.containsKey( attrType.getQName() )) {
+          if ((attrType.getQName() != null)
+              && scopeCache.containsKey( attrType.getQName() )) {
             attrScope = scopeCache.get( attrType.getQName() );
           } else {
-            attrScope = new XmlSchemaScope(attr.getSchemaType(), schemasByNamespace, scopeCache);
+            attrScope =
+                new XmlSchemaScope(
+                    attr.getSchemaType(),
+                    schemasByNamespace,
+                    scopeCache);
+
             if (attrType.getName() != null) {
               scopeCache.put(attrType.getQName(), attrScope);
             }
@@ -208,7 +223,7 @@ final class XmlSchemaWalker {
       }
 
       for (XmlSchemaVisitor visitor : visitors) {
-        visitor.onExitSubstitutionGroup(element);
+        visitor.onExitSubstitutionGroup(substGroupElem);
       }
     }
   }
@@ -385,16 +400,21 @@ final class XmlSchemaWalker {
    * @param element The element to get the definition of.
    * @return The real {@link XmlSchemaElement}.
    */
-  private XmlSchemaElement getElement(XmlSchemaElement element) {
-    if ( !element.isRef() ) {
+  private XmlSchemaElement getElement(
+      XmlSchemaElement element,
+      boolean isSubstitutionGroup) {
+
+    if (!element.isRef() && !isSubstitutionGroup) {
       return element;
     }
 
-    final QName elemQName = element.getRefBase().getTargetQName();
+    final QName elemQName = getElementQName(element);
     final XmlSchema schema = schemasByNamespace.get( elemQName.getNamespaceURI() );
 
     XmlSchemaElement globalElem = null;
-    if (element.getRef().getTarget() != null) {
+    if ( !element.isRef() ) {
+      globalElem = element;
+    } else if (element.getRef().getTarget() != null) {
       globalElem = element.getRef().getTarget();
     } else {
       globalElem = schema.getElementByName(elemQName);
@@ -432,6 +452,14 @@ final class XmlSchemaWalker {
     copy.setUnhandledAttributes( globalElem.getUnhandledAttributes() );
 
     return copy;
+  }
+
+  private QName getElementQName(XmlSchemaElement element) {
+    if ( element.isRef() ) {
+      return element.getRefBase().getTargetQName();
+    } else {
+      return element.getQName();
+    }
   }
 
   private XmlSchemaCollection schemas;

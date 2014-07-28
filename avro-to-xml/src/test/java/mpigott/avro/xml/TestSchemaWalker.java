@@ -314,6 +314,13 @@ public class TestSchemaWalker {
 
       } else if (!next.name.equals( base.getName() )) {
         throw new IllegalStateException("Expected a substitution group for element \"" + next.name + "\", but instead received one for \"" + base.getName() + "\"");
+
+      } else if (next.minOccurs != base.getMinOccurs()) {
+        throw new IllegalStateException("Expected a substitution group for element \"" + next.name + "\" and min occurs of " + next.minOccurs + ", but received a min occurs of " + base.getMinOccurs());
+
+      } else if (next.maxOccurs != base.getMaxOccurs()) {
+        throw new IllegalStateException("Expected a substitution group for element \"" + next.name + "\" and max occurs of " + next.maxOccurs + ", but received a max occurs of " + base.getMaxOccurs());
+
       }
     }
 
@@ -563,8 +570,8 @@ public class TestSchemaWalker {
                         stack.add( new StackEntry(Type.ELEMENT, "list") );
                           stack.add( new StackEntry(Type.CHOICE) );
                             stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, 1, 100, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
-                            stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
-                              stack.add( new StackEntry(Type.ELEMENT, "record", "recordType", 1, 100) );
+                            stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record", "recordType", 1, 100) );
+                              stack.add( new StackEntry(Type.ELEMENT, "record", "recordType", 1, 1) );
                               stack.add( new StackEntry(Type.ELEMENT, "map") );
                         stack.add( new StackEntry(Type.ELEMENT, "tuple") );
                           stack.add( new StackEntry(Type.ALL) );
