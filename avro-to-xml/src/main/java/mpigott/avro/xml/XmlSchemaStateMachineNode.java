@@ -241,7 +241,7 @@ final class XmlSchemaStateMachineNode {
    * node in the XML document should not be written to Avro.
    * </p>
    */
-  public Schema getAvroSchema() {
+  Schema getAvroSchema() {
     return avroSchema;
   }
 
@@ -355,6 +355,27 @@ final class XmlSchemaStateMachineNode {
     }
 
     return true;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder name = new StringBuilder( nodeType.name() );
+    switch (nodeType) {
+    case ELEMENT:
+      name.append(": ").append( element.getQName() ).append(" (");
+      name.append(avroSchema).append("), [").append(minOccurs).append(", ");
+      name.append(maxOccurs).append("]");
+      break;
+    case ANY:
+      name.append(": NS: \"").append( any.getNamespace() ).append("\", ");
+      name.append("Processing: ").append( any.getProcessContent() );
+      name.append(" [").append(minOccurs).append(", ").append(maxOccurs);
+      break;
+    default:
+      name.append(" [").append(minOccurs).append(", ").append(maxOccurs);
+      name.append(']');
+    }
+    return name.toString();
   }
 
   private int localHashCode(int prime) {

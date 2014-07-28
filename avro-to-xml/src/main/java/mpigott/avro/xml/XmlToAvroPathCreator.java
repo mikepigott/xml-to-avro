@@ -385,12 +385,13 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    */
   XmlToAvroPathCreator(XmlSchemaStateMachineNode root) {
     rootNode = root;
-    rootTreeNode = new XmlSchemaDocumentNode(null, rootNode);
+    rootTreeNode = null; // Will be created later.
 
     rootPathNode =
         new XmlSchemaDocumentPathNode(
             XmlSchemaDocumentPathNode.Direction.CHILD,
-            rootTreeNode);
+            null,
+            rootNode);
 
     traversedElements = new ArrayList<TraversedElement>();
     elementStack = new ArrayList<QName>();
@@ -945,7 +946,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       throw new IllegalStateException("Current position has a node of unrecognized type \"" + currentPosition.getStateMachineNode().getNodeType() + '\"');
     }
 
-    if ( currentPosition.getIteration() >= state.getMinOccurs() ) {
+    if (currentPosition == null) {
+      // This is the root node.  It is not fulfilled.
+      fulfilled = false;
+    } else if ( currentPosition.getIteration() >= state.getMinOccurs() ) {
       fulfilled &= true;
     } else {
       fulfilled = false;
@@ -966,12 +970,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       List<PathSegment> currChoices = null;
 
       // Try siblings.
-      if (currentPosition.getIteration() < currentPosition.getMaxOccurs()) {
+      if (startNode.getIteration() < startNode.getMaxOccurs()) {
         XmlSchemaDocumentPathNode siblingPath =
             createDocumentPathNode(
                 XmlSchemaDocumentPathNode.Direction.SIBLING,
                 startNode,
-                currentPosition);
+                startNode.getStateMachineNode());
         siblingPath.setIteration(startNode.getIteration() + 1);
 
         currChoices = find(siblingPath, elemQName, 0);
@@ -1125,6 +1129,20 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       XmlSchemaDocumentPathNode.Direction direction,
       XmlSchemaDocumentPathNode previous,
       XmlSchemaDocumentNode state) {
+
+    if ((unusedNodePool != null) && !unusedNodePool.isEmpty()) {
+      XmlSchemaDocumentPathNode node = unusedNodePool.remove(unusedNodePool.size() - 1);
+      node.update(direction, previous, state);
+      return node;
+    } else {
+      return new XmlSchemaDocumentPathNode(direction, previous, state);
+    }
+  }
+
+  private XmlSchemaDocumentPathNode createDocumentPathNode(
+      XmlSchemaDocumentPathNode.Direction direction,
+      XmlSchemaDocumentPathNode previous,
+      XmlSchemaStateMachineNode state) {
 
     if ((unusedNodePool != null) && !unusedNodePool.isEmpty()) {
       XmlSchemaDocumentPathNode node = unusedNodePool.remove(unusedNodePool.size() - 1);

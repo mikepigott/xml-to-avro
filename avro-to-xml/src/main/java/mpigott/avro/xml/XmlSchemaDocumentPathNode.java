@@ -30,10 +30,6 @@ final class XmlSchemaDocumentPathNode {
     SIBLING
   }
 
-  XmlSchemaDocumentPathNode(Direction dir, XmlSchemaDocumentNode node) {
-    update(dir, null, node);
-  }
-
   XmlSchemaDocumentPathNode(
       Direction dir,
       XmlSchemaDocumentPathNode previous,
@@ -133,6 +129,14 @@ final class XmlSchemaDocumentPathNode {
     return iterationNum;
   }
 
+  long getMinOccurs() {
+    return stateMachineNode.getMinOccurs();
+  }
+
+  long getMaxOccurs() {
+    return stateMachineNode.getMaxOccurs();
+  }
+
   int getDocIteration() {
     if (documentNode == null) {
       return 0;
@@ -159,6 +163,13 @@ final class XmlSchemaDocumentPathNode {
 
   void setIteration(int newIteration) {
     iterationNum = newIteration;
+  }
+
+  void setDocumentNode(XmlSchemaDocumentNode docNode) {
+    if (docNode.getStateMachineNode() != stateMachineNode) {
+      throw new IllegalArgumentException("The document node's state machine (" + docNode.getStateMachineNode() + ") must use the same state machine node as this path node (" + stateMachineNode + ")");
+    }
+    documentNode = docNode;
   }
 
   XmlSchemaDocumentPathNode setNextNode(
