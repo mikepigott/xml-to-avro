@@ -97,12 +97,7 @@ public class TestSchemaStateMachineGenerator {
   private int nextNode(XmlSchemaStateMachineNode currNode, int nodeNum, ArrayList<StringTemplate> nodes, ArrayList<StringTemplate> edges, StringTemplateGroup templates, Map<QName, Integer> nodeNums) {
     int nextNum = nodeNum + 1;
 
-    StringBuilder name = new StringBuilder( currNode.getNodeType().name() );
-    if ( currNode.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
-      name.append(": ").append( currNode.getElement().getQName() );
-    }
-
-    nodes.add( getNodeSt(templates, "node" + nodeNum, name.toString()) );
+    nodes.add( getNodeSt(templates, "node" + nodeNum, currNode.toString()) );
 
     if ( currNode.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
       nodeNums.put(currNode.getElement().getQName(), nodeNum);

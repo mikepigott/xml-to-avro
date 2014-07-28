@@ -363,7 +363,7 @@ final class XmlSchemaStateMachineNode {
     switch (nodeType) {
     case ELEMENT:
       name.append(": ").append( element.getQName() ).append(" (");
-      name.append(avroSchema).append("), [").append(minOccurs).append(", ");
+      name.append(avroSchema.getType()).append("), [").append(minOccurs).append(", ");
       name.append(maxOccurs).append("]");
       break;
     case ANY:
