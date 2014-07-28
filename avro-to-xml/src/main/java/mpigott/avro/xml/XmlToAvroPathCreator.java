@@ -385,7 +385,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
    */
   XmlToAvroPathCreator(XmlSchemaStateMachineNode root) {
     rootNode = root;
-    rootTreeNode = new XmlSchemaDocumentNode(rootNode);
+    rootTreeNode = new XmlSchemaDocumentNode(null, rootNode);
 
     rootPathNode =
         new XmlSchemaDocumentPathNode(
@@ -524,7 +524,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
         currentPath.setNextNode(0, childPath);
         currentPath = childPath;
-        currentPath.setIteration( childNode.getCurrIteration() );
+        currentPath.setIteration( childNode.getIteration() );
 
         if (currentPosition
               .getStateMachineNode()
@@ -534,8 +534,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       }
 
       // 1. Find possible paths.
-      List<PathSegment> possiblePaths =
-          find(currentPath, currentPosition, elemQName);
+      List<PathSegment> possiblePaths = find(currentPath, elemQName);
 
       PathSegment nextPath = null;
   
@@ -567,7 +566,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           throw new IllegalStateException("When searching for " + elemQName + ", received a set of path choices of size " + possiblePaths.size() + ", but the next path is null.");
         }
 
-        followPath(nextPath);
+        // TODO: followPath(nextPath);
 
       } else {
         // OR: If no paths are returned:
@@ -590,14 +589,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             continue;
           }
 
-          unfollowPriorPath( priorPoint.getDecisionPoint() );
+          // TODO: unfollowPriorPath( priorPoint.getDecisionPoint() );
 
           /* Walk through the traversedElements list again from that
            * index and see if we traverse through all of the elements
            * in the list, including this one.  If not, repeat step 2a,
            * removing decision points from the stack as we refute them.
            */
-          followPath(nextPath);
+          // TODO: followPath(nextPath);
 
           for (int index = priorPoint.traversedElementIndex + 1;
               index < traversedElements.size();
@@ -609,10 +608,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
             if (te.traversal.equals(TraversedElement.Traversal.START)) {
               possiblePaths =
-                  find(
-                      currentPath,
-                      currentPosition,
-                      traversedElements.get(index).elemName);
+                  find(currentPath, traversedElements.get(index).elemName);
 
               if ((possiblePaths == null) || possiblePaths.isEmpty()) {
                 break;
@@ -635,10 +631,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
               }
 
               // If we find (a) path(s) that match(es), success!  Follow it.
-              followPath(nextPath);
+              // TODO: followPath(nextPath);
 
             } else if ( te.traversal.equals(TraversedElement.Traversal.END) ) {
-              walkUpTree(te.elemName);
+              // TODO: walkUpTree(te.elemName);
 
             } else {
               throw new IllegalStateException("Unrecognized element traversal direction for " + te.elemName + " of " + te.traversal + '.');
@@ -823,7 +819,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         }
       }
 
-      walkUpTree(elemQName);
+      // TODO: walkUpTree(elemQName);
 
       traversedElements.add(
           new TraversedElement(elemQName, TraversedElement.Traversal.END));
@@ -857,584 +853,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return rootPathNode;
   }
 
-  private List<PathSegment> find (
-      XmlSchemaDocumentPathNode startNode,
-      XmlSchemaDocumentNode startTree,
-      QName elemQName) {
-
-    // First, try searching down the tree.
-    List<PathSegment> choices = find(startNode, startTree, elemQName, 0);
-    List<PathSegment> currChoices = null;
-
-    XmlSchemaDocumentNode tree = startTree.getParent();
-
-    if (tree == null) {
-      // This is the root element; there is no parent.
-      return choices;
-    }
-
-    ArrayList<XmlSchemaDocumentPathNode> parentPathStack =
-        new ArrayList<XmlSchemaDocumentPathNode>();
-
-    parentPathStack.add(startNode);
-
-    XmlSchemaDocumentPathNode path =
-        createDocumentPathNode(
-            XmlSchemaDocumentPathNode.Direction.PARENT,
-            startNode,
-            tree);
-    path.setIteration(tree.getCurrIteration());
-
-    parentPathStack.add(path);
-
-    /* We may continue traversing up the tree and collecting
-     * choices until we reach our owning element.
-     */
-    while (!tree
-              .getStateMachineNode()
-              .getNodeType()
-              .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-             || !tree
-                   .getStateMachineNode()
-                   .getElement()
-                   .getQName()
-                   .equals(elementStack.get(elementStack.size() - 1))) {
-
-      currChoices = find(path, tree, elemQName, 0);
-
-      if (currChoices != null) {
-        for (PathSegment currChoice : currChoices) {
-
-          for (int parentIndex = parentPathStack.size() - 2;
-              parentIndex >= 0;
-              --parentIndex) {
-
-            /* We need to prepend all of the nodes in the path that we
-             * traversed to get to this level.  The most recent node
-             * we traversed was already prepended, so we start from
-             * the one before it.
-             */
-            currChoice.prepend(parentPathStack.get(parentIndex), -1);
-          }
-        }
-
-        if (choices == null) {
-          choices = currChoices;
-        } else {
-          choices.addAll(currChoices);
-        }
-      }
-
-      final XmlSchemaDocumentNode nextTree = tree.getParent();
-
-      final XmlSchemaDocumentPathNode nextPath =
-          createDocumentPathNode(
-              XmlSchemaDocumentPathNode.Direction.PARENT,
-              path,
-              nextTree);
-
-      nextPath.setIteration(nextTree.getCurrIteration());
-
-      tree = nextTree;
-      path = nextPath;
-      parentPathStack.add(path);
-    }
-
-    return choices;
-  }
-
-  private List<PathSegment> find(
-      XmlSchemaDocumentPathNode startNode,
-      XmlSchemaDocumentNode tree,
-      QName elemQName,
-      int currDepth) {
-
-    if (currDepth > MAX_DEPTH) {
-      /* We are likely in an infinite recursive loop looking for an element in
-       * a group whose definition includes itself.  Likewise, we'll stop here
-       * and say we were unable to find the element we were looking for.
-       */
-      return null;
-
-    } else if (startNode.getStateMachineNode()
-                != tree.getStateMachineNode()) {
-
-      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode state machine (" + startNode.getStateMachineNode().getNodeType() + ") does not match the tree node (" + tree.getStateMachineNode().getNodeType() + ").");
-
-    } else if (startNode.getIteration() != tree.getCurrIteration()) {
-      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") was not kept up-to-date with the tree node's iteration (" + tree.getCurrIteration() + ").  Current state machine position is " + tree.getStateMachineNode().getNodeType());
-
-    } else if (tree
-                 .getStateMachineNode()
-                 .getNodeType()
-                 .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)
-        && (startNode.getIndexOfNextNodeState()
-            != tree.getCurrPositionInSequence())) {
-
-      throw new IllegalStateException("While processing a sequence group in search of " + elemQName + ", the current position in the DocumentPathNode (" + startNode.getIndexOfNextNodeState() + ") was not kept up-to-date with the tree node's position in the sequence group (" + tree.getCurrPositionInSequence() + ").");
-
-    } else if (tree.getStateMachineNode().getMaxOccurs() < tree.getCurrIteration()) {
-
-      throw new IllegalStateException("While searching for " + elemQName + " found that a node of type " + tree.getStateMachineNode().getNodeType() + " had more iterations in the tree (" + tree.getCurrIteration() + ") than were the maximum allowed for the state machine node (" + tree.getStateMachineNode().getMaxOccurs() + ").");
-
-    /*} else if (tree.getStateMachineNode().getMaxOccurs() == tree.getCurrIteration()) {
-      System.err.println("Path to " + tree.getStateMachineNode().getNodeType() + " was already followed the max number of times.");
-      return null;*/
-    }
-
-    final XmlSchemaStateMachineNode state = tree.getStateMachineNode();
-
-    // If this is a group, confirm it has children.
-    if ( !state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-        && !state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ANY) ) {
-
-      if (( state.getPossibleNextStates() == null)
-          || state.getPossibleNextStates().isEmpty()) {
-
-        throw new IllegalStateException("Group " + state.getNodeType() + " has no children.  Found when processing " + elemQName);
-
-      } else if (tree.getChildren() == null) {
-        throw new IllegalStateException("StateMachineTreeWithState node represents a " + state.getNodeType() + ", but has no children.  Found when searching for " + elemQName);
-      }
-
-    }
-
-    List<PathSegment> choices = null;
-
-    switch (state.getNodeType()) {
-    case ELEMENT:
-      {
-        if (state.getElement().getQName().equals(elemQName)
-            && startNode.getIteration() < state.getMaxOccurs()) {
-
-          choices = new ArrayList<PathSegment>(1);
-          choices.add( createPathSegment(startNode) );
-
-        } else if ( state.getElement().getQName().equals(elemQName) ) {
-          System.err.println("Could not match " + elemQName + " because the current iteration " + startNode.getIteration() + " is greater than or equal to the max occurs " + state.getMaxOccurs());
-        }
-      }
-      break;
-
-    case SEQUENCE:
-      {
-        // Find the next one in the sequence that matches.
-        int position = tree.getCurrPositionInSequence();
-        if (position < 0) {
-          // Let's just do ourselves a favor and add in all the children now.
-          if ( !tree.getChildren().isEmpty() ) {
-            throw new IllegalStateException("When searching for " + elemQName + ", reached a sequence group with a negative position but with children defined.");
-          }
-
-          for (XmlSchemaStateMachineNode nextState : state.getPossibleNextStates()) {
-            tree.getChildren().add( new XmlSchemaDocumentNode(tree, nextState) );
-          }
-
-          position = 0;
-        }
-
-        for (int stateIndex = position;
-            stateIndex < tree.getChildren().size();
-            ++stateIndex) {
-
-          // Process child.
-          final XmlSchemaDocumentNode nextTree =
-              tree.getChildren().get(stateIndex);
-
-          final XmlSchemaStateMachineNode nextState =
-              nextTree.getStateMachineNode();
-
-          final XmlSchemaDocumentPathNode nextPath =
-              createDocumentPathNode(
-                  XmlSchemaDocumentPathNode.Direction.CHILD,
-                  startNode,
-                  nextTree);
-          nextPath.setIteration(nextTree.getCurrIteration());
-
-          /* Both the tree node's and the document path node's state machine
-           * nodes should point to the same state machine node in memory.
-           */
-          if ((nextTree.getStateMachineNode() != nextState)
-              || (nextPath.getStateMachineNode() != nextState)) {
-            throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.getStateMachineNode().getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
-
-          } else if (nextTree.getCurrIteration() >= nextState.getMaxOccurs()) {
-            throw new IllegalStateException("Reached a sequence group when searching for " + elemQName + " whose iteration at the current position (" + nextTree.getCurrIteration() + ") was already maxed out (" + nextState.getMaxOccurs() + ").  Was at position " + stateIndex + "; tree node's starting position was " + tree.getCurrPositionInSequence());
-          }
-
-          final List<PathSegment> seqPaths =
-              find(nextPath, nextTree, elemQName, currDepth + 1);
-
-          if (seqPaths != null) {
-            for (PathSegment seqPath : seqPaths) {
-              seqPath.prepend(startNode, stateIndex);
-            }
-
-            // nextPath was cloned by all path segments, so it can be recycled.
-            recyclePathNode(nextPath);
-
-            if (choices == null) {
-              choices = seqPaths;
-            } else {
-              choices.addAll(seqPaths);
-            }
-          }
-
-          if (nextTree.getCurrIteration()
-                < nextTree.getStateMachineNode().getMinOccurs()) {
-
-            /* If we have not traversed this node in the sequence the minimum
-             * number of times, we cannot advance to the next node in the
-             * sequence.
-             */
-            break;
-          }
-        }
-
-        break;
-      }
-
-    case ALL:
-    case SUBSTITUTION_GROUP:
-    case CHOICE:
-      {
-        /* All groups only contain elements.  Find one that matches.
-         * The max-occurrence check will confirm it wasn't already selected.
-         *
-         * Choice groups may have multiple paths through its children
-         * which are valid.  In addition, a wild card ("any" element)
-         * may be a child of any group, thus creating another decision
-         * point.
-         */
-        for (int stateIndex = 0;
-            stateIndex < state.getPossibleNextStates().size();
-            ++stateIndex) {
-
-          final XmlSchemaStateMachineNode nextState =
-              state.getPossibleNextStates().get(stateIndex);
-
-          if (state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ALL)
-              && !nextState
-                   .getNodeType()
-                   .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-              && !nextState
-                   .getNodeType()
-                   .equals(XmlSchemaStateMachineNode.Type.ANY)
-              && !nextState
-                   .getNodeType()
-                   .equals(XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP)) {
-
-            throw new IllegalStateException("While searching for " + elemQName + ", encountered an All group which contained a child of type " + nextState.getNodeType() + '.');
-          }
-
-          XmlSchemaDocumentNode nextTree = null;
-
-          if (tree.getChildren().size() < stateIndex) {
-            throw new IllegalStateException("In group of type " + state.getNodeType() + " when searching for " + elemQName + ", StateMachineTreeWithState contained fewer children (" + tree.getChildren().size() + ") than the next possible state index, " + stateIndex);
-
-          } else if (tree.getChildren().size() == stateIndex) {
-            nextTree = new XmlSchemaDocumentNode(tree, nextState);
-            tree.getChildren().add(nextTree);
-
-          } else {
-            nextTree = tree.getChildren().get(stateIndex);
-          }
-
-          final XmlSchemaDocumentPathNode nextPath =
-              createDocumentPathNode(
-                  XmlSchemaDocumentPathNode.Direction.CHILD,
-                  startNode,
-                  nextTree);
-
-          /* At this stage, we are only collecting possible paths to follow.
-           * Likewise, we do not want to increment the iteration number yet
-           * (or have any other side effects on the tree).
-           */
-          nextPath.setIteration(nextTree.getCurrIteration());
-
-          /* Both the tree node's and the document path node's state machine
-           * nodes should point to the same state machine node in memory.
-           */
-          if ((nextTree.getStateMachineNode() != nextState)
-              || (nextPath.getStateMachineNode() != nextState)) {
-            throw new IllegalStateException("The expected state machine node (" + nextState.getNodeType() + ") does not match either the tree node (" + nextTree.getStateMachineNode().getNodeType() + ") or the next path (" + nextPath.getStateMachineNode().getNodeType() + ") when searching for " + elemQName);
-          }
-
-          final List<PathSegment> choicePaths =
-              find(nextPath, nextTree, elemQName, currDepth + 1);
-
-          if (choicePaths != null) {
-            for (PathSegment choicePath : choicePaths) {
-              choicePath.prepend(startNode, stateIndex);
-            }
-
-            // nextPath was cloned by all path segments, so it can be recycled.
-            recyclePathNode(nextPath);
-
-            if (choices == null) {
-              choices = choicePaths;
-            } else {
-              choices.addAll(choicePaths);
-            }
-          }
-        }
-
-        break;
-      }
-    case ANY:
-      {
-        /* If the XmlSchemaAny namespace and processing rules
-         * apply, this element matches.  False otherwise.
-         */
-        if (traversedElements.size() < 2) {
-          throw new IllegalStateException("Reached a wildcard element while searching for " + elemQName + ", but we've only seen " + traversedElements.size() + " element(s)!");
-        }
-
-        final XmlSchemaAny any = state.getAny();
-
-        if (any.getNamespace() == null) {
-          throw new IllegalStateException("The XmlSchemaAny element traversed when searching for " + elemQName + " does not have a namespace!");
-        }
-
-        boolean needTargetNamespace = false;
-        boolean matches = false;
-
-        List<String> validNamespaces = null;
-
-        if ( any.getNamespace().equals("##any") ) {
-          // Any namespace is valid.  This matches.
-          matches = true;
-
-        } else if ( any.getNamespace().equals("##other") ) {
-          needTargetNamespace = true;
-          validNamespaces = new ArrayList<String>(1);
-
-        } else {
-          final String[] namespaces = any.getNamespace().trim().split(" ");
-          validNamespaces = new ArrayList<String>(namespaces.length);
-          for (String namespace : namespaces) {
-            if (namespace.equals("##targetNamespace")) {
-              needTargetNamespace = true;
-
-            } else if (namespace.equals("##local")
-                && (elemQName.getNamespaceURI() == null)) {
-
-              matches = true;
-
-            } else {
-              validNamespaces.add(namespace);
-            }
-          }
-        }
-
-        if (!matches) {
-          /* At this time, it is not possible to determine the XmlSchemaAny's
-           * original target namespace without knowing the original element
-           * that owned it.  Likewise, unless the XmlSchemaAny's namespace is
-           * an actual namespace, or ##any, or ##local, there is no way to
-           * validate it.
-           *
-           * The work-around is to walk upwards through the tree and find
-           * the owning element, then use its namespace as the target
-           * namespace.
-           */
-          if (needTargetNamespace) {
-            XmlSchemaDocumentNode iter = tree;
-            while ( !iter
-                      .getStateMachineNode()
-                      .getNodeType()
-                      .equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
-
-              iter = iter.getParent();
-
-              if (iter == null) {
-                throw new IllegalStateException("Walking up the StateMachineTreeWithState to determine the target namespace of a wildcard element, and reached the root without finding any elements.  Searching for " + elemQName + '.');
-              }
-            }
-
-            validNamespaces.add(
-              iter
-                .getStateMachineNode()
-                .getElement()
-                .getQName()
-                .getNamespaceURI());
-          }
-
-          matches = validNamespaces.contains( elemQName.getNamespaceURI() );
-        }
-
-        if (matches) {
-          choices = new ArrayList<PathSegment>(1);
-          choices.add( createPathSegment(startNode) );
-        }
-      }
-      break;
-    default:
-      throw new IllegalStateException("Unrecognized node type " + state.getNodeType() + " when processing element " + elemQName);
-    }
-
-    if (choices == null) {
-      recyclePathNode(startNode);
-    }
-    return choices;
-  }
-
-  private void followPath(PathSegment path) {
-    switch (path.getEnd().getStateMachineNode().getNodeType()) {
-    case ELEMENT:
-    case ANY:
-      break;
-    default:
-      throw new IllegalStateException("Path does not end in an element or a wildcard element.");
-    }
-
-    // Join the start element with the new path.
-    XmlSchemaDocumentPathNode iter = path.getStart();
-
-    if (path.getAfterStart() != null) {
-      iter.setNextNode(path.getAfterStartPathIndex(), path.getAfterStart());
-    }
-
-    // Walk the path and update the underlying document node accordingly.
-    while (iter != null) {
-      final XmlSchemaDocumentNode docNode = iter.getDocumentNode();
-
-      // We only update when we're entering, not when we're leaving.
-      if (iter
-            .getDirection()
-            .equals(XmlSchemaDocumentPathNode.Direction.CHILD)) {
-
-        docNode.setCurrIteration(docNode.getCurrIteration() + 1);
-
-        if (docNode.getCurrIteration()
-            > docNode.getStateMachineNode().getMaxOccurs()) {
-
-          final String elemName =
-              getLeafNodeName( path.getEnd().getStateMachineNode() );
-          throw new IllegalStateException("When walking the path to " + elemName + ", we incremented the iteration of a " + docNode.getStateMachineNode().getNodeType() + " (" + docNode.getCurrIteration() + ") beyond its maximum (" + docNode.getStateMachineNode().getMaxOccurs() + ").");
-        }
-
-        if (docNode
-              .getStateMachineNode()
-              .getNodeType()
-              .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)) {
-
-          docNode.setCurrPositionInSequence(iter.getIndexOfNextNodeState());
-        }
-
-        iter.setIteration( docNode.getCurrIteration() );
-      }
-
-      iter = iter.getNext();
-    }
-
-    currentPath = path.getEnd();
-    currentPosition = path.getEnd().getDocumentNode();
-
-    // This path segment is followed!  We no longer need it.
-    recyclePathSegment(path);
-  }
-
-  private void unfollowPriorPath(XmlSchemaDocumentPathNode start) {
-    /* We need to walk from currentPosition back to start, undoing
-     * iteration increments and sequence group walks along the way.
-     */
-    XmlSchemaDocumentPathNode revIter = currentPath;
-    currentPath = start;
-    currentPosition = start.getDocumentNode();
-
-    while (revIter != start) {
-
-      // As before, only entering counts; exiting does not.
-      if (revIter
-            .getDirection()
-            .equals(XmlSchemaDocumentPathNode.Direction.CHILD)) {
-
-        final XmlSchemaDocumentNode docNode = revIter.getDocumentNode();
-        docNode.setCurrIteration(docNode.getCurrIteration() - 1);
-        if (docNode
-              .getStateMachineNode()
-              .getNodeType()
-              .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)) {
-
-          int priorPosition = revIter.getPriorSequencePosition();
-          if (priorPosition < 0) {
-            /* A negative sequence position indicates that the sequence has not
-             * been traversed yet, and children need to be created.  Since the
-             * node has been traversed and children have been created, we just
-             * want to indicate we're in the first position.
-             */
-            priorPosition = 0;
-          }
-          docNode.setCurrPositionInSequence(priorPosition);
-        }
-      }
-
-      /* While this segment of the path is no longer valid, the underlying
-       * document node is, and will likely be traversed again.  Likewise,
-       * we only want to recycle the path node, and leave the document node
-       * in place.
-       */
-      final XmlSchemaDocumentPathNode nodeToRecycle = revIter;
-      revIter = revIter.getPrevious();
-      recyclePathNode(nodeToRecycle);
-    }
-  }
-
-  /* Walks up the tree from the current element to the prior one.
-   * Confirms the provided QName matches the current one before traversing.
-   *
-   * If currElem is null, the current position must be a wildcard element.
-   */
-  private void walkUpTree(QName currElem) {
-    final XmlSchemaStateMachineNode state = currentPosition.getStateMachineNode();
-    switch (state.getNodeType()) {
-    case ANY:
-      break;
-    case ELEMENT:
-      if ( !state.getElement().getQName().equals(currElem) ) {
-        throw new IllegalStateException("We expected to walk upwards from element " + currElem + ", but our current element is " + state.getElement().getQName());
-      }
-      break;
-    default:
-      throw new IllegalStateException("We expected to walk upwards from element " + currElem + ", but our current position is in a node of type " + state.getNodeType());
-    }
-
-    XmlSchemaDocumentNode iter = currentPosition;
-    XmlSchemaDocumentPathNode path = currentPath;
-
-    do {
-      if (iter.getCurrIteration()
-            < iter.getStateMachineNode().getMaxOccurs()) {
-        break;
-      }
-
-      iter = iter.getParent();
-
-      if (iter == null) {
-        // We are exiting the root node.  Nothing to see here!
-        break;
-      }
-
-      final XmlSchemaDocumentPathNode nextPath =
-          createDocumentPathNode(
-              XmlSchemaDocumentPathNode.Direction.PARENT,
-              path,
-              iter);
-
-      nextPath.setIteration(iter.getCurrIteration());
-      path.setNextNode(-1, nextPath);
-      path = nextPath;
-
-    } while (!iter
-                .getStateMachineNode()
-                .getNodeType()
-                .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
-
-    currentPath = path;
-    currentPosition = iter;
-  }
-
   private boolean isCurrentPositionFulfilled() {
     final XmlSchemaStateMachineNode state = currentPosition.getStateMachineNode();
 
@@ -1464,7 +882,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
           if (stateIndex < children.size()) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
-            if (child.getCurrIteration()
+            if (child.getIteration()
                 >= nextState.getMinOccurs()) {
               fulfilled = true;
               break;
@@ -1486,7 +904,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           final XmlSchemaStateMachineNode nextState = nextStates.get(stateIndex);
           if (stateIndex < children.size()) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
-            if (child.getCurrIteration()
+            if (child.getIteration()
                 < nextState.getMinOccurs()) {
               fulfilled = false;
               break;
@@ -1502,7 +920,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     case SEQUENCE:
       {
         // If the sequence is complete, we succeeded.
-        int stateIndex = currentPosition.getCurrPositionInSequence();
+        int stateIndex = currentPosition.getSequencePosition();
         if (stateIndex < 0) {
           stateIndex = 0;
         }
@@ -1511,7 +929,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           final XmlSchemaStateMachineNode nextState = nextStates.get(stateIndex);
           if (stateIndex < children.size()) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
-            if (child.getCurrIteration()
+            if (child.getIteration()
                 < nextState.getMinOccurs()) {
               fulfilled = false;
               break;
@@ -1527,7 +945,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       throw new IllegalStateException("Current position has a node of unrecognized type \"" + currentPosition.getStateMachineNode().getNodeType() + '\"');
     }
 
-    if ( currentPosition.getCurrIteration() >= state.getMinOccurs() ) {
+    if ( currentPosition.getIteration() >= state.getMinOccurs() ) {
       fulfilled &= true;
     } else {
       fulfilled = false;
@@ -1536,13 +954,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return fulfilled;
   }
 
-  private List<PathSegment> find2(
+  private List<PathSegment> find(
       XmlSchemaDocumentPathNode startNode,
-      XmlSchemaDocumentNode startTree,
       QName elemQName) {
 
     // First, try searching down the tree.
-    List<PathSegment> choices = find(startNode, startTree, elemQName, 0);
+    List<PathSegment> choices = find(startNode, elemQName, 0);
 
     // Second, if the node is currently fulfilled, try siblings and parents.
     if ( isCurrentPositionFulfilled() ) {
@@ -1554,10 +971,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             createDocumentPathNode(
                 XmlSchemaDocumentPathNode.Direction.SIBLING,
                 startNode,
-                startTree);
+                currentPosition);
         siblingPath.setIteration(startNode.getIteration() + 1);
 
-        currChoices = find(siblingPath, startTree, elemQName, 0);
+        currChoices = find(siblingPath, elemQName, 0);
         if (currChoices != null) {
           for (PathSegment choice : currChoices) {
             choice.prepend(startNode, -1);
@@ -1572,7 +989,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       }
 
       // Try parents.
-      XmlSchemaDocumentNode tree = startTree.getParent();
+      XmlSchemaDocumentNode tree = currentPosition.getParent();
 
       if (tree == null) {
         // This is the root element; there is no parent.
@@ -1589,7 +1006,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
               XmlSchemaDocumentPathNode.Direction.PARENT,
               startNode,
               tree);
-      path.setIteration(tree.getCurrIteration());
+      path.setIteration(tree.getIteration());
 
       parentPathStack.add(path);
 
@@ -1606,7 +1023,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                      .getQName()
                      .equals(elementStack.get(elementStack.size() - 1))) {
 
-        currChoices = find(path, tree, elemQName, 0);
+        currChoices = find(path, elemQName, 0);
 
         if (currChoices != null) {
           for (PathSegment currChoice : currChoices) {
@@ -1639,7 +1056,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                 path,
                 nextTree);
 
-        nextPath.setIteration(nextTree.getCurrIteration());
+        nextPath.setIteration(nextTree.getIteration());
 
         tree = nextTree;
         path = nextPath;
@@ -1651,11 +1068,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return choices;
   }
 
-  private List<PathSegment> find2(
+  private List<PathSegment> find(
       XmlSchemaDocumentPathNode startNode,
-      XmlSchemaStateMachineNode state,
       QName elemQName,
       int currDepth) {
+
+    final XmlSchemaStateMachineNode state = startNode.getStateMachineNode();
 
     if (currDepth > MAX_DEPTH) {
       /* We are likely in an infinite recursive loop looking for an element in
@@ -1670,7 +1088,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     } else if (startNode.getIteration()
                  <= startNode.getDocumentNode().getIteration()) {
-      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") should be greater than the tree node's iteration (" + startNode.getDocumentNode().getCurrIteration() + ").  Current state machine position is " + state.getNodeType());
+      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") should be greater than the tree node's iteration (" + startNode.getDocumentNode().getIteration() + ").  Current state machine position is " + state.getNodeType());
 
     } else if (state
                  .getNodeType()

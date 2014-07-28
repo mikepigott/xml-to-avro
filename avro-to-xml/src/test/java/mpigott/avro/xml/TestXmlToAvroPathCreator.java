@@ -117,8 +117,8 @@ public class TestXmlToAvroPathCreator {
         (rootDoc.getChildren() == null)
         || (rootDoc.getChildren().isEmpty()));
 
-    assertEquals(1, rootDoc.getCurrIteration());
-    assertEquals(-1, rootDoc.getCurrPositionInSequence());
+    assertEquals(1, rootDoc.getIteration());
+    assertEquals(-1, rootDoc.getSequencePosition());
     assertNull( rootDoc.getParent() );
     assertFalse(rootDoc.getReceivedContent());
     assertNotNull(rootDoc.getStateMachineNode());
@@ -139,7 +139,6 @@ public class TestXmlToAvroPathCreator {
     assertEquals(1, rootPath.getIteration());
 
     assertNull(rootPath.getPrevious());
-    assertEquals(rootPath.getPriorSequencePosition(), -1);
     assertTrue(rootPath.getStateMachineNode() == root);
     assertNull( rootPath.getNext() );
   }
@@ -173,8 +172,8 @@ public class TestXmlToAvroPathCreator {
     }
 
     assertEquals(1, rootDoc.getChildren().size());
-    assertEquals(1, rootDoc.getCurrIteration());
-    assertEquals(-1, rootDoc.getCurrPositionInSequence());
+    assertEquals(1, rootDoc.getIteration());
+    assertEquals(-1, rootDoc.getSequencePosition());
     assertNull( rootDoc.getParent() );
     assertFalse(rootDoc.getReceivedContent());
     assertNotNull(rootDoc.getStateMachineNode());
@@ -195,7 +194,6 @@ public class TestXmlToAvroPathCreator {
     assertEquals(1, rootPath.getIteration());
 
     assertNull(rootPath.getPrevious());
-    assertEquals(rootPath.getPriorSequencePosition(), -1);
     assertTrue(rootPath.getStateMachineNode() == root);
     assertNotNull( rootPath.getNext() );
 

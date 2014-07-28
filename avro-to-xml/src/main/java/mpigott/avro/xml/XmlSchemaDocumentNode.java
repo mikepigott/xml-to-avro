@@ -16,10 +16,6 @@ import java.util.List;
  * graph generator to build a visualization of the tree.
  */
 final class XmlSchemaDocumentNode {
-  XmlSchemaDocumentNode(XmlSchemaStateMachineNode stateMachineNode) {
-    set(null, stateMachineNode);
-  }
-
   XmlSchemaDocumentNode(
       XmlSchemaDocumentNode parent,
       XmlSchemaStateMachineNode stateMachineNode) {
@@ -47,33 +43,11 @@ final class XmlSchemaDocumentNode {
     }
   }
 
-  int getCurrIteration() {
-    return currIteration;
-  }
-
-  int getCurrPositionInSequence() {
-    return currPositionInSeqGroup;
-  }
-
   /**
    * Indicates whether an element has text in it.
    */
   boolean getReceivedContent() {
     return receivedContent;
-  }
-
-  void setCurrIteration(int newIteration) {
-    currIteration = newIteration;
-    if (children.size() < currIteration) {
-      for (int index = children.size(); index < currIteration; ++index) {
-        children.add( new ArrayList<XmlSchemaDocumentNode>(
-            this.stateMachineNode.getPossibleNextStates().size() ) );
-      }
-    }
-  }
-
-  void setCurrPositionInSequence(int newPosition) {
-    currPositionInSeqGroup = newPosition;
   }
 
   void setReceivedContent(boolean receivedContent) {

@@ -47,6 +47,7 @@ final class XmlSchemaDocumentPathNode {
       XmlSchemaDocumentPathNode previous,
       XmlSchemaStateMachineNode stateMachine) {
 
+    update(dir, previous, stateMachine);
   }
 
   /**
@@ -113,15 +114,11 @@ final class XmlSchemaDocumentPathNode {
   }
 
   XmlSchemaDocumentNode getDocumentNode() {
-    return schemaNode;
+    return documentNode;
   }
 
   XmlSchemaStateMachineNode getStateMachineNode() {
-    if (schemaNode == null) {
-      return null;
-    } else {
-      return schemaNode.getStateMachineNode();
-    }
+    return stateMachineNode;
   }
 
   Direction getDirection() {
@@ -136,13 +133,20 @@ final class XmlSchemaDocumentPathNode {
     return iterationNum;
   }
 
-  /**
-   * When unfollowing a <code>XmlSchemaDocumentPathNode</code>, we need to
-   * reset the child position of a {@link XmlSchemaDocumentNode} representing
-   * an XML Schema Sequence group.
-   */
-  int getPriorSequencePosition() {
-    return priorSequencePosition;
+  int getDocIteration() {
+    if (documentNode == null) {
+      return 0;
+    } else {
+      return documentNode.getIteration();
+    }
+  }
+
+  int getDocSequencePosition() {
+    if (documentNode == null) {
+      return 0;
+    } else {
+      return documentNode.getSequencePosition();
+    }
   }
 
   XmlSchemaDocumentPathNode getPrevious() {
@@ -175,16 +179,14 @@ final class XmlSchemaDocumentPathNode {
 
     } else if ((nextNodeIndex < 0)
                 || (nextNodeIndex
-                    >= schemaNode
-                         .getStateMachineNode()
+                    >= stateMachineNode
                          .getPossibleNextStates().size())) {
-      throw new IllegalArgumentException("The node index (" + nextNodeIndex + ") is not within the range of " + schemaNode.getStateMachineNode().getPossibleNextStates().size() + " possible next states.");
+      throw new IllegalArgumentException("The node index (" + nextNodeIndex + ") is not within the range of " + documentNode.getStateMachineNode().getPossibleNextStates().size() + " possible next states.");
 
     } else if (newNext == null) {
       throw new IllegalArgumentException("The next node must be defined.");
 
-    } else if ( !schemaNode
-                   .getStateMachineNode()
+    } else if ( !stateMachineNode
                    .getPossibleNextStates()
                    .get(nextNodeIndex)
                    .equals( newNext.getStateMachineNode() ) ) {
@@ -227,24 +229,34 @@ final class XmlSchemaDocumentPathNode {
    *         be discarded internally. 
    */
   final XmlSchemaDocumentPathNode update(
-      XmlSchemaDocumentPathNode.Direction newDirection,
+      Direction newDirection,
       XmlSchemaDocumentPathNode newPrevious,
       XmlSchemaDocumentNode newNode) {
 
     direction = newDirection;
-    schemaNode = newNode;
+    documentNode = newNode;
+    stateMachineNode = documentNode.getStateMachineNode();
     nextNodeStateIndex = -1;
     iterationNum = newNode.getIteration() + 1;
     prevNode = newPrevious;
-    priorSequencePosition = newNode.getCurrPositionInSequence();
 
-    if (newNode
-          .getStateMachineNode()
-          .getNodeType()
-          .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)) {
+    final XmlSchemaDocumentPathNode oldNext = nextNode;
+    nextNode = null;
 
-      nextNodeStateIndex = newNode.getCurrPositionInSequence();
-    }
+    return oldNext;
+  }
+
+  final XmlSchemaDocumentPathNode update(
+      Direction newDirection,
+      XmlSchemaDocumentPathNode newPrevious,
+      XmlSchemaStateMachineNode newStateMachineNode) {
+
+    direction = newDirection;
+    documentNode = null;
+    stateMachineNode = newStateMachineNode;
+    nextNodeStateIndex = -1;
+    iterationNum = 0;
+    prevNode = newPrevious;
 
     final XmlSchemaDocumentPathNode oldNext = nextNode;
     nextNode = null;
@@ -256,10 +268,11 @@ final class XmlSchemaDocumentPathNode {
     int result = 1;
     result = prime * result + iterationNum;
     result = prime * result + nextNodeStateIndex;
-    result = prime * result + priorSequencePosition;
     result = prime * result + ((direction == null) ? 0 : direction.hashCode());
     result = prime * result
-        + ((schemaNode == null) ? 0 : schemaNode.hashCode());
+        + ((documentNode == null) ? 0 : documentNode.hashCode());
+    result = prime * result
+        + ((stateMachineNode == null) ? 0 : stateMachineNode.hashCode());
     return result;
   }
 
@@ -273,23 +286,27 @@ final class XmlSchemaDocumentPathNode {
     if (nextNodeStateIndex != other.nextNodeStateIndex) {
       return false;
     }
-    if (priorSequencePosition != other.priorSequencePosition) {
-      return false;
-    }
-    if (schemaNode == null) {
-      if (other.schemaNode != null) {
+    if (documentNode == null) {
+      if (other.documentNode != null) {
         return false;
       }
-    } else if (!schemaNode.equals(other.schemaNode)) {
+    } else if (!documentNode.equals(other.documentNode)) {
       return false;
     }
-    return false;
+    if (stateMachineNode == null) {
+      if (other.stateMachineNode != null) {
+        return false;
+      }
+    } else if (!stateMachineNode.equals(other.stateMachineNode)) {
+      return false;
+    }
+    return true;
   }
 
   private Direction direction;
-  private XmlSchemaDocumentNode schemaNode;
+  private XmlSchemaDocumentNode documentNode;
+  private XmlSchemaStateMachineNode stateMachineNode;
   private int nextNodeStateIndex;
-  private int priorSequencePosition;
   private int iterationNum;
 
   private XmlSchemaDocumentPathNode prevNode;
