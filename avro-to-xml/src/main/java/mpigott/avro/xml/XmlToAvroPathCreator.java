@@ -1435,6 +1435,107 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     currentPosition = iter;
   }
 
+  private boolean isCurrentPositionFulfilled() {
+    final SchemaStateMachineNode state = currentPosition.getStateMachineNode();
+
+    final List<SchemaStateMachineNode> nextStates =
+        state.getPossibleNextStates();
+
+    final List<XmlSchemaDocumentNode> children =
+        currentPosition.getChildren();
+
+    boolean fulfilled = true;
+
+    switch ( state.getNodeType() ) {
+    case ELEMENT:
+    case ANY:
+      // We only need to perform the occurrence check.
+      break;
+    case CHOICE:
+    case SUBSTITUTION_GROUP:
+      {
+        // If any child meets the minimum number, we succeeded.
+        fulfilled = false;
+        for (int stateIndex = 0;
+            stateIndex < nextStates.size();
+            ++stateIndex) {
+
+          SchemaStateMachineNode nextState = nextStates.get(stateIndex);
+
+          if (stateIndex < children.size()) {
+            final XmlSchemaDocumentNode child = children.get(stateIndex);
+            if (child.getCurrIteration()
+                >= nextState.getMinOccurs()) {
+              fulfilled = true;
+              break;
+            }
+          } else if (nextState.getMinOccurs() == 0) {
+            fulfilled = true;
+            break;
+          }
+        }
+        break;
+      }
+    case ALL:
+      {
+        // If all children meet the minimum number, we succeeded.
+        for (int stateIndex = 0;
+            stateIndex < nextStates.size();
+            ++stateIndex) {
+
+          final SchemaStateMachineNode nextState = nextStates.get(stateIndex);
+          if (stateIndex < children.size()) {
+            final XmlSchemaDocumentNode child = children.get(stateIndex);
+            if (child.getCurrIteration()
+                < nextState.getMinOccurs()) {
+              fulfilled = false;
+              break;
+            }
+          } else if (nextState.getMinOccurs() > 0) {
+            fulfilled = false;
+            break;
+          }
+        }
+
+        break;
+      }
+    case SEQUENCE:
+      {
+        // If the sequence is complete, we succeeded.
+        int stateIndex = currentPosition.getCurrPositionInSequence();
+        if (stateIndex < 0) {
+          stateIndex = 0;
+        }
+        for (; stateIndex < nextStates.size(); ++stateIndex) {
+
+          final SchemaStateMachineNode nextState = nextStates.get(stateIndex);
+          if (stateIndex < children.size()) {
+            final XmlSchemaDocumentNode child = children.get(stateIndex);
+            if (child.getCurrIteration()
+                < nextState.getMinOccurs()) {
+              fulfilled = false;
+              break;
+            }
+          } else if (nextState.getMinOccurs() > 0) {
+            fulfilled = false;
+            break;
+          }
+        }
+        break;
+      }
+    default:
+      throw new IllegalStateException("Current position has a node of unrecognized type \"" + currentPosition.getStateMachineNode().getNodeType() + '\"');
+    }
+
+    if ( currentPosition.getCurrIteration() >= state.getMinOccurs() ) {
+      fulfilled &= true;
+    } else {
+      fulfilled = false;
+    }
+
+    return fulfilled;
+  }
+
   private XmlSchemaDocumentPathNode createDocumentPathNode(
       XmlSchemaDocumentPathNode.Direction direction,
       XmlSchemaDocumentPathNode previous,
