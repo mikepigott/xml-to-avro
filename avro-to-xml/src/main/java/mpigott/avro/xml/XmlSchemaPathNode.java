@@ -24,7 +24,7 @@ import java.util.List;
  *
  * @author  Mike Pigott
  */
-final class XmlSchemaPathNode {
+final class XmlSchemaPathNode<U> {
 
   enum Direction {
     PARENT,
@@ -36,7 +36,7 @@ final class XmlSchemaPathNode {
   XmlSchemaPathNode(
       Direction dir,
       XmlSchemaPathNode previous,
-      XmlSchemaDocumentNode node) {
+      XmlSchemaDocumentNode<U> node) {
 
     update(dir, previous, node);
   }
@@ -248,7 +248,7 @@ final class XmlSchemaPathNode {
   final void update(
       Direction newDirection,
       XmlSchemaPathNode newPrevious,
-      XmlSchemaDocumentNode newNode) {
+      XmlSchemaDocumentNode<U> newNode) {
 
     update(newDirection, newPrevious, newNode.getStateMachineNode());
     documentNode = newNode;
@@ -308,11 +308,11 @@ final class XmlSchemaPathNode {
   }
 
   private Direction direction;
-  private XmlSchemaDocumentNode documentNode;
+  private XmlSchemaDocumentNode<U> documentNode;
   private XmlSchemaStateMachineNode stateMachineNode;
   private int nextNodeStateIndex;
   private int iterationNum;
 
-  private XmlSchemaPathNode prevNode;
-  private XmlSchemaPathNode nextNode;
+  private XmlSchemaPathNode<U> prevNode;
+  private XmlSchemaPathNode<U> nextNode;
 }

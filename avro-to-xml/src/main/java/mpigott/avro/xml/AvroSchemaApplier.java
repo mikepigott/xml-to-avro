@@ -16,6 +16,18 @@
 
 package mpigott.avro.xml;
 
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+
+import org.apache.avro.Schema;
+import org.apache.ws.commons.schema.XmlSchemaElement;
+
 /**
  * Applies an Avro schema to a tree described
  * by {@link XmlSchemaDocumentNode}s.
@@ -28,6 +40,381 @@ final class AvroSchemaApplier {
    * Creates a new <code>AvroSchemaApplier</code>
    * with the provided root node.
    */
-  public AvroSchemaApplier(XmlSchemaDocumentNode root) {
+  public AvroSchemaApplier(Schema avroSchema, boolean xmlIsWritten) {
+    this.avroSchema = avroSchema;
+    this.xmlIsWritten = xmlIsWritten;
+
+    conversionCache = new HashMap<Schema.Type, Set<Schema.Type>>();
+    unionOfValidElementsStack = new ArrayList<Schema>();
+
+    if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
+      // ARRAY of UNION of RECORDs/MAPs is not valid when writing XML.
+      if (xmlIsWritten) {
+        throw new IllegalArgumentException("The Avro Schema cannot be an ARRAY of UNION of MAPs/RECORDs when writing XML; it must conform to the corresponding XML schema.");
+      }
+
+      /* The user is only looking to retrieve specific elements from the XML
+       * document.  Likewise, the next valid elements are only the ones in
+       * that list.
+       *
+       * (The expected format is Array<Union<Type>>)
+       */
+      if ( !avroSchema.getElementType().getType().equals(Schema.Type.UNION) ) {
+        throw new IllegalArgumentException("If retrieving only a subset of elements in the document, the Avro Schema must be an ARRAY of UNION of those types, not an Array of " + avroSchema.getElementType().getType());
+      }
+
+      // Confirm all of the elements in the UNION are either RECORDs or MAPs.
+      verifyIsUnionOfMapsAndRecords( avroSchema.getElementType() );
+
+      unionOfValidElementsStack.add(avroSchema.getElementType());
+
+    } else if ( avroSchema.getType().equals(Schema.Type.UNION) ) {
+      /* It is possible for the root element to actually be the root of a
+       * substitution group.  If this happens, the root element could be
+       * one of many different record types.
+       *
+       * This can only be valid if the schema is a union of records.
+       */
+      verifyIsUnionOfMapsAndRecords(avroSchema);
+
+      unionOfValidElementsStack.add(avroSchema);
+
+    } else if ( avroSchema.getType().equals(Schema.Type.RECORD)
+        || avroSchema.getType().equals(Schema.Type.MAP) ) {
+      // This is a definition of the root element.
+      List<Schema> union = new ArrayList<Schema>(1);
+      union.add(avroSchema);
+      unionOfValidElementsStack.add( Schema.createUnion(union) );
+
+    } else {
+      throw new IllegalArgumentException("The Avro Schema must be one of the following types: RECORD, MAP, UNION of RECORDs/MAPs, or ARRAY of UNION of RECORDs/MAPs.");
+    }
   }
+
+  void apply(XmlSchemaDocumentNode<Schema> docNode) {
+  }
+
+  private void handleElement(XmlSchemaDocumentNode doc) {
+    if (!doc
+           .getStateMachineNode()
+           .getNodeType()
+           .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
+      throw new IllegalStateException("Attempted to process an element when the node type is " + doc.getStateMachineNode().getNodeType());
+    }
+
+    final XmlSchemaElement element = doc.getStateMachineNode().getElement();
+
+    final List<Schema> validNextElements =
+        unionOfValidElementsStack
+          .get(unionOfValidElementsStack.size() - 1)
+          .getTypes();
+
+    Schema elemSchema = null;
+    if (validNextElements != null) {
+      for (Schema possibleSchema : validNextElements) {
+        Schema valueType = possibleSchema;
+        if ( possibleSchema.getType().equals(Schema.Type.MAP) ) {
+          valueType = possibleSchema.getValueType();
+        }
+  
+        if (!valueType.getType().equals(Schema.Type.RECORD)) {
+          // The map must have a value type of record, or it is invalid.
+          throw new IllegalStateException("MAPs in Avro Schemas for XML documents must have a value type of RECORD, not " + valueType.getType());
+        }
+  
+        if (valueType.getName().equals( element.getName() )) {
+          // Confirm the namespaces match.
+          String ns = element.getQName().getNamespaceURI();
+          if ((ns != null) && !ns.isEmpty()) {
+            try {
+              if (!Utils.getAvroNamespaceFor(ns).equals(
+                    valueType.getNamespace()))
+              {
+                // Namespaces do not mach. Try the next schema.
+                continue;
+              }
+            } catch (URISyntaxException e) {
+              throw new IllegalStateException("Element \"" + element.getQName() + "\" has a namespace that is not a valid URI", e);
+            }
+          }
+  
+          // We found the schema!
+          elemSchema = possibleSchema;
+          break;
+        }
+      }
+    }
+
+    if (xmlIsWritten && (elemSchema == null)) {
+      throw new IllegalStateException("Element \"" + element.getQName() + "\" does not have a corresponding Avro schema.  One is needed when writing XML.");
+    }
+
+    final XmlSchemaTypeInfo typeInfo =
+        doc.getStateMachineNode().getElementType();
+
+    Schema unionOfChildrenTypes = null;
+
+    if (elemSchema != null) {
+      doc.setUserDefinedContent(elemSchema);
+
+      /* Child elements are in a field under the same name as the element.
+       *
+       * In the Avro schema, they may be NULL (no children), a
+       * primitive type, or an ARRAY of UNION of MAPs and RECORDs.
+       */
+      Schema valueType = elemSchema;
+      if (elemSchema.getType().equals(Schema.Type.MAP)) {
+        valueType = elemSchema.getValueType();
+      }
+
+      Schema.Field childrenField = valueType.getField( element.getName() );
+
+      /* If the element has no children, a NULL placeholder is used instead.
+       * Likewise, if the children field is null, it means the children have
+       * been removed in order to be filtered out. 
+       */
+      if (xmlIsWritten && (childrenField == null)) {
+        throw new IllegalStateException("The children of " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName() + " must exist.  If there are no children, an Avro NULL placeholder is required.");
+      }
+
+      if (childrenField != null) {
+        final Schema childrenSchema = childrenField.schema();
+        switch (childrenSchema.getType()) {
+        case ARRAY:
+          {
+            // All group types are ARRAY of UNION of MAP/RECORD.
+            if ( !childrenSchema.getElementType().getType().equals(Schema.Type.UNION) ) {
+              throw new IllegalStateException("If the children of " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName() + " are in a group, the corresponding Avro Schema MUST BE an ARRAY of UNION of MAPs/RECORDs, not " + childrenSchema.getElementType().getType());
+            }
+
+            verifyIsUnionOfMapsAndRecords( childrenSchema.getElementType() );
+
+            unionOfChildrenTypes = childrenSchema.getElementType();
+          }
+          break;
+        case BOOLEAN:
+        case BYTES:
+        case DOUBLE:
+        case ENUM:
+        case FLOAT:
+        case INT:
+        case LONG:
+        case STRING:
+          {
+            if ( !confirmEquivalent(typeInfo, childrenSchema) ) {
+              throw new IllegalStateException("Cannot convert between " + typeInfo + " and " + childrenSchema + " for simple content of " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName());
+            }
+          }
+          break;
+        case NULL:
+          // There are no children, so no further types are valid.
+          break;
+        default:
+          throw new IllegalStateException("Children of element " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName() + " must be either an ARRAY of UNION of MAP/RECORD or a primitive type, not " + childrenSchema.getType());
+        }
+      }
+    }
+
+    /* If the root schema is an ARRAY of UNION, then the next valid
+     * element will be one of its entries.  Otherwise, there are no
+     * next valid entries.
+     *
+     * We want to push that on the stack for when we exit children
+     * of the current element.
+     */
+    if ((unionOfChildrenTypes == null)
+          && avroSchema.getType().equals(Schema.Type.ARRAY) ) {
+      unionOfChildrenTypes = avroSchema.getElementType();
+    }
+
+    // Process the children, if any.
+    processChildren(doc, unionOfChildrenTypes);
+  }
+
+  private void processChildren(
+      XmlSchemaDocumentNode doc,
+      Schema unionOfChildrenTypes) {
+
+    if (unionOfChildrenTypes == null) {
+      return;
+    }
+
+    unionOfValidElementsStack.add(unionOfChildrenTypes);
+
+    for (int iteration = 1; iteration <= doc.getIteration(); ++iteration) {
+      final SortedMap<Integer, XmlSchemaDocumentNode> children =
+          doc.getChildren(iteration);
+
+      if (children != null) {
+        for (Map.Entry<Integer, XmlSchemaDocumentNode> child :
+              children.entrySet()) {
+          apply(child.getValue());
+        }
+      }
+    }
+
+    unionOfValidElementsStack.remove(unionOfValidElementsStack.size() - 1);
+  }
+
+  // Confirms the root-level Schema is a UNION of MAPs, RECORDs, or both.
+  private final void verifyIsUnionOfMapsAndRecords(Schema schema) {
+    for (Schema unionType : schema.getTypes()) {
+      if (!unionType.getType().equals(Schema.Type.RECORD)
+          && !unionType.getType().equals(Schema.Type.MAP)) {
+        throw new IllegalArgumentException("The Avro Schema may either be a UNION or an ARRAY of UNION, but only if all of the elements in the UNION are of either type RECORD or MAP, not " + unionType.getType());
+      } else if ( unionType.getType().equals(Schema.Type.MAP)
+          && !unionType.getValueType().getType().equals(Schema.Type.RECORD) ) {
+        throw new IllegalArgumentException("If the Avro Schema is a UNION of MAPs or an ARRAY of UNION of MAPs, all MAP value types must be RECORD, not " + unionType.getValueType().getType());
+      }
+    }
+  }
+
+  /* Confirms two XML Schema simple types are equivalent.  Supported types are:
+   *
+   * BOOLEAN
+   * BYTES
+   * DOUBLE
+   * ENUM
+   * FLOAT
+   * INT
+   * LONG
+   * STRING
+   */
+  private boolean confirmEquivalent(
+      XmlSchemaTypeInfo xmlType,
+      Schema avroType) {
+
+    if ((avroType != null)
+        && ((xmlType == null) || (xmlType.getAvroType() == null))) {
+      return false;
+
+    } else if ((avroType == null)
+        && ((xmlType != null) && (xmlType.getAvroType() != null))) {
+      return false;
+
+    } else if ((avroType == null)
+        && ((xmlType == null) || (xmlType.getAvroType() == null))) {
+      return true;
+
+    }
+
+    if (xmlIsWritten) {
+      return confirmEquivalent(avroType, xmlType.getAvroType());
+    } else {
+      return confirmEquivalent(xmlType.getAvroType(), avroType);
+    }
+  }
+
+  /* Confirms two XML Schema simple types are equivalent.  Supported types are:
+   *
+   * BOOLEAN
+   * BYTES
+   * DOUBLE
+   * ENUM
+   * FLOAT
+   * INT
+   * LONG
+   * STRING
+   */
+  private boolean confirmEquivalent(Schema readerType, Schema writerType) {
+
+    if (readerType.getType().equals(Schema.Type.ARRAY)
+        && (writerType.getType().equals(Schema.Type.ARRAY))) {
+      return confirmEquivalent(readerType.getElementType(), writerType.getElementType());
+
+    } else if (readerType.getType().equals(Schema.Type.UNION)
+        && writerType.getType().equals(Schema.Type.UNION)) {
+
+      // O(N^2) cross-examination.
+      int numFound = 0;
+      for (Schema readerUnionType : writerType.getTypes()) {
+        for (Schema writerUnionType : readerType.getTypes()) {
+          if ( confirmEquivalent(readerUnionType, writerUnionType) ) {
+            ++numFound;
+            break;
+          }
+        }
+      }
+      if (readerType.getTypes().size() == numFound) {
+        // We were able to find equivalents for all of the reader types.
+        return true;
+      } else {
+        // We could not find equivalents for all of the reader types.
+        return false;
+      }
+    }
+
+    if ( conversionCache.containsKey(writerType.getType()) ) {
+      return conversionCache.get( writerType.getType() )
+                            .contains( readerType.getType() );
+    }
+
+    final HashSet<Schema.Type> convertibleFrom = new HashSet<Schema.Type>();
+    switch ( writerType.getType() ) {
+    case STRING:
+      // STRING, BOOLEAN, ENUM, DOUBLE, FLOAT, LONG, INT -> STRING
+      convertibleFrom.add(Schema.Type.STRING);
+      convertibleFrom.add(Schema.Type.BOOLEAN);
+      convertibleFrom.add(Schema.Type.ENUM);
+    case DOUBLE:
+      // DOUBLE, FLOAT, LONG, INT -> DOUBLE
+      convertibleFrom.add(Schema.Type.DOUBLE);
+    case FLOAT:
+      // FLOAT, LONG, INT -> FLOAT
+      convertibleFrom.add(Schema.Type.FLOAT);
+    case LONG:
+      // LONG, INT -> LONG
+      convertibleFrom.add(Schema.Type.LONG);
+    case INT:
+      // INT -> INT
+      convertibleFrom.add(Schema.Type.INT);
+      break;
+
+    case BOOLEAN:
+      // BOOLEAN -> BOOLEAN
+      convertibleFrom.add(Schema.Type.BOOLEAN);
+      break;
+
+    case BYTES:
+      // BYTES -> BYTES
+      convertibleFrom.add(Schema.Type.BYTES);
+      break;
+
+    case ENUM:
+      // This one is more complex.
+      break;
+
+    default:
+      throw new IllegalArgumentException("Cannot confirm the equivalency of a reader of type " + readerType.getType() + " and a writer of type " + writerType.getType());
+    }
+
+    if ( !convertibleFrom.isEmpty() ) {
+      conversionCache.put(writerType.getType(), convertibleFrom);
+      return convertibleFrom.contains( readerType.getType() );
+    }
+
+    /* If we're here, it's because the writer is an ENUM.  Confirm
+     * the writer elements are a superset of the reader elements.
+     */
+    if ( readerType.getType().equals(Schema.Type.ENUM) ) {
+      final List<String> writerSymbols = writerType.getEnumSymbols();
+      final List<String> readerSymbols = readerType.getEnumSymbols();
+
+      for (String readerSymbol : readerSymbols) {
+        if ( !writerSymbols.contains(readerSymbol) ) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  private List<Schema> unionOfValidElementsStack;
+
+  private final Schema avroSchema;
+  private final Map<Schema.Type, Set<Schema.Type>> conversionCache;
+  private final boolean xmlIsWritten;
 }

@@ -17,11 +17,12 @@ import java.util.TreeMap;
  * This class is package-protected, and not private, to allow an external
  * graph generator to build a visualization of the tree.
  */
-final class XmlSchemaDocumentNode {
+final class XmlSchemaDocumentNode<U> {
   XmlSchemaDocumentNode(
       XmlSchemaDocumentNode parent,
       XmlSchemaStateMachineNode stateMachineNode) {
 
+    userDefinedContent = null;
     set(parent, stateMachineNode);
   }
 
@@ -162,9 +163,18 @@ final class XmlSchemaDocumentNode {
     }
   }
 
+  U getUserDefinedContent() {
+    return userDefinedContent;
+  }
+
+  void setUserDefinedContent(U userDefinedContent) {
+    this.userDefinedContent = userDefinedContent;
+  }
+
   private XmlSchemaStateMachineNode stateMachineNode;
   private XmlSchemaDocumentNode parent;
   private List<SortedMap<Integer, XmlSchemaDocumentNode>> children;
   private List<XmlSchemaPathNode> visitors;
   private boolean receivedContent;
+  private U userDefinedContent;
 }
