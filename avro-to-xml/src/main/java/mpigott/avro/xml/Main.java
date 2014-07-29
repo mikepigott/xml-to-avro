@@ -105,7 +105,7 @@ public class Main {
     try {
       XmlSchemaElement xbrl = getElementOf(collection, "xbrl");
       walk(walker, avroVisitor, xbrl, "xbrl.avsc");
-      XmlSchemaStateMachineGenerator smGen = new XmlSchemaStateMachineGenerator(avroVisitor.getSchema(), true);
+      AvroSchemaStateMachineGenerator smGen = new AvroSchemaStateMachineGenerator(avroVisitor.getSchema(), true);
       avroVisitor.clear();
       walker.removeVisitor(avroVisitor).addVisitor(smGen);
       walker.walk(xbrl);

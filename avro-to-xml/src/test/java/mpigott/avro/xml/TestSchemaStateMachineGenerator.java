@@ -56,8 +56,8 @@ public class TestSchemaStateMachineGenerator {
     walker.clear();
 
     // 2. Confirm the Avro Schema conforms to the XML Schema
-    XmlSchemaStateMachineGenerator generator =
-        new XmlSchemaStateMachineGenerator(schema, true);
+    AvroSchemaStateMachineGenerator generator =
+        new AvroSchemaStateMachineGenerator(schema, true);
 
     walker.removeVisitor(visitor).addVisitor(generator);
 

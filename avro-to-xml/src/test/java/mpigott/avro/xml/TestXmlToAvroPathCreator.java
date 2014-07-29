@@ -85,8 +85,8 @@ public class TestXmlToAvroPathCreator {
     walker.clear();
 
     // 2. Construct the state machine.
-    XmlSchemaStateMachineGenerator generator =
-        new XmlSchemaStateMachineGenerator(schema, true);
+    AvroSchemaStateMachineGenerator generator =
+        new AvroSchemaStateMachineGenerator(schema, true);
 
     walker.removeVisitor(visitor).addVisitor(generator);
 
