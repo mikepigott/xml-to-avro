@@ -259,7 +259,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     }
 
     stack.get(stack.size() - 1).addPossibleNextState(node);
-    stack.add(node);
   }
 
   /**

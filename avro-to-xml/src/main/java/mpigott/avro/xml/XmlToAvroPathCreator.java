@@ -1521,25 +1521,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   }
 
   private QName getQNameOfOwningElement() {
-    XmlSchemaDocumentNode iter = currentPath.getDocumentNode();
-
-    if (iter == null) {
-      throw new IllegalStateException("Starting point should not be null.");
-    }
-
-    while ((iter != null)
-            && !iter
-                 .getStateMachineNode()
-                 .getNodeType()
-                 .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
-
-      iter = iter.getParent();
-    }
-
-    if (iter == null) {
+    if ( elementStack.isEmpty() ) {
       return null;
     } else {
-      return iter.getStateMachineNode().getElement().getQName();
+      return elementStack.get(elementStack.size() - 1);
     }
   }
 

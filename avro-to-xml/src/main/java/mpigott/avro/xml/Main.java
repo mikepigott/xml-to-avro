@@ -9,11 +9,17 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
+import javax.xml.namespace.QName;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.stream.StreamSource;
 
+import org.antlr.stringtemplate.StringTemplate;
+import org.antlr.stringtemplate.StringTemplateGroup;
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
@@ -104,14 +110,17 @@ public class Main {
     long startXbrlWalk = System.currentTimeMillis();
     try {
       XmlSchemaElement xbrl = getElementOf(collection, "xbrl");
-      walk(walker, avroVisitor, xbrl, "xbrl.avsc");
-      AvroSchemaStateMachineGenerator smGen = new AvroSchemaStateMachineGenerator(avroVisitor.getSchema(), true);
-      avroVisitor.clear();
+      //walk(walker, avroVisitor, xbrl, "xbrl.avsc");
+      XmlSchemaStateMachineGenerator smGen = new XmlSchemaStateMachineGenerator();
+      ///avroVisitor.clear();
       walker.removeVisitor(avroVisitor).addVisitor(smGen);
       walker.walk(xbrl);
       XmlSchemaStateMachineNode startNode = smGen.getStartNode();
-      XmlToAvroPathCreator pathCreator = new XmlToAvroPathCreator(startNode);
 
+      visualizeStateMachine(startNode, "xbrl_sm.dot");
+
+      /* TODO
+      XmlToAvroPathCreator pathCreator = new XmlToAvroPathCreator(startNode);
       SAXParserFactory spf = SAXParserFactory.newInstance();
       spf.setNamespaceAware(true);
       SAXParser saxParser = spf.newSAXParser();
@@ -120,7 +129,7 @@ public class Main {
 
       XmlSchemaPathNode rootPath =
           pathCreator.getXmlSchemaDocumentPath();
-
+       */
     } finally {
       long endXbrlWalk = System.currentTimeMillis();
       System.out.println("Walking the xbrl node took " + (endXbrlWalk - startXbrlWalk) + " milliseconds.");
@@ -184,5 +193,86 @@ public class Main {
     }
 
     walker.clear();
+  }
+
+  private static void visualizeStateMachine(XmlSchemaStateMachineNode startNode, String fileName) throws Exception {
+    StringTemplateGroup templates = null;
+    FileReader fr = null;
+    try {
+      fr = new FileReader("C:\\Users\\Mike Pigott\\Google Drive\\workspace\\edgar_xbrl\\src\\main\\resources\\DOT.stg");
+      templates = new StringTemplateGroup(fr);
+    } finally {
+      try {
+        if (fr != null) {
+          fr.close();
+        }
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
+      }
+    }
+
+    ArrayList<StringTemplate> nodes = new ArrayList<StringTemplate>();
+    ArrayList<StringTemplate> edges = new ArrayList<StringTemplate>();
+
+    nextNode(startNode, 0, nodes, edges, templates, new HashMap<QName, Integer>());
+
+    StringTemplate fileSt = templates.getInstanceOf("file");
+    fileSt.setAttribute("gname", "state_machine");
+    fileSt.setAttribute("nodes", nodes);
+    fileSt.setAttribute("edges", edges);
+
+    FileWriter writer = null;
+    try {
+      writer = new FileWriter(fileName);
+      writer.write( fileSt.toString() ); 
+    } finally {
+      if (writer != null) {
+        try {
+          writer.close();
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
+      }
+    }
+  }
+
+  private static int nextNode(XmlSchemaStateMachineNode currNode, int nodeNum, ArrayList<StringTemplate> nodes, ArrayList<StringTemplate> edges, StringTemplateGroup templates, Map<QName, Integer> nodeNums) {
+    int nextNum = nodeNum + 1;
+
+    nodes.add( getNodeSt(templates, "node" + nodeNum, currNode.toString()) );
+
+    if ( currNode.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
+      nodeNums.put(currNode.getElement().getQName(), nodeNum);
+    }
+
+    if (currNode.getPossibleNextStates() != null) {
+      for (XmlSchemaStateMachineNode nextNode : currNode.getPossibleNextStates()) {
+        int nextNodeNum = nextNum;
+
+        if (nextNode.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+            && nodeNums.containsKey( nextNode.getElement().getQName() )) {
+          nextNodeNum = nodeNums.get( nextNode.getElement().getQName() );
+        } else {
+          nextNum = nextNode(nextNode, nextNum, nodes, edges, templates, nodeNums);
+        }
+        edges.add( getEdgeSt(templates, "node" + nodeNum, "node" + nextNodeNum) );
+      }
+    }
+
+    return nextNum;
+  }
+
+  private static StringTemplate getEdgeSt(StringTemplateGroup templates, String from, String to) {
+    StringTemplate edgeSt = templates.getInstanceOf("edge");
+    edgeSt.setAttribute("from", from);
+    edgeSt.setAttribute("to", to);
+    return edgeSt;
+  }
+
+  private static StringTemplate getNodeSt(StringTemplateGroup templates, String name, String text) {
+    StringTemplate tmpl = templates.getInstanceOf("node");
+    tmpl.setAttribute("name", name);
+    tmpl.setAttribute("text", text.replace('\"', '\''));
+    return tmpl;
   }
 }

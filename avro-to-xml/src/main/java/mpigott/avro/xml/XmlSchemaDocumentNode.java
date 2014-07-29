@@ -34,7 +34,11 @@ final class XmlSchemaDocumentNode {
   }
 
   SortedMap<Integer, XmlSchemaDocumentNode> getChildren() {
-    return getChildren(children.size());
+    if (children == null) {
+      return null;
+    } else {
+      return getChildren(children.size());
+    }
   }
 
   SortedMap<Integer, XmlSchemaDocumentNode> getChildren(int iteration) {
