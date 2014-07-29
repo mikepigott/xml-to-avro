@@ -61,9 +61,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     XmlSchemaStateMachineNode stateMachineNode;
   }
 
-  /**
-   * 
-   */
   public XmlSchemaStateMachineGenerator() {
     stack = new ArrayList<XmlSchemaStateMachineNode>();
     elementInfoByQName = new HashMap<QName, ElementInfo>();
@@ -121,8 +118,12 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
    * @see mpigott.avro.xml.XmlSchemaVisitor#onExitElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo, boolean)
    */
   @Override
-  public void onExitElement(XmlSchemaElement element,
-      XmlSchemaTypeInfo typeInfo, boolean previouslyVisited) {
+  public void onExitElement(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo typeInfo,
+      boolean previouslyVisited) {
+
+    addParentElementIfAny();
 
     if ( stack.isEmpty() ) {
       throw new IllegalStateException("Exiting " + element.getQName() + ", but the stack is empty.");
@@ -131,7 +132,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     final XmlSchemaStateMachineNode node = stack.remove(stack.size() - 1);
     if (!node.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
       throw new IllegalStateException("Exiting element " + element.getQName() + ", but  " + node + " is on the stack.");
-    } else if (node.getElement() != element) {
+    } else if (!node.getElement().getQName().equals(element.getQName())) {
       throw new IllegalStateException("Element " + element.getQName() + " is not the same in-memory copy we received on creation.  Our copy is of a " + node.getElement().getQName());
     }
   }
@@ -251,6 +252,8 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     final XmlSchemaStateMachineNode node =
         new XmlSchemaStateMachineNode(any);
 
+    addParentElementIfAny();
+
     if ( stack.isEmpty() ) {
       throw new IllegalStateException("Reached an wildcard with no parent!  The stack is empty.");
     }
@@ -274,35 +277,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
       long minOccurs,
       long maxOccurs) {
 
-    if (parentElemName != null) {
-      /* The parent of this group is an element
-       * that needs to be added to the stack.
-       */
-      final ElementInfo elemInfo = elementInfoByQName.get(parentElemName);
-
-      if (elemInfo.stateMachineNode != null) {
-        throw new IllegalStateException("Parent element " + parentElemName + " is supposedly undefined, but that entry already has a state machine of " + elemInfo.stateMachineNode);
-      }
-
-      elemInfo.stateMachineNode =
-          new XmlSchemaStateMachineNode(
-              elemInfo.element,
-              elemInfo.attributes,
-              elemInfo.typeInfo,
-              null);
-
-      if ( !stack.isEmpty() ) {
-        stack.get(stack.size() - 1)
-             .addPossibleNextState(elemInfo.stateMachineNode);
-      } else {
-        // This is the root node.
-        startNode = elemInfo.stateMachineNode;
-      }
-
-      stack.add(elemInfo.stateMachineNode);
-
-      parentElemName = null;
-    }
+    addParentElementIfAny();
 
     if ( stack.isEmpty() ) {
       throw new IllegalStateException("Attempted to create a(n) " + groupType + " group with no parent - the stack is empty!");
@@ -333,6 +308,38 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     if (!groupType.equals(XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP)
         && stack.isEmpty()) {
       throw new IllegalStateException("Popped a group of type " + groupType + " only to find it did not have a parent.");
+    }
+  }
+
+  private void addParentElementIfAny() {
+    if (parentElemName != null) {
+      /* The parent of this group is an element
+       * that needs to be added to the stack.
+       */
+      final ElementInfo elemInfo = elementInfoByQName.get(parentElemName);
+
+      if (elemInfo.stateMachineNode != null) {
+        throw new IllegalStateException("Parent element " + parentElemName + " is supposedly undefined, but that entry already has a state machine of " + elemInfo.stateMachineNode);
+      }
+
+      elemInfo.stateMachineNode =
+          new XmlSchemaStateMachineNode(
+              elemInfo.element,
+              elemInfo.attributes,
+              elemInfo.typeInfo,
+              null);
+
+      if ( !stack.isEmpty() ) {
+        stack.get(stack.size() - 1)
+             .addPossibleNextState(elemInfo.stateMachineNode);
+      } else {
+        // This is the root node.
+        startNode = elemInfo.stateMachineNode;
+      }
+
+      stack.add(elemInfo.stateMachineNode);
+
+      parentElemName = null;
     }
   }
 

@@ -122,7 +122,7 @@ final class XmlSchemaWalker {
       substitutes = elemsBySubstGroup.get( element.getQName() );
 
       for (XmlSchemaVisitor visitor : visitors) {
-        visitor.onEnterSubstitutionGroup(element);
+        visitor.onEnterSubstitutionGroup(substGroupElem);
       }
 
       // Force a copy to change the min & max occurs.
