@@ -308,6 +308,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
         /* The attribute type is a union of other types.  Unions of unions are
          * not allowed, so we must add the NULL type to the existing union.
          */
+        // TODO: This is not allowed.  Need to create a new schema instead.
         attrSchema.getTypes().add( Schema.create(Schema.Type.NULL) );
       } else {
         ArrayList<Schema> unionTypes = new ArrayList<Schema>(2);

@@ -10,6 +10,8 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLClassLoader;
 
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.avro.Schema;
@@ -38,7 +40,7 @@ public class Main {
    * @param args
    * @throws IOException 
    */
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws Exception {
     Main main = new Main();
     System.out.println( main.getClasspathString() );
     System.out.println();
@@ -75,6 +77,7 @@ public class Main {
 
     XmlSchemaWalker walker = new XmlSchemaWalker(collection, avroVisitor);
 
+    /*
     long startContextWalk = System.currentTimeMillis();
     try {
       XmlSchemaElement context = getElementOf(collection, "context");
@@ -94,12 +97,28 @@ public class Main {
       long endCosWalk = System.currentTimeMillis();
       System.out.println("Walking the CostOfServices node took " + (endCosWalk - startCosWalk) + " milliseconds.");
     }
+    */
 
     long startXbrlWalk = System.currentTimeMillis();
     try {
       XmlSchemaElement xbrl = getElementOf(collection, "xbrl");
       walk(walker, avroVisitor, xbrl, "xbrl.avsc");
-      //walker.walk(xbrl);
+      XmlSchemaStateMachineGenerator smGen = new XmlSchemaStateMachineGenerator(avroVisitor.getSchema(), true);
+      avroVisitor.clear();
+      walker.removeVisitor(avroVisitor).addVisitor(smGen);
+      walker.walk(xbrl);
+      XmlSchemaStateMachineNode startNode = smGen.getStartNode();
+      XmlToAvroPathCreator pathCreator = new XmlToAvroPathCreator(startNode);
+
+      SAXParserFactory spf = SAXParserFactory.newInstance();
+      spf.setNamespaceAware(true);
+      SAXParser saxParser = spf.newSAXParser();
+      final File xsdFile = new File("C:\\Users\\Mike Pigott\\Google Drive\\workspace\\edgar_xbrl\\src\\test\\resources\\fds-20130228.xml");
+      saxParser.parse(xsdFile, pathCreator);
+
+      XmlSchemaPathNode rootPath =
+          pathCreator.getXmlSchemaDocumentPath();
+
     } finally {
       long endXbrlWalk = System.currentTimeMillis();
       System.out.println("Walking the xbrl node took " + (endXbrlWalk - startXbrlWalk) + " milliseconds.");
@@ -162,7 +181,6 @@ public class Main {
       }
     }
 
-    visitor.clear();
     walker.clear();
   }
 }
