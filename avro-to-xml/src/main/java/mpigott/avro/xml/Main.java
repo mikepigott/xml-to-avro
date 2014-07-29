@@ -43,12 +43,14 @@ public class Main {
   public static void main(String[] args) throws Exception {
     Main main = new Main();
     System.out.println( main.getClasspathString() );
+
+    /*
+    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
     System.out.println();
     System.out.println("[Start jvisualvm, and press any key when ready.]");
     System.out.println();
-
-    //BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-    //reader.readLine();
+    reader.readLine();
+    */
 
     //GraphGenerationVisitor visitor = new GraphGenerationVisitor();
     //NullVisitor nullVisitor = new NullVisitor();
