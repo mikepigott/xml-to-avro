@@ -254,7 +254,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       if (afterStart != null) {
         afterStart.setPreviousNode(clonedStartNode);
-        // TODO: clonedStartNode.setNextNode(afterStartPathIndex, afterStart);
+        clonedStartNode.setNextNode(afterStartPathIndex, afterStart);
         afterStart = clonedStartNode;
 
       } else {
@@ -517,7 +517,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         currentPosition.getChildren().put(0, childNode);
         currentPosition = childNode;
 
-        // TODO: currentPath.setNextNode(0, childPath);
+        currentPath.setNextNode(0, childPath);
         currentPath = childPath;
         currentPath.setIteration( childNode.getIteration() );
 
@@ -561,7 +561,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           throw new IllegalStateException("When searching for " + elemQName + ", received a set of path choices of size " + possiblePaths.size() + ", but the next path is null.");
         }
 
-        // TODO: followPath(nextPath);
+        followPath(nextPath);
 
       } else {
         // OR: If no paths are returned:
@@ -584,14 +584,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             continue;
           }
 
-          // TODO: unfollowPriorPath( priorPoint.getDecisionPoint() );
+          pathMgr.unfollowPath(priorPoint.getDecisionPoint());
 
           /* Walk through the traversedElements list again from that
            * index and see if we traverse through all of the elements
            * in the list, including this one.  If not, repeat step 2a,
            * removing decision points from the stack as we refute them.
            */
-          // TODO: followPath(nextPath);
+          followPath(nextPath);
 
           for (int index = priorPoint.traversedElementIndex + 1;
               index < traversedElements.size();
@@ -626,10 +626,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
               }
 
               // If we find (a) path(s) that match(es), success!  Follow it.
-              // TODO: followPath(nextPath);
+              followPath(nextPath);
 
             } else if ( te.traversal.equals(TraversedElement.Traversal.END) ) {
-              // TODO: walkUpTree(te.elemName);
+              walkUpTree(te.elemName);
 
             } else {
               throw new IllegalStateException("Unrecognized element traversal direction for " + te.elemName + " of " + te.traversal + '.');
@@ -738,7 +738,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
               currentPath,
               XmlSchemaPathNode.Direction.CONTENT);
 
-      // TODO: currentPath.setNextNode(-1, contentPath);
+      currentPath.setNextNode(-1, contentPath);
       currentPath = contentPath;
 
     } catch (Exception e) {
@@ -813,7 +813,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         }
       }
 
-      // TODO: walkUpTree(elemQName);
+      walkUpTree(elemQName);
 
       traversedElements.add(
           new TraversedElement(elemQName, TraversedElement.Traversal.END));
@@ -1101,6 +1101,234 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     List<PathSegment> choices = null;
 
+    switch (state.getNodeType()) {
+    case ELEMENT:
+      {
+        if (state.getElement().getQName().equals(elemQName)
+            && startNode.getIteration() < state.getMaxOccurs()) {
+
+          choices = new ArrayList<PathSegment>(1);
+          choices.add( createPathSegment(startNode) );
+
+        } else if ( state.getElement().getQName().equals(elemQName) ) {
+          System.err.println("Could not match " + elemQName + " because the current iteration " + startNode.getIteration() + " is greater than or equal to the max occurs " + state.getMaxOccurs());
+        }
+      }
+      break;
+
+    case SEQUENCE:
+      {
+        // Find the next one in the sequence that matches.
+        int position = startNode.getDocSequencePosition();
+
+        if (startNode.getDocIteration() > startNode.getMaxOccurs()) {
+          throw new IllegalStateException("Somehow the document iteration for " + startNode.getStateMachineNode() + " of " + startNode.getDocIteration() + " exceeds the maximum number of occurrences of " + startNode.getMaxOccurs());
+        } else if (startNode.getDocIteration() == startNode.getMaxOccurs()) {
+          ++position;
+        }
+
+        for (int stateIndex = position;
+            stateIndex
+              < startNode.getStateMachineNode().getPossibleNextStates().size();
+            ++stateIndex) {
+
+          // Process child.
+          final XmlSchemaPathNode nextPath =
+              pathMgr.addChildNodeToPath(startNode, stateIndex);
+
+          /* Both the tree node's and the document path node's state machine
+           * nodes should point to the same state machine node in memory.
+           */
+          if (nextPath.getIteration() > nextPath.getMaxOccurs()) {
+            throw new IllegalStateException("Reached a sequence group when searching for " + elemQName + " whose iteration at the current position (" + nextPath.getIteration() + ") was already maxed out (" + nextPath.getMaxOccurs() + ").  Was at position " + stateIndex + "; tree node's starting position was " + startNode.getDocSequencePosition());
+          }
+
+          final boolean reachedMinOccurs =
+              (nextPath.getIteration() >= nextPath.getMinOccurs());
+
+          final List<PathSegment> seqPaths =
+              find(nextPath, elemQName, currDepth + 1);
+
+          if (seqPaths != null) {
+            for (PathSegment seqPath : seqPaths) {
+              seqPath.prepend(startNode, stateIndex);
+            }
+
+            // nextPath was cloned by all path segments, so it can be recycled.
+            pathMgr.recyclePathNode(nextPath);
+
+            if (choices == null) {
+              choices = seqPaths;
+            } else {
+              choices.addAll(seqPaths);
+            }
+          }
+
+          if (!reachedMinOccurs) {
+
+            /* If we have not traversed this node in the sequence the minimum
+             * number of times, we cannot advance to the next node in the
+             * sequence.
+             */
+            break;
+          }
+        }
+
+        break;
+      }
+
+    case ALL:
+    case SUBSTITUTION_GROUP:
+    case CHOICE:
+      {
+        /* All groups only contain elements.  Find one that matches.
+         * The max-occurrence check will confirm it wasn't already selected.
+         *
+         * Choice groups may have multiple paths through its children
+         * which are valid.  In addition, a wild card ("any" element)
+         * may be a child of any group, thus creating another decision
+         * point.
+         */
+        for (int stateIndex = 0;
+            stateIndex < state.getPossibleNextStates().size();
+            ++stateIndex) {
+
+          final XmlSchemaStateMachineNode nextState =
+              state.getPossibleNextStates().get(stateIndex);
+
+          if (state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ALL)
+              && !nextState
+                   .getNodeType()
+                   .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+              && !nextState
+                   .getNodeType()
+                   .equals(XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP)
+              && !nextState
+                   .getNodeType()
+                   .equals(XmlSchemaStateMachineNode.Type.ANY)) {
+
+            throw new IllegalStateException("While searching for " + elemQName + ", encountered an All group which contained a child of type " + nextState.getNodeType() + '.');
+          }
+
+          final XmlSchemaPathNode nextPath =
+              pathMgr.addChildNodeToPath(startNode, stateIndex);
+
+          final List<PathSegment> choicePaths =
+              find(nextPath, elemQName, currDepth + 1);
+
+          if (choicePaths != null) {
+            for (PathSegment choicePath : choicePaths) {
+              choicePath.prepend(startNode, stateIndex);
+            }
+
+            // nextPath was cloned by all path segments, so it can be recycled.
+            pathMgr.recyclePathNode(nextPath);
+
+            if (choices == null) {
+              choices = choicePaths;
+            } else {
+              choices.addAll(choicePaths);
+            }
+          }
+        }
+
+        break;
+      }
+    case ANY:
+      {
+        /* If the XmlSchemaAny namespace and processing rules
+         * apply, this element matches.  False otherwise.
+         */
+        if (traversedElements.size() < 2) {
+          throw new IllegalStateException("Reached a wildcard element while searching for " + elemQName + ", but we've only seen " + traversedElements.size() + " element(s)!");
+        }
+
+        final XmlSchemaAny any = state.getAny();
+
+        if (any.getNamespace() == null) {
+          throw new IllegalStateException("The XmlSchemaAny element traversed when searching for " + elemQName + " does not have a namespace!");
+        }
+
+        boolean needTargetNamespace = false;
+        boolean matches = false;
+
+        List<String> validNamespaces = null;
+
+        if ( any.getNamespace().equals("##any") ) {
+          // Any namespace is valid.  This matches.
+          matches = true;
+
+        } else if ( any.getNamespace().equals("##other") ) {
+          needTargetNamespace = true;
+          validNamespaces = new ArrayList<String>(1);
+
+        } else {
+          final String[] namespaces = any.getNamespace().trim().split(" ");
+          validNamespaces = new ArrayList<String>(namespaces.length);
+          for (String namespace : namespaces) {
+            if (namespace.equals("##targetNamespace")) {
+              needTargetNamespace = true;
+
+            } else if (namespace.equals("##local")
+                && (elemQName.getNamespaceURI() == null)) {
+
+              matches = true;
+
+            } else {
+              validNamespaces.add(namespace);
+            }
+          }
+        }
+
+        if (!matches) {
+          /* At this time, it is not possible to determine the XmlSchemaAny's
+           * original target namespace without knowing the original element
+           * that owned it.  Likewise, unless the XmlSchemaAny's namespace is
+           * an actual namespace, or ##any, or ##local, there is no way to
+           * validate it.
+           *
+           * The work-around is to walk upwards through the tree and find
+           * the owning element, then use its namespace as the target
+           * namespace.
+           */
+          if (needTargetNamespace) {
+            XmlSchemaDocumentNode iter = startNode.getDocumentNode();
+            while ( !iter
+                      .getStateMachineNode()
+                      .getNodeType()
+                      .equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
+
+              iter = iter.getParent();
+
+              if (iter == null) {
+                throw new IllegalStateException("Walking up the StateMachineTreeWithState to determine the target namespace of a wildcard element, and reached the root without finding any elements.  Searching for " + elemQName + '.');
+              }
+            }
+
+            validNamespaces.add(
+              iter
+                .getStateMachineNode()
+                .getElement()
+                .getQName()
+                .getNamespaceURI());
+          }
+
+          matches = validNamespaces.contains( elemQName.getNamespaceURI() );
+        }
+
+        if (matches) {
+          choices = new ArrayList<PathSegment>(1);
+          choices.add( createPathSegment(startNode) );
+        }
+      }
+      break;
+    default:
+      throw new IllegalStateException("Unrecognized node type " + state.getNodeType() + " when processing element " + elemQName);
+    }
+
+    if (choices == null) {
+      pathMgr.recyclePathNode(startNode);
+    }
     return choices;
   }
 
@@ -1117,6 +1345,59 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return segment;
   }
 
+  /* Walks up the tree from the current element to the prior one.
+   * Confirms the provided QName matches the current one before traversing.
+   *
+   * If currElem is null, the current position must be a wildcard element.
+   */
+  private void walkUpTree(QName currElem) {
+    final XmlSchemaStateMachineNode state =
+        currentPath.getStateMachineNode();
+
+    switch (state.getNodeType()) {
+    case ANY:
+      break;
+    case ELEMENT:
+      if ( !state.getElement().getQName().equals(currElem) ) {
+        throw new IllegalStateException("We expected to walk upwards from element " + currElem + ", but our current element is " + state.getElement().getQName());
+      }
+      break;
+    default:
+      throw new IllegalStateException("We expected to walk upwards from element " + currElem + ", but our current position is in a node of type " + state.getNodeType());
+    }
+
+    XmlSchemaDocumentNode iter = currentPath.getDocumentNode();
+    XmlSchemaPathNode path = currentPath;
+
+    do {
+      if (iter.getIteration()
+            < iter.getStateMachineNode().getMaxOccurs()) {
+        break;
+      }
+
+      iter = iter.getParent();
+
+      if (iter == null) {
+        // We are exiting the root node.  Nothing to see here!
+        break;
+      }
+
+      final XmlSchemaPathNode nextPath =
+          pathMgr.addParentSiblingOrContentNodeToPath(
+              path,
+              XmlSchemaPathNode.Direction.PARENT);
+
+      path = nextPath;
+
+    } while (!iter
+                .getStateMachineNode()
+                .getNodeType()
+                .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
+
+    currentPath = path;
+    currentPosition = iter;
+  }
+
   private void recyclePathSegment(PathSegment segment) {
     if (unusedPathSegmentPool == null) {
       unusedPathSegmentPool = new ArrayList<PathSegment>();
@@ -1128,6 +1409,25 @@ final class XmlToAvroPathCreator extends DefaultHandler {
      */
 
     unusedPathSegmentPool.add(segment);
+  }
+
+  private void followPath(PathSegment path) {
+    switch (path.getEnd().getStateMachineNode().getNodeType()) {
+    case ELEMENT:
+    case ANY:
+      break;
+    default:
+      throw new IllegalStateException("Path does not end in an element or a wildcard element.");
+    }
+
+    // Join the start element with the new path.
+    XmlSchemaPathNode startNode = path.getStart();
+
+    if (path.getAfterStart() != null) {
+      startNode.setNextNode(path.getAfterStartPathIndex(), path.getAfterStart());
+    }
+
+    pathMgr.followPath(startNode);
   }
 
   /* Perhaps this would be better implemented as a bunch of starting and
