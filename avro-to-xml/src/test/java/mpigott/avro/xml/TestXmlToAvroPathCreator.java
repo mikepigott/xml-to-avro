@@ -197,7 +197,7 @@ public class TestXmlToAvroPathCreator {
     assertTrue(rootPath.getStateMachineNode() == root);
     assertNotNull( rootPath.getNext() );
 
-    // 3. To replace with something more sophisticated: draw a graph of the state machine.
+    /* To replace with something more sophisticated: draw a graph of the walked path.
     StringTemplateGroup templates = null;
     FileReader fr = null;
     try {
@@ -224,6 +224,56 @@ public class TestXmlToAvroPathCreator {
     fileSt.setAttribute("edges", edges);
 
     System.out.println( fileSt.toString() );
+    */
+  }
+
+  @Test
+  public void testGrandchildren() throws Exception {
+    final File xsdFile = new File("src\\test\\resources\\test3_grandchildren.xml");
+
+    try {
+      saxParser.parse(xsdFile, pathCreator);
+    } catch (SAXException e) {
+      e.printStackTrace();
+      throw e;
+    }
+
+    XmlSchemaPathNode rootPath =
+        pathCreator.getXmlSchemaDocumentPath();
+
+    XmlSchemaDocumentNode rootDoc = rootPath.getDocumentNode();
+
+    assertNotNull(rootPath);
+    assertNotNull(rootDoc);
+
+    // To replace with something more sophisticated: draw a graph of the walked path.
+    StringTemplateGroup templates = null;
+    FileReader fr = null;
+    try {
+      fr = new FileReader("C:\\Users\\Mike Pigott\\Google Drive\\workspace\\edgar_xbrl\\src\\main\\resources\\DOT.stg");
+      templates = new StringTemplateGroup(fr);
+    } finally {
+      try {
+        if (fr != null) {
+          fr.close();
+        }
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
+      }
+    }
+
+    ArrayList<StringTemplate> nodes = new ArrayList<StringTemplate>();
+    ArrayList<StringTemplate> edges = new ArrayList<StringTemplate>();
+
+    nextNode(rootPath, 0, nodes, edges, templates);
+
+    StringTemplate fileSt = templates.getInstanceOf("file");
+    fileSt.setAttribute("gname", "walked_path");
+    fileSt.setAttribute("nodes", nodes);
+    fileSt.setAttribute("edges", edges);
+
+    System.out.println( fileSt.toString() );
+
   }
 
   private int nextNode(XmlSchemaPathNode currNode, int nodeNum, ArrayList<StringTemplate> nodes, ArrayList<StringTemplate> edges, StringTemplateGroup templates) {

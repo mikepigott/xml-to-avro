@@ -648,8 +648,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
        */
       throw new RuntimeException("Error occurred while starting element " + elemQName + "; traversed path is " + getElementsTraversedAsString(), e);
     }
-
-    //System.err.println( currentPosition.getStateMachineNode().getElement().getQName() );
   }
 
   /**
@@ -782,7 +780,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
         // 1. Is this the element we are looking for?
         if (!state.getElement().getQName().equals(elemQName) ) {
-          throw new IllegalStateException("We are ending element " + traversedElements.get(traversedElements.size() - 1).elemName + " but our current position is for element " + state.getElement().getQName() + " !!");
+          throw new IllegalStateException("We are ending element " + elemQName + " but our current position is for element " + state.getElement().getQName() + " !!");
         }
 
         // 2. Check the element received the expected content, if any.
@@ -1088,7 +1086,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") should be greater than the tree node's iteration (" + startNode.getDocIteration() + ").  Current state machine position is " + state.getNodeType());
 
     } else if (state.getMaxOccurs() < startNode.getIteration()) {
-      System.err.println("Path to " + state.getNodeType() + " was already followed the max number of times.");
       return null;
     }
 
@@ -1115,8 +1112,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
           choices = new ArrayList<PathSegment>(1);
           choices.add( createPathSegment(startNode) );
 
-        } else if ( state.getElement().getQName().equals(elemQName) ) {
-          System.err.println("Could not match " + elemQName + " because the current iteration " + startNode.getIteration() + " is greater than or equal to the max occurs " + state.getMaxOccurs());
         }
       }
       break;
@@ -1420,8 +1415,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     }
 
     while ((iter != null)
-            && (!iter.getStateMachineNode().getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-                || !iter.getStateMachineNode().getElement().equals(element))) {
+            && !iter
+                  .getStateMachineNode()
+                  .getNodeType()
+                  .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
+
       iter = iter.getParent();
       if (iter != null) {
         final XmlSchemaPathNode nextPath =
@@ -1432,6 +1430,18 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         currentPath.setNextNode(-1, nextPath);
         currentPath = nextPath;
       }
+    }
+
+    if (!currentPath
+          .getStateMachineNode()
+          .getNodeType()
+          .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+        || !currentPath
+              .getStateMachineNode()
+              .getElement()
+              .getQName()
+              .equals(element)) {
+      throw new IllegalStateException("Walked up tree and stopped at node " + currentPath.getStateMachineNode() + ", which does not represent element " + element);
     }
   }
 
