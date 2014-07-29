@@ -117,7 +117,8 @@ final class XmlSchemaPathManager {
 
     final XmlSchemaDocumentNode docNode = startNode.getDocumentNode();
     if ((startNode.getDocumentNode() != null)
-        && (docNode.getChildren() != null)) {
+        && (docNode.getChildren() != null)
+        && docNode.getChildren().containsKey(branchIndex)) {
       next.setDocumentNode( docNode.getChildren().get(branchIndex) );
       next.setIteration(next.getDocIteration() + 1);
     } else {
@@ -132,8 +133,10 @@ final class XmlSchemaPathManager {
    * the nodes that follow it.  Unlinks from its previous node.
    */
   void recyclePathNode(XmlSchemaPathNode toRecycle) {
-    toRecycle.getPrevious().setNextNode(-1, null);
-    toRecycle.setPreviousNode(null);
+    if (toRecycle.getPrevious() != null) {
+      toRecycle.getPrevious().setNextNode(-1, null);
+      toRecycle.setPreviousNode(null);
+    }
 
     if (toRecycle.getNext() != null) {
       recyclePathNode(toRecycle.getNext());

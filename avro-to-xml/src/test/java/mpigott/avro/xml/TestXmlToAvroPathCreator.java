@@ -99,7 +99,7 @@ public class TestXmlToAvroPathCreator {
     pathCreator = new XmlToAvroPathCreator(root);
   }
 
-  @Test // @Ignore
+  @Test @Ignore
   public void testRoot() throws Exception {
     final File xsdFile = new File("src\\test\\resources\\test1_root.xml");
     saxParser.parse(xsdFile, pathCreator);
@@ -108,7 +108,7 @@ public class TestXmlToAvroPathCreator {
         pathCreator.getXmlSchemaDocumentPath();
 
     XmlSchemaDocumentNode rootDoc =
-        pathCreator.getXmlSchemaDocumentRoot();
+        rootPath.getDocumentNode();
 
     assertNotNull(rootPath);
     assertNotNull(rootDoc);
@@ -157,8 +157,7 @@ public class TestXmlToAvroPathCreator {
     XmlSchemaPathNode rootPath =
         pathCreator.getXmlSchemaDocumentPath();
 
-    XmlSchemaDocumentNode rootDoc =
-        pathCreator.getXmlSchemaDocumentRoot();
+    XmlSchemaDocumentNode rootDoc = rootPath.getDocumentNode();
 
     assertNotNull(rootPath);
     assertNotNull(rootDoc);

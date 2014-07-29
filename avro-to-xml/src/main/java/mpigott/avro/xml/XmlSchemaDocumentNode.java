@@ -34,7 +34,7 @@ final class XmlSchemaDocumentNode {
   }
 
   SortedMap<Integer, XmlSchemaDocumentNode> getChildren() {
-    return getChildren(children.size() - 1);
+    return getChildren(children.size());
   }
 
   SortedMap<Integer, XmlSchemaDocumentNode> getChildren(int iteration) {
@@ -110,7 +110,7 @@ final class XmlSchemaDocumentNode {
   }
 
   int getIteration() {
-    if (children.size() != visitors.size()) {
+    if ((children != null) && (children.size() != visitors.size())) {
       throw new IllegalStateException("The number of occurrences (" + children.size() + ") is not equal to the number of visitors (" + visitors.size() + ").");
     }
     return visitors.size();
@@ -125,7 +125,10 @@ final class XmlSchemaDocumentNode {
   }
 
   int getSequencePosition() {
-    if (children == null) {
+    if ((children == null)
+        || (!stateMachineNode
+              .getNodeType()
+              .equals(XmlSchemaStateMachineNode.Type.SEQUENCE))) {
       return -1;
     } else if (children.isEmpty()) {
       return 0;
@@ -152,8 +155,6 @@ final class XmlSchemaDocumentNode {
     } else {
       this.children =
           new ArrayList<SortedMap<Integer, XmlSchemaDocumentNode>>(1);
-
-      children.add(new TreeMap<Integer, XmlSchemaDocumentNode>());
     }
   }
 
