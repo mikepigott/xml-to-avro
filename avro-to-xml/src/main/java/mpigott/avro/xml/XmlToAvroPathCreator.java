@@ -811,6 +811,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
   @Override
   public void endDocument() throws SAXException {
+    if ( !elementStack.isEmpty() ) {
+      throw new IllegalStateException("Ended the document but " + elementStack.size() + " elements have not been closed.");
+    }
+
     pathMgr.clear();
 
     if (unusedPathSegmentPool != null) {
@@ -1083,15 +1087,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                  <= startNode.getDocIteration()) {
       throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") should be greater than the tree node's iteration (" + startNode.getDocIteration() + ").  Current state machine position is " + state.getNodeType());
 
-    /*} else if (state
-                 .getNodeType()
-                 .equals(XmlSchemaStateMachineNode.Type.SEQUENCE)
-        && (startNode.getIndexOfNextNodeState()
-            != startNode.getDocSequencePosition())) {
-
-      // TODO: Is this a good / valid check?
-      throw new IllegalStateException("While processing a sequence group in search of " + elemQName + ", the current position in the DocumentPathNode (" + startNode.getIndexOfNextNodeState() + ") was not kept up-to-date with the tree node's position in the sequence group (" + startNode.getDocSequencePosition() + ").");
-    */
     } else if (state.getMaxOccurs() < startNode.getIteration()) {
       System.err.println("Path to " + state.getNodeType() + " was already followed the max number of times.");
       return null;
@@ -1397,6 +1392,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
               path,
               XmlSchemaPathNode.Direction.PARENT);
 
+      path.setNextNode(-1, nextPath);
       path = nextPath;
 
     } while (!iter
@@ -1428,10 +1424,13 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                 || !iter.getStateMachineNode().getElement().equals(element))) {
       iter = iter.getParent();
       if (iter != null) {
-        currentPath =
+        final XmlSchemaPathNode nextPath =
             pathMgr.addParentSiblingOrContentNodeToPath(
                 currentPath,
                 XmlSchemaPathNode.Direction.PARENT);
+
+        currentPath.setNextNode(-1, nextPath);
+        currentPath = nextPath;
       }
     }
   }

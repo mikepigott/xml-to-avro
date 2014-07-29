@@ -22,12 +22,17 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 
+import javax.xml.namespace.QName;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.stream.StreamSource;
 
+import org.antlr.stringtemplate.StringTemplate;
+import org.antlr.stringtemplate.StringTemplateGroup;
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
@@ -191,6 +196,52 @@ public class TestXmlToAvroPathCreator {
     assertNull(rootPath.getPrevious());
     assertTrue(rootPath.getStateMachineNode() == root);
     assertNotNull( rootPath.getNext() );
+
+    // 3. To replace with something more sophisticated: draw a graph of the state machine.
+    StringTemplateGroup templates = null;
+    FileReader fr = null;
+    try {
+      fr = new FileReader("C:\\Users\\Mike Pigott\\Google Drive\\workspace\\edgar_xbrl\\src\\main\\resources\\DOT.stg");
+      templates = new StringTemplateGroup(fr);
+    } finally {
+      try {
+        if (fr != null) {
+          fr.close();
+        }
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
+      }
+    }
+
+    ArrayList<StringTemplate> nodes = new ArrayList<StringTemplate>();
+    ArrayList<StringTemplate> edges = new ArrayList<StringTemplate>();
+
+    nextNode(rootPath, 0, nodes, edges, templates);
+
+    StringTemplate fileSt = templates.getInstanceOf("file");
+    fileSt.setAttribute("gname", "walked_path");
+    fileSt.setAttribute("nodes", nodes);
+    fileSt.setAttribute("edges", edges);
+
+    System.out.println( fileSt.toString() );
+  }
+
+  private int nextNode(XmlSchemaPathNode currNode, int nodeNum, ArrayList<StringTemplate> nodes, ArrayList<StringTemplate> edges, StringTemplateGroup templates) {
+    int nextNum = nodeNum + 1;
+
+    StringBuilder nodeName = new StringBuilder( currNode.getDirection().toString() );
+    nodeName.append(' ').append( currNode.getStateMachineNode() );
+    nodeName.append(" [Iteration: ").append( currNode.getIteration() ).append(']');
+    nodeName.append(" [Next Node").append( currNode.getIndexOfNextNodeState() ).append(']');
+
+    nodes.add( getNodeSt(templates, "node" + nodeNum, nodeName.toString()) );
+
+    if (currNode.getNext() != null) {
+      edges.add( getEdgeSt(templates, "node" + nodeNum, "node" + nextNum) );
+      return nextNode(currNode.getNext(), nextNum, nodes, edges, templates);
+    } else {
+      return nextNum;
+    }
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
@@ -202,6 +253,20 @@ public class TestXmlToAvroPathCreator {
       }
     }
     return elem;
+  }
+
+  private StringTemplate getEdgeSt(StringTemplateGroup templates, String from, String to) {
+    StringTemplate edgeSt = templates.getInstanceOf("edge");
+    edgeSt.setAttribute("from", from);
+    edgeSt.setAttribute("to", to);
+    return edgeSt;
+  }
+
+  private StringTemplate getNodeSt(StringTemplateGroup templates, String name, String text) {
+    StringTemplate tmpl = templates.getInstanceOf("node");
+    tmpl.setAttribute("name", name);
+    tmpl.setAttribute("text", text.replace('\"', '\''));
+    return tmpl;
   }
 
   private SAXParser saxParser;
