@@ -72,6 +72,10 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     startNode = null;
   }
 
+  XmlSchemaStateMachineNode getStartNode() {
+    return startNode;
+  }
+
   /**
    * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo, boolean)
    */
@@ -159,12 +163,13 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   public void onEnterSubstitutionGroup(XmlSchemaElement base) {
     if ( stack.isEmpty() ) {
       // The root element is the base of a substitution group.
-      XmlSchemaStateMachineNode node =
+      startNode =
           new XmlSchemaStateMachineNode(
               XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
               null,
               base.getMinOccurs(),
               base.getMaxOccurs());
+      stack.add(startNode);
     } else {
       pushGroup(
           XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
@@ -289,6 +294,9 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
       if ( !stack.isEmpty() ) {
         stack.get(stack.size() - 1)
              .addPossibleNextState(elemInfo.stateMachineNode);
+      } else {
+        // This is the root node.
+        startNode = elemInfo.stateMachineNode;
       }
 
       stack.add(elemInfo.stateMachineNode);
