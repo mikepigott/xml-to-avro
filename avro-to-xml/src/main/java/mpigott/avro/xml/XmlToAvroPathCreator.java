@@ -769,11 +769,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     final QName elemQName = new QName(uri, localName);
 
     try {
-      verifyCurrentPositionIsAtElement("Ended element " + elemQName);
-
       if ( !elementStack.get(elementStack.size() - 1).equals(elemQName) ) {
         throw new IllegalStateException("Attempting to end element " + elemQName + " but the stack is expecting " + elementStack.get(elementStack.size() - 1));
       }
+
+      walkUpToElement(elemQName);
 
       final XmlSchemaStateMachineNode state =
           currentPath.getStateMachineNode();
@@ -826,7 +826,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return rootPathNode;
   }
 
-  private boolean isCurrentPositionFulfilled(List<Integer> possiblePaths) {
+  private boolean isPositionFulfilled(
+      XmlSchemaPathNode currentPath,
+      List<Integer> possiblePaths) {
 
     final XmlSchemaStateMachineNode state = currentPath.getStateMachineNode();
 
@@ -960,7 +962,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     final ArrayList<Integer> childrenNodes =
         new ArrayList<Integer>();
-    final boolean isFulfilled = isCurrentPositionFulfilled(childrenNodes);
+    final boolean isFulfilled =
+        isPositionFulfilled(startNode, childrenNodes);
 
     // First, try searching down the tree.
     List<PathSegment> choices = null;
@@ -993,10 +996,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       // Try siblings.
       if (startNode.getIteration() < startNode.getMaxOccurs()) {
-        XmlSchemaPathNode siblingPath =
+        final XmlSchemaPathNode siblingPath =
             pathMgr.addParentSiblingOrContentNodeToPath(
                 startNode,
                 XmlSchemaPathNode.Direction.SIBLING);
+        siblingPath.setIteration(startNode.getIteration() + 1);
 
         currChoices = find(siblingPath, elemQName, 0);
         if (currChoices != null) {
@@ -1012,71 +1016,46 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         }
       }
 
-      // Try parents.
+      // Try parent.
       if (startNode.getDocumentNode().getParent() == null) {
         // This is the root element; there is no parent.
         return choices;
       }
 
-      ArrayList<XmlSchemaPathNode> parentPathStack =
-          new ArrayList<XmlSchemaPathNode>();
-
-      parentPathStack.add(startNode);
-
-      XmlSchemaPathNode path =
+      final XmlSchemaPathNode path =
           pathMgr.addParentSiblingOrContentNodeToPath(
               startNode,
               XmlSchemaPathNode.Direction.PARENT);
 
-      parentPathStack.add(path);
-
-      /* We may continue traversing up the tree and collecting
-       * choices until we reach our owning element.
-       */
-      while (!path
-                .getStateMachineNode()
-                .getNodeType()
-                .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-               || !path
-                     .getStateMachineNode()
-                     .getElement()
-                     .getQName()
-                     .equals(elementStack.get(elementStack.size() - 1))) {
-
-        currChoices = find(path, elemQName, 0);
-
-        if (currChoices != null) {
-          for (PathSegment currChoice : currChoices) {
-
-            for (int parentIndex = parentPathStack.size() - 2;
-                parentIndex >= 0;
-                --parentIndex) {
-
-              /* We need to prepend all of the nodes in the path that we
-               * traversed to get to this level.  The most recent node
-               * we traversed was already prepended, so we start from
-               * the one before it.
-               */
-              currChoice.prepend(parentPathStack.get(parentIndex), -1);
-            }
-          }
-
-          if (choices == null) {
-            choices = currChoices;
-          } else {
-            choices.addAll(currChoices);
-          }
-        }
-
-        final XmlSchemaPathNode nextPath =
-            pathMgr.addParentSiblingOrContentNodeToPath(
-                path,
-                XmlSchemaPathNode.Direction.PARENT);
-
-        path = nextPath;
-        parentPathStack.add(path);
+      if (path
+          .getStateMachineNode()
+          .getNodeType()
+          .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+          && path
+             .getStateMachineNode()
+             .getElement()
+             .getQName()
+             .equals(elementStack.get(elementStack.size() - 1))) {
+          return choices;
       }
 
+      final List<PathSegment> pathsOfParent =
+          find(path, elemQName);
+
+      if (pathsOfParent != null) {
+        for (PathSegment choice : pathsOfParent) {
+          choice.prepend(startNode, -1);
+        }
+
+        if (choices == null) {
+          choices = currChoices;
+        } else {
+          choices.addAll(currChoices);
+        }
+      } else {
+        // path would not have been recycled at a lower level.
+        pathMgr.recyclePathNode(path);
+      }
     }
 
     return choices;
@@ -1426,6 +1405,35 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                 .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
 
     currentPath = path;
+  }
+
+  private void walkUpToElement(QName element) {
+    XmlSchemaDocumentNode iter = currentPath.getDocumentNode();
+    XmlSchemaPathNode path = currentPath;
+
+    if (iter
+          .getStateMachineNode()
+          .getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+          && iter
+               .getStateMachineNode()
+               .getElement()
+               .getQName()
+               .equals(element)) {
+      // We are already at the element!
+      return;
+    }
+
+    while ((iter != null)
+            && (!iter.getStateMachineNode().getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+                || !iter.getStateMachineNode().getElement().equals(element))) {
+      iter = iter.getParent();
+      if (iter != null) {
+        currentPath =
+            pathMgr.addParentSiblingOrContentNodeToPath(
+                currentPath,
+                XmlSchemaPathNode.Direction.PARENT);
+      }
+    }
   }
 
   private void followPath(PathSegment path) {

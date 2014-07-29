@@ -99,7 +99,7 @@ public class TestXmlToAvroPathCreator {
     pathCreator = new XmlToAvroPathCreator(root);
   }
 
-  @Test @Ignore
+  @Test
   public void testRoot() throws Exception {
     final File xsdFile = new File("src\\test\\resources\\test1_root.xml");
     saxParser.parse(xsdFile, pathCreator);
@@ -166,10 +166,6 @@ public class TestXmlToAvroPathCreator {
         (rootDoc.getChildren() != null)
         && !rootDoc.getChildren().isEmpty());
 
-    for (int i = 0; i < rootDoc.getChildren().size(); ++i) {
-      System.out.println( rootDoc.getChildren().get(i).getStateMachineNode().getNodeType() );
-    }
-
     assertEquals(1, rootDoc.getChildren().size());
     assertEquals(1, rootDoc.getIteration());
     assertEquals(-1, rootDoc.getSequencePosition());
@@ -188,14 +184,13 @@ public class TestXmlToAvroPathCreator {
         rootPath.getDirection());
 
     assertTrue(rootPath.getDocumentNode() == rootDoc);
-    assertEquals(-1, rootPath.getIndexOfNextNodeState());
+    assertEquals(0, rootPath.getIndexOfNextNodeState());
 
     assertEquals(1, rootPath.getIteration());
 
     assertNull(rootPath.getPrevious());
     assertTrue(rootPath.getStateMachineNode() == root);
     assertNotNull( rootPath.getNext() );
-
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {

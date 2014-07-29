@@ -117,9 +117,9 @@ final class XmlSchemaPathManager {
 
     final XmlSchemaDocumentNode docNode = startNode.getDocumentNode();
     if ((startNode.getDocumentNode() != null)
-        && (docNode.getChildren() != null)
+        && (docNode.getChildren(startNode.getIteration()) != null)
         && docNode.getChildren().containsKey(branchIndex)) {
-      next.setDocumentNode( docNode.getChildren().get(branchIndex) );
+      next.setDocumentNode( docNode.getChildren(startNode.getIteration()).get(branchIndex) );
       next.setIteration(next.getDocIteration() + 1);
     } else {
       next.setIteration(1);
