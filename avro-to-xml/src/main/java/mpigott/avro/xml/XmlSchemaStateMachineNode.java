@@ -85,10 +85,6 @@ final class XmlSchemaStateMachineNode {
    *                 {@link Type#SUBSTITUTION_GROUP}, {@link Type#CHOICE},
    *                 {@link Type#SEQUENCE}, or {@link Type#ANY}).
    *
-   * @param avroSchema The Avro {@link Schema} representing this group,
-   *                   or <code>null</code> if no element from this group
-   *                   should be written to the Avro document.
-   *
    * @param minOccurs The minimum number of occurrences of this group.
    * @param maxOccurs The maximum number of occurrences of this group.
    *
@@ -98,7 +94,6 @@ final class XmlSchemaStateMachineNode {
    */
   XmlSchemaStateMachineNode(
       Type nodeType,
-      Schema avroSchema,
       long minOccurs,
       long maxOccurs) {
 
@@ -111,7 +106,6 @@ final class XmlSchemaStateMachineNode {
     this.nodeType = nodeType;
     this.minOccurs = minOccurs;
     this.maxOccurs = maxOccurs;
-    this.avroSchema = avroSchema;
 
     this.element = null;
     this.attributes = null;
@@ -131,16 +125,11 @@ final class XmlSchemaStateMachineNode {
    *
    * @param typeInfo The type information, if the element has simple content.
    *                 <code>null</code> if not.
-   *
-   * @param avroSchema The Avro {@link Schema} representing this Element, or
-   *                   or <code>null</code> if this element should not be
-   *                   written to the Avro document.
    */
   XmlSchemaStateMachineNode(
       XmlSchemaElement elem,
       List<Attribute> attrs,
-      XmlSchemaTypeInfo typeInfo,
-      Schema avroSchema)
+      XmlSchemaTypeInfo typeInfo)
   {
     this.nodeType = Type.ELEMENT;
     this.element = elem;
@@ -148,7 +137,6 @@ final class XmlSchemaStateMachineNode {
     this.typeInfo = typeInfo;
     this.minOccurs = elem.getMinOccurs();
     this.maxOccurs = elem.getMaxOccurs();
-    this.avroSchema = avroSchema;
 
     this.any = null;
 
@@ -169,7 +157,6 @@ final class XmlSchemaStateMachineNode {
     this.element = null;
     this.attributes = null;
     this.typeInfo = null;
-    this.avroSchema = null;
 
     this.possibleNextStates = new ArrayList<XmlSchemaStateMachineNode>();
   }
@@ -231,18 +218,6 @@ final class XmlSchemaStateMachineNode {
    */
   XmlSchemaAny getAny() {
     return any;
-  }
-
-  /**
-   * Returns the Avro {@link Schema} associated with this node.
-   *
-   * <p>
-   * This will only be <code>null</code> if the corresponding
-   * node in the XML document should not be written to Avro.
-   * </p>
-   */
-  Schema getAvroSchema() {
-    return avroSchema;
   }
 
   /**
@@ -362,19 +337,15 @@ final class XmlSchemaStateMachineNode {
     StringBuilder name = new StringBuilder( nodeType.name() );
     switch (nodeType) {
     case ELEMENT:
-      name.append(": ").append( element.getQName() ).append(" (");
-      if (avroSchema != null) {
-        name.append(avroSchema.getType());
-      } else {
-        name.append("null");
-      }
-      name.append("), [").append(minOccurs).append(", ");
+      name.append(": ").append( element.getQName() ).append(" [");
+      name.append(minOccurs).append(", ");
       name.append(maxOccurs).append("]");
       break;
     case ANY:
       name.append(": NS: \"").append( any.getNamespace() ).append("\", ");
       name.append("Processing: ").append( any.getProcessContent() );
       name.append(" [").append(minOccurs).append(", ").append(maxOccurs);
+      name.append(']');
       break;
     default:
       name.append(" [").append(minOccurs).append(", ").append(maxOccurs);
@@ -388,8 +359,6 @@ final class XmlSchemaStateMachineNode {
     result = prime * result + ((any == null) ? 0 : any.hashCode());
     result = prime * result
         + ((attributes == null) ? 0 : attributes.hashCode());
-    result = prime * result
-        + ((avroSchema == null) ? 0 : avroSchema.hashCode());
     result = prime * result + ((element == null) ? 0 : element.hashCode());
     result = prime * result + (int) (maxOccurs ^ (maxOccurs >>> 32));
     result = prime * result + (int) (minOccurs ^ (minOccurs >>> 32));
@@ -412,13 +381,6 @@ final class XmlSchemaStateMachineNode {
         return false;
       }
     } else if (!attributes.equals(other.attributes)) {
-      return false;
-    }
-    if (avroSchema == null) {
-      if (other.avroSchema != null) {
-        return false;
-      }
-    } else if (!avroSchema.equals(other.avroSchema)) {
       return false;
     }
     if (element == null) {
@@ -454,7 +416,6 @@ final class XmlSchemaStateMachineNode {
   private final long minOccurs;
   private final long maxOccurs;
   private final XmlSchemaAny any;
-  private final Schema avroSchema;
 
   private List<XmlSchemaStateMachineNode> possibleNextStates;
 }

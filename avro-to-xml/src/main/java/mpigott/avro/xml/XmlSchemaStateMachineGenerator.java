@@ -167,7 +167,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
       startNode =
           new XmlSchemaStateMachineNode(
               XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP,
-              null,
               base.getMinOccurs(),
               base.getMaxOccurs());
       stack.add(startNode);
@@ -285,7 +284,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     final XmlSchemaStateMachineNode node =
         new XmlSchemaStateMachineNode(
             groupType,
-            null,
             minOccurs,
             maxOccurs);
 
@@ -325,8 +323,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
           new XmlSchemaStateMachineNode(
               elemInfo.element,
               elemInfo.attributes,
-              elemInfo.typeInfo,
-              null);
+              elemInfo.typeInfo);
 
       if ( !stack.isEmpty() ) {
         stack.get(stack.size() - 1)
