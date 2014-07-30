@@ -16,11 +16,15 @@
 
 package mpigott.avro.xml;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.namespace.QName;
+
 import org.apache.avro.Schema;
+import org.apache.ws.commons.schema.XmlSchemaContentType;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
@@ -38,12 +42,23 @@ import org.codehaus.jackson.node.ObjectNode;
  *
  * @author  Mike Pigott
  */
-final class XmlSchemaTypeInfo {
+final class XmlSchemaTypeInfo implements Cloneable {
+
+  enum Type {
+    LIST,
+    UNION,
+    RESTRICTION,
+    SIMPLE;
+  }
 
   XmlSchemaTypeInfo(Schema avroType, JsonNode xmlType) {
     this.avroSchemaType = avroType;
     this.xmlSchemaType = xmlType;
     this.facets = null;
+    this.contentType = null;
+    this.baseSimpleType = null;
+    this.userRecognizedType = null;
+    this.childTypes = null;
   }
 
   XmlSchemaTypeInfo(
@@ -53,6 +68,57 @@ final class XmlSchemaTypeInfo {
 
     this(avroType, xmlType);
     this.facets = facets;
+  }
+
+  XmlSchemaTypeInfo(XmlSchemaTypeInfo listType) {
+    type = Type.LIST;
+    childTypes = new ArrayList<XmlSchemaTypeInfo>(1);
+    childTypes.add(listType);
+  }
+
+  XmlSchemaTypeInfo(List<XmlSchemaTypeInfo> unionTypes) {
+    type = Type.UNION;
+    childTypes = unionTypes;
+  }
+
+  XmlSchemaTypeInfo(
+      QName baseSimpleType,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
+
+    type = Type.RESTRICTION;
+    this.baseSimpleType = baseSimpleType;
+  }
+
+  XmlSchemaTypeInfo(QName typeName) {
+    type = Type.SIMPLE;
+  }
+
+  public XmlSchemaTypeInfo clone() {
+    XmlSchemaTypeInfo clone = null;
+
+    switch (type) {
+    case LIST:
+      clone = new XmlSchemaTypeInfo(childTypes.get(0));
+      break;
+    case UNION:
+      clone = new XmlSchemaTypeInfo(childTypes);
+      break;
+    case RESTRICTION:
+      // TODO: Confirm this is correct.
+      clone = new XmlSchemaTypeInfo(baseSimpleType, facets);
+      break;
+    case SIMPLE:
+      clone = new XmlSchemaTypeInfo(baseSimpleType);
+      break;
+    default:
+      throw new IllegalStateException("Unrecognized type for XmlSchemaTypeInfo of " + type);
+    }
+
+    if (userRecognizedType != null) {
+      clone.setUserRecognizedType(userRecognizedType);
+    }
+
+    return clone;
   }
 
   Schema getAvroType() {
@@ -108,58 +174,17 @@ final class XmlSchemaTypeInfo {
     return type;
   }
 
-  /**
-   * Computes a hash code for this {@link XmlSchemaTypeInfo} instance.
-   *
-   * @see java.lang.Object#hashCode()
-   */
-  @Override
-  public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result
-        + ((avroSchemaType == null) ? 0 : avroSchemaType.hashCode());
-    result = prime * result + ((facets == null) ? 0 : facets.hashCode());
-    return result;
-  }
-
-  /**
-   * Determines of this instance of <code>XmlSchemaTypeInfo</code>
-   * is equal to another instance of <code>XmlSchemaTypeInfo</code>.
-   * The XML Schema JSON nodes are not compared in making this decision.
-   *
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (!(obj instanceof XmlSchemaTypeInfo)) {
-      return false;
-    }
-    XmlSchemaTypeInfo other = (XmlSchemaTypeInfo) obj;
-    if (avroSchemaType == null) {
-      if (other.avroSchemaType != null) {
-        return false;
-      }
-    } else if (!avroSchemaType.equals(other.avroSchemaType)) {
-      return false;
-    }
-    if (facets == null) {
-      if (other.facets != null) {
-        return false;
-      }
-    } else if (!facets.equals(other.facets)) {
-      return false;
-    }
-    return true;
+  void setUserRecognizedType(QName userRecType) {
+    userRecognizedType = userRecType;
   }
 
   private Schema avroSchemaType;
   private JsonNode xmlSchemaType;
+
+  private Type type;
   private HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets;
+  private XmlSchemaContentType contentType;
+  private QName baseSimpleType;
+  private QName userRecognizedType;
+  private List<XmlSchemaTypeInfo> childTypes;
 }
