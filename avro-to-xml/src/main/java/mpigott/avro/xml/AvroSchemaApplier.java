@@ -323,11 +323,11 @@ final class AvroSchemaApplier {
 
   private void processChildren(XmlSchemaDocumentNode<Schema> doc) {
     for (int iteration = 1; iteration <= doc.getIteration(); ++iteration) {
-      final SortedMap<Integer, XmlSchemaDocumentNode> children =
+      final SortedMap<Integer, XmlSchemaDocumentNode<Schema>> children =
           doc.getChildren(iteration);
 
       if (children != null) {
-        for (Map.Entry<Integer, XmlSchemaDocumentNode> child :
+        for (Map.Entry<Integer, XmlSchemaDocumentNode<Schema>> child :
               children.entrySet()) {
           apply(child.getValue());
         }

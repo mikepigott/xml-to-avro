@@ -131,7 +131,7 @@ public class TestAvroSchemaApplier {
     assertEquals(7, numElemsProcessed);
   }
 
-  private int checkDoc(XmlSchemaDocumentNode doc) {
+  private int checkDoc(XmlSchemaDocumentNode<Schema> doc) {
     int numElemsProcessed = 0;
     if (doc
           .getStateMachineNode()
@@ -144,11 +144,12 @@ public class TestAvroSchemaApplier {
     }
 
     for (int iter = 1; iter <= doc.getIteration(); ++iter) {
-      final SortedMap<Integer, XmlSchemaDocumentNode> children =
+      final SortedMap<Integer, XmlSchemaDocumentNode<Schema>> children =
           doc.getChildren(iter);
 
       if (children != null) {
-        for (Map.Entry<Integer, XmlSchemaDocumentNode> child : children.entrySet()) {
+        for (Map.Entry<Integer, XmlSchemaDocumentNode<Schema>> child :
+              children.entrySet()) {
           numElemsProcessed += checkDoc( child.getValue() );
         }
       }

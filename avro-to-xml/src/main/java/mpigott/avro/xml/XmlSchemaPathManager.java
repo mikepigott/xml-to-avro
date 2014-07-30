@@ -296,7 +296,7 @@ final class XmlSchemaPathManager<U> {
       }
 
       if (node.getChildren() != null) {
-        for (Map.Entry<Integer, XmlSchemaDocumentNode> child :
+        for (Map.Entry<Integer, XmlSchemaDocumentNode<U>> child :
                 node.getChildren().entrySet()) {
           recycleDocumentNode(child.getValue());
         }

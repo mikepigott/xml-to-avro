@@ -34,7 +34,7 @@ final class XmlSchemaDocumentNode<U> {
     return parent;
   }
 
-  SortedMap<Integer, XmlSchemaDocumentNode> getChildren() {
+  SortedMap<Integer, XmlSchemaDocumentNode<U>> getChildren() {
     if (children == null) {
       return null;
     } else {
@@ -42,7 +42,7 @@ final class XmlSchemaDocumentNode<U> {
     }
   }
 
-  SortedMap<Integer, XmlSchemaDocumentNode> getChildren(int iteration) {
+  SortedMap<Integer, XmlSchemaDocumentNode<U>> getChildren(int iteration) {
     if ((children == null)
           || (children.size() < iteration)
           || (iteration < 1)) {
@@ -82,7 +82,7 @@ final class XmlSchemaDocumentNode<U> {
 
     if (children != null) { 
       if (children.size() == visitors.size()) {
-        children.add( new TreeMap<Integer, XmlSchemaDocumentNode>() );
+        children.add( new TreeMap<Integer, XmlSchemaDocumentNode<U>>() );
       } else {
         throw new IllegalStateException("Attempted to add a new visitor when the number of occurrences (" + children.size() + ") did not match the number of existing visitors (" + visitors.size() + ").");
       }
@@ -161,7 +161,7 @@ final class XmlSchemaDocumentNode<U> {
 
     } else {
       this.children =
-          new ArrayList<SortedMap<Integer, XmlSchemaDocumentNode>>(1);
+          new ArrayList<SortedMap<Integer, XmlSchemaDocumentNode<U>>>(1);
     }
   }
 
@@ -175,7 +175,7 @@ final class XmlSchemaDocumentNode<U> {
 
   private XmlSchemaStateMachineNode stateMachineNode;
   private XmlSchemaDocumentNode parent;
-  private List<SortedMap<Integer, XmlSchemaDocumentNode>> children;
+  private List<SortedMap<Integer, XmlSchemaDocumentNode<U>>> children;
   private List<XmlSchemaPathNode> visitors;
   private boolean receivedContent;
   private U userDefinedContent;
