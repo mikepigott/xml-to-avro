@@ -299,7 +299,7 @@ final class AvroSchemaApplier {
         /* The XML Schema Attribute may have already been a union, so we
          * need to walk all of the subtypes and pull out the non-NULL ones.
          */
-        ArrayList<Schema> subset =
+        final ArrayList<Schema> subset =
             new ArrayList<Schema>(attrType.getTypes().size() - 1);
 
         for (Schema unionSchema : attrType.getTypes()) {

@@ -138,6 +138,16 @@ public class TestAvroSchemaApplier {
           .getNodeType()
           .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
       assertNotNull( doc.getUserDefinedContent() );
+
+      final Schema schema = doc.getUserDefinedContent();
+      assertTrue(
+          schema.getType().equals(Schema.Type.RECORD)
+          || schema.getType().equals(Schema.Type.MAP));
+
+      assertEquals(
+          doc.getStateMachineNode().getElement().getName(),
+          schema.getName());
+
       ++numElemsProcessed;
     } else {
       assertNull( doc.getUserDefinedContent() );

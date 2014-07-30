@@ -16,13 +16,14 @@ import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaComplexType;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import junit.framework.TestCase;
 
 public class GraphVisTest extends TestCase {
 
-  @Test
+  @Test @Ignore
   public void test() throws IOException {
     GraphGenerationVisitor visitor = new GraphGenerationVisitor();
 
