@@ -25,8 +25,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
+import javax.xml.namespace.QName;
+
 import org.apache.avro.Schema;
+import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.XmlSchemaUse;
 
 /**
  * Applies an Avro schema to a tree described
@@ -92,9 +96,25 @@ final class AvroSchemaApplier {
   }
 
   void apply(XmlSchemaDocumentNode<Schema> docNode) {
+    switch (docNode.getStateMachineNode().getNodeType()) {
+    case ELEMENT:
+      processElement(docNode);
+      break;
+    case ALL:
+    case CHOICE:
+    case SEQUENCE:
+    case SUBSTITUTION_GROUP:
+      processGroup(docNode);
+      break;
+    case ANY:
+      // Ignored
+      break;
+    default:
+      throw new IllegalArgumentException("Document node has an unrecognized type of " + docNode.getStateMachineNode().getNodeType() + '.');
+    }
   }
 
-  private void handleElement(XmlSchemaDocumentNode doc) {
+  private void processElement(XmlSchemaDocumentNode<Schema> doc) {
     if (!doc
            .getStateMachineNode()
            .getNodeType()
@@ -155,7 +175,17 @@ final class AvroSchemaApplier {
     Schema unionOfChildrenTypes = null;
 
     if (elemSchema != null) {
-      doc.setUserDefinedContent(elemSchema);
+      final List<XmlSchemaStateMachineNode.Attribute> attributes =
+          doc.getStateMachineNode().getAttributes();
+
+      // Match the element's attributes against the element's schema.
+      for (XmlSchemaStateMachineNode.Attribute attribute : attributes) {
+        processAttribute(
+            element.getQName(),
+            elemSchema,
+            attribute.getAttribute(),
+            attribute.getType());
+      }
 
       /* Child elements are in a field under the same name as the element.
        *
@@ -183,7 +213,10 @@ final class AvroSchemaApplier {
         case ARRAY:
           {
             // All group types are ARRAY of UNION of MAP/RECORD.
-            if ( !childrenSchema.getElementType().getType().equals(Schema.Type.UNION) ) {
+            if ( !childrenSchema
+                    .getElementType()
+                    .getType()
+                    .equals(Schema.Type.UNION) ) {
               throw new IllegalStateException("If the children of " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName() + " are in a group, the corresponding Avro Schema MUST BE an ARRAY of UNION of MAPs/RECORDs, not " + childrenSchema.getElementType().getType());
             }
 
@@ -213,6 +246,8 @@ final class AvroSchemaApplier {
           throw new IllegalStateException("Children of element " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName() + " must be either an ARRAY of UNION of MAP/RECORD or a primitive type, not " + childrenSchema.getType());
         }
       }
+
+      doc.setUserDefinedContent(elemSchema);
     }
 
     /* If the root schema is an ARRAY of UNION, then the next valid
@@ -228,19 +263,65 @@ final class AvroSchemaApplier {
     }
 
     // Process the children, if any.
-    processChildren(doc, unionOfChildrenTypes);
+    if (unionOfChildrenTypes != null) {
+      unionOfValidElementsStack.add(unionOfChildrenTypes);
+      processChildren(doc);
+      unionOfValidElementsStack.remove(unionOfValidElementsStack.size() - 1);
+    }
   }
 
-  private void processChildren(
-      XmlSchemaDocumentNode doc,
-      Schema unionOfChildrenTypes) {
+  private void processAttribute(
+      QName elementName,
+      Schema elementSchema,
+      XmlSchemaAttribute attribute,
+      XmlSchemaTypeInfo attributeType) {
 
-    if (unionOfChildrenTypes == null) {
-      return;
+    Schema valueType = elementSchema;
+    if ( valueType.getType().equals(Schema.Type.MAP) ) {
+      valueType = valueType.getValueType();
     }
 
-    unionOfValidElementsStack.add(unionOfChildrenTypes);
+    final Schema.Field attrField = valueType.getField( attribute.getName() );
 
+    if (xmlIsWritten
+        && (attrField == null)
+        && !attribute.getUse().equals(XmlSchemaUse.OPTIONAL)
+        && !attribute.getUse().equals(XmlSchemaUse.PROHIBITED)) {
+      throw new IllegalStateException("Element " + elementName + " has a " + attribute.getUse() + " attribute named " + attribute.getQName() + " - when writing to XML, a field in the Avro record must exist.");
+    }
+
+    if (attrField != null) {
+      Schema attrType = attrField.schema();
+
+      if ( attribute.getUse().equals(XmlSchemaUse.OPTIONAL) 
+          && attrType.getType().equals(Schema.Type.UNION) ) {
+
+        /* The XML Schema Attribute may have already been a union, so we
+         * need to walk all of the subtypes and pull out the non-NULL ones.
+         */
+        ArrayList<Schema> subset =
+            new ArrayList<Schema>(attrType.getTypes().size() - 1);
+
+        for (Schema unionSchema : attrType.getTypes()) {
+          if ( !unionSchema.getType().equals(Schema.Type.NULL) ) {
+            subset.add(unionSchema);
+          }
+        }
+
+        if (subset.size() == 1) {
+          attrType = subset.get(0);
+        } else {
+          attrType = Schema.createUnion(subset);
+        }
+      }
+
+      if (!confirmEquivalent(attributeType, attrType)) {
+        throw new IllegalStateException("Cannot convert element " + elementName + " attribute " + attribute.getQName() + " types between " + attributeType + " and " + attrField.schema());
+      }
+    }
+  }
+
+  private void processChildren(XmlSchemaDocumentNode<Schema> doc) {
     for (int iteration = 1; iteration <= doc.getIteration(); ++iteration) {
       final SortedMap<Integer, XmlSchemaDocumentNode> children =
           doc.getChildren(iteration);
@@ -252,8 +333,22 @@ final class AvroSchemaApplier {
         }
       }
     }
+  }
 
-    unionOfValidElementsStack.remove(unionOfValidElementsStack.size() - 1);
+  private void processGroup(XmlSchemaDocumentNode<Schema> doc) {
+    /* The union of valid types is already on the stack from
+     * the owning element.  We just need to walk the children.
+     */
+    switch( doc.getStateMachineNode().getNodeType() ) {
+    case SUBSTITUTION_GROUP:
+    case ALL:
+    case CHOICE:
+    case SEQUENCE:
+      processChildren(doc);
+      break;
+    default:
+      throw new IllegalStateException("Attempted to process a group, but the document node is of type " + doc.getStateMachineNode().getNodeType());
+    }
   }
 
   // Confirms the root-level Schema is a UNION of MAPs, RECORDs, or both.

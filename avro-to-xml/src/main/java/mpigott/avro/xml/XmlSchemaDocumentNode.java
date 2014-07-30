@@ -43,7 +43,9 @@ final class XmlSchemaDocumentNode<U> {
   }
 
   SortedMap<Integer, XmlSchemaDocumentNode> getChildren(int iteration) {
-    if ((children.size() < iteration) || (iteration < 1)) {
+    if ((children == null)
+          || (children.size() < iteration)
+          || (iteration < 1)) {
       return null;
     } else {
       return children.get(iteration - 1);

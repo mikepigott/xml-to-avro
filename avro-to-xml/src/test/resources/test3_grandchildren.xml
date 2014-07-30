@@ -24,4 +24,5 @@
 		<avro:primitive>double</avro:primitive>
 		<avro:nonNullPrimitive>float</avro:nonNullPrimitive>
 	</avro:map>
+	<avro:nonNullPrimitive>long</avro:nonNullPrimitive>
 </avro:root>
