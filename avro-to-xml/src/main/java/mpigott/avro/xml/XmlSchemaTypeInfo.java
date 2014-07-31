@@ -82,14 +82,14 @@ final class XmlSchemaTypeInfo implements Cloneable {
   }
 
   XmlSchemaTypeInfo(
-      QName baseSimpleType,
+      XmlSchemaBaseSimpleType baseSimpleType,
       Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
 
     type = Type.RESTRICTION;
     this.baseSimpleType = baseSimpleType;
   }
 
-  XmlSchemaTypeInfo(QName typeName) {
+  XmlSchemaTypeInfo(XmlSchemaBaseSimpleType typeName) {
     type = Type.SIMPLE;
     baseSimpleType = typeName; // TODO: Is this anySimpleType, one of its children, or its parent?
   }
@@ -105,7 +105,6 @@ final class XmlSchemaTypeInfo implements Cloneable {
       clone = new XmlSchemaTypeInfo(childTypes);
       break;
     case RESTRICTION:
-      // TODO: Confirm this is correct.
       clone = new XmlSchemaTypeInfo(baseSimpleType, facets);
       break;
     case SIMPLE:
@@ -185,7 +184,7 @@ final class XmlSchemaTypeInfo implements Cloneable {
   private Type type;
   private HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets;
   private XmlSchemaContentType contentType;
-  private QName baseSimpleType;
+  private XmlSchemaBaseSimpleType baseSimpleType;
   private QName userRecognizedType;
   private List<XmlSchemaTypeInfo> childTypes;
 }
