@@ -84,6 +84,7 @@ public class Main {
     }
 
     XmlSchemaWalker walker = new XmlSchemaWalker(collection, avroVisitor);
+    walker.setUserRecognizedTypes( Utils.getAvroRecognizedTypes() );
 
     /*
     long startContextWalk = System.currentTimeMillis();

@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.namespace.QName;
 
@@ -34,10 +35,16 @@ import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
+import org.apache.ws.commons.schema.XmlSchemaContentType;
 import org.apache.ws.commons.schema.XmlSchemaDocumentation;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
 import org.apache.ws.commons.schema.XmlSchemaUse;
+import org.apache.ws.commons.schema.constants.Constants;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.JsonNodeFactory;
+import org.codehaus.jackson.node.ObjectNode;
 import org.w3c.dom.NodeList;
 
 /**
@@ -57,7 +64,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     final boolean isSubstitutionGroup;
   }
 
-  public AvroSchemaGenerator() {
+  AvroSchemaGenerator() {
     root = null;
     stack = new ArrayList<StackEntry>();
     schemasByElement = new HashMap<QName, Schema>();
@@ -71,7 +78,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * so a new Avro {@link Schema} can be generated from a new
    * {@link org.apache.ws.commons.schema.XmlSchema}.
    */
-  public void clear() {
+  void clear() {
     root = null;
     stack.clear();
     schemasByElement.clear();
@@ -85,7 +92,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    *
    * @return The generated {@link Schema}, or <code>null</code> if none.
    */
-  public Schema getSchema() {
+  Schema getSchema() {
     return root;
   }
 
@@ -219,12 +226,32 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     List<Schema> children = fieldsByElement.get(entry.elementQName);
 
-    // TODO: Handle mixed elements.
-
-    if ((children != null) && !children.isEmpty() && (typeInfo != null) && (typeInfo.getAvroType() != null)) {
+    if ((children != null)
+          && !children.isEmpty()
+          && (typeInfo != null)
+          && (typeInfo.getUserRecognizedType() != null)) {
       throw new IllegalStateException("Element \"" + entry.elementQName + "\" has both a type (" + typeInfo.getAvroType() + ") and " + children.size() + " child elements.");
 
     } else if ((children != null) && !children.isEmpty()) {
+      boolean isMixedType = false;
+      if (typeInfo != null) {
+        isMixedType =
+            typeInfo.getContentType().equals(XmlSchemaContentType.MIXED);
+      }
+
+      if (isMixedType) {
+        boolean foundString = false;
+        for (Schema child : children) {
+          if ( child.getType().equals(Schema.Type.STRING) ) {
+            foundString = true;
+            break;
+          }
+        }
+        if (!foundString) {
+          children.add( Schema.create(Schema.Type.STRING) );
+        }
+      }
+
       final Schema schema = Schema.createArray( Schema.createUnion(children) );
       final Schema.Field field =
           new Schema.Field(
@@ -234,17 +261,21 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
               null);
       fields.add(field);
 
-    } else if ((typeInfo != null) && (typeInfo.getAvroType() != null)) {
+    } else if ((typeInfo != null)
+                && (typeInfo.getUserRecognizedType() != null)) {
       final Schema.Field field =
           new Schema.Field(
               entry.elementQName.getLocalPart(),
-              typeInfo.getAvroType(),
-              "Simple type " + typeInfo.getAvroType(),
+              Schema.create(
+                  Utils.getAvroSchemaTypeFor(
+                      typeInfo.getUserRecognizedType())),
+              "Simple type " + typeInfo.getUserRecognizedType(),
               null);
       fields.add(field);
 
     } else if (((children == null) || children.isEmpty())
-               && ((typeInfo == null) || (typeInfo.getAvroType() == null))) {
+               && ((typeInfo == null)
+                   || (typeInfo.getUserRecognizedType() == null))) {
 
       // This element has no children.  Set a null placeholder.
       final Schema.Field field =
@@ -300,23 +331,14 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       defaultValue = attribute.getFixedValue();
     }
 
-    Schema attrSchema = attributeType.getAvroType();
+    boolean isOptional = false;
 
     // Optional types are unions of the real type and null.
     if ( attribute.getUse().equals(XmlSchemaUse.OPTIONAL) ) {
-      if ( attrSchema.getType().equals(Schema.Type.UNION) ) {
-        /* The attribute type is a union of other types.  Unions of unions are
-         * not allowed, so we must add the NULL type to the existing union.
-         */
-        // TODO: This is not allowed.  Need to create a new schema instead.
-        attrSchema.getTypes().add( Schema.create(Schema.Type.NULL) );
-      } else {
-        ArrayList<Schema> unionTypes = new ArrayList<Schema>(2);
-        unionTypes.add(attrSchema);
-        unionTypes.add( Schema.create(Schema.Type.NULL) );
-        attrSchema = Schema.createUnion(unionTypes);
-      }
+      isOptional = true;
     }
+
+    Schema attrSchema = Utils.getAvroSchemaFor(attributeType, isOptional);
 
     final Schema.Field attr =
         new Schema.Field(
@@ -534,6 +556,29 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     }
 
     return null;
+  }
+
+  private static JsonNode createJsonNodeFor(QName baseType) {
+    ObjectNode object = JsonNodeFactory.instance.objectNode();
+    object.put("namespace", baseType.getNamespaceURI());
+    object.put("localPart", baseType.getLocalPart());
+    return object;
+  }
+
+  private static JsonNode createJsonNodeForList(JsonNode child) {
+    ObjectNode object = JsonNodeFactory.instance.objectNode();
+    object.put("type", "list");
+    object.put("value", child);
+    return object;
+  }
+
+  private static JsonNode createJsonNodeForUnion(List<JsonNode> unionTypes) {
+    ObjectNode object = JsonNodeFactory.instance.objectNode();
+    object.put("type", "union");
+    ArrayNode arrayNode = JsonNodeFactory.instance.arrayNode();
+    arrayNode.addAll(unionTypes);
+    object.put("value", arrayNode);
+    return object;
   }
 
   private Schema root;

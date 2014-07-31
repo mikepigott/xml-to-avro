@@ -19,9 +19,15 @@ import java.net.URISyntaxException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.xml.namespace.QName;
 
 import org.apache.avro.Schema;
+import org.apache.ws.commons.schema.constants.Constants;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
@@ -34,6 +40,85 @@ import org.xml.sax.InputSource;
  * @author  Mike Pigott
  */
 class Utils {
+
+  private static final Map<QName, Schema.Type> xmlToAvroTypeMap =
+      new HashMap<QName, Schema.Type>();
+
+  static {
+    xmlToAvroTypeMap.put(Constants.XSD_ANYTYPE,       Schema.Type.STRING);
+    xmlToAvroTypeMap.put(Constants.XSD_BOOLEAN,       Schema.Type.BOOLEAN);
+    xmlToAvroTypeMap.put(Constants.XSD_DECIMAL,       Schema.Type.DOUBLE);
+    xmlToAvroTypeMap.put(Constants.XSD_DOUBLE,        Schema.Type.DOUBLE);
+    xmlToAvroTypeMap.put(Constants.XSD_FLOAT,         Schema.Type.FLOAT);
+    xmlToAvroTypeMap.put(Constants.XSD_BASE64,        Schema.Type.BYTES);
+    xmlToAvroTypeMap.put(Constants.XSD_HEXBIN,        Schema.Type.BYTES);
+    xmlToAvroTypeMap.put(Constants.XSD_LONG,          Schema.Type.LONG);
+    xmlToAvroTypeMap.put(Constants.XSD_ID,            Schema.Type.STRING);
+    xmlToAvroTypeMap.put(Constants.XSD_INT,           Schema.Type.INT);
+    xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDINT,   Schema.Type.LONG);
+    xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDSHORT, Schema.Type.INT);
+  }
+
+  static Set<QName> getAvroRecognizedTypes() {
+    return xmlToAvroTypeMap.keySet();
+  }
+
+  static Schema.Type getAvroSchemaTypeFor(QName qName) {
+    return xmlToAvroTypeMap.get(qName);
+  }
+
+  static Schema getAvroSchemaFor(
+      XmlSchemaTypeInfo typeInfo,
+      boolean isOptional) {
+
+    switch ( typeInfo.getType() ) {
+    case ATOMIC:
+      {
+        Schema.Type avroType =
+          xmlToAvroTypeMap.get( typeInfo.getUserRecognizedType() );
+        Schema schema = Schema.create(avroType);
+
+        if (isOptional) {
+          schema = createOptionalTypeOf(schema);
+        }
+
+        return schema;
+      }
+    case LIST:
+      {
+        Schema schema =
+          getAvroSchemaFor(typeInfo.getChildTypes().get(0), false);
+
+        if (isOptional) {
+          schema = createOptionalTypeOf(schema);
+        }
+
+        return schema;
+      }
+    case UNION:
+      List<XmlSchemaTypeInfo> unionTypes = typeInfo.getChildTypes();
+      List<Schema> avroTypes = new ArrayList<Schema>( unionTypes.size() );
+
+      for (XmlSchemaTypeInfo unionType : unionTypes) {
+        avroTypes.add( getAvroSchemaFor(unionType, false) );
+      }
+
+      if (isOptional) {
+        avroTypes.add( Schema.create(Schema.Type.NULL) );
+      }
+
+      return Schema.createUnion(avroTypes);
+    default:
+      throw new IllegalArgumentException("Cannot create an Avro schema for a " + typeInfo.getType() + " type.");
+    }
+  }
+
+  private static Schema createOptionalTypeOf(Schema schema) {
+    List<Schema> unionTypes = new ArrayList<Schema>(2);
+    unionTypes.add(schema);
+    unionTypes.add( Schema.create(Schema.Type.NULL) );
+    return Schema.createUnion(unionTypes);
+  }
 
   static String getAvroNamespaceFor(String xmlSchemaNamespace) throws URISyntaxException {
 	  return getAvroNamespaceFor(new URI(xmlSchemaNamespace));

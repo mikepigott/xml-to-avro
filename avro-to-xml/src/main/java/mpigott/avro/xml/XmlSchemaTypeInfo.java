@@ -42,7 +42,7 @@ import org.codehaus.jackson.node.ObjectNode;
  *
  * @author  Mike Pigott
  */
-final class XmlSchemaTypeInfo implements Cloneable {
+final class XmlSchemaTypeInfo {
 
   enum Type {
     LIST,

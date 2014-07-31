@@ -82,6 +82,7 @@ final class XmlSchemaWalker {
 
     scopeCache = new HashMap<QName, XmlSchemaScope>();
     visitedElements = new java.util.HashSet<QName>();
+    userRecognizedTypes = null;
   }
 
   XmlSchemaWalker(XmlSchemaCollection xmlSchemas, XmlSchemaVisitor visitor) {
@@ -106,6 +107,14 @@ final class XmlSchemaWalker {
   void clear() {
     scopeCache.clear();
     visitedElements.clear();
+  }
+
+  void setUserRecognizedTypes(Set<QName> userRecognizedTypes) {
+    this.userRecognizedTypes = userRecognizedTypes;
+  }
+
+  Set<QName> getUserRecognizedTypes() {
+    return userRecognizedTypes;
   }
 
   // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
@@ -143,7 +152,12 @@ final class XmlSchemaWalker {
         && scopeCache.containsKey( schemaType.getQName())) {
       scope = scopeCache.get(schemaType.getQName());
     } else {
-      scope = new XmlSchemaScope(schemaType, schemasByNamespace, scopeCache);
+      scope =
+          new XmlSchemaScope(
+              schemaType,
+              schemasByNamespace,
+              scopeCache,
+              userRecognizedTypes);
       if (schemaType.getQName() != null) {
         scopeCache.put(schemaType.getQName(), scope);
       }
@@ -182,7 +196,8 @@ final class XmlSchemaWalker {
                 new XmlSchemaScope(
                     attr.getSchemaType(),
                     schemasByNamespace,
-                    scopeCache);
+                    scopeCache,
+                    userRecognizedTypes);
 
             if (attrType.getName() != null) {
               scopeCache.put(attrType.getQName(), attrScope);
@@ -462,10 +477,12 @@ final class XmlSchemaWalker {
     }
   }
 
-  private XmlSchemaCollection schemas;
-  private ArrayList<XmlSchemaVisitor> visitors;
-  private Map<QName, List<XmlSchemaElement>> elemsBySubstGroup;
-  private Map<String, XmlSchema> schemasByNamespace;
-  private Map<QName, XmlSchemaScope> scopeCache;
-  private Set<QName> visitedElements;
+  private Set<QName> userRecognizedTypes;
+
+  private final XmlSchemaCollection schemas;
+  private final ArrayList<XmlSchemaVisitor> visitors;
+  private final Map<QName, List<XmlSchemaElement>> elemsBySubstGroup;
+  private final Map<String, XmlSchema> schemasByNamespace;
+  private final Map<QName, XmlSchemaScope> scopeCache;
+  private final Set<QName> visitedElements;
 }

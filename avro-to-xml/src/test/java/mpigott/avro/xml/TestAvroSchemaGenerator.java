@@ -67,6 +67,7 @@ public class TestAvroSchemaGenerator {
 
     XmlSchemaElement elem = getElementOf(collection, "root");
     XmlSchemaWalker walker = new XmlSchemaWalker(collection, visitor);
+    walker.setUserRecognizedTypes( Utils.getAvroRecognizedTypes() );
     walker.walk(elem);
 
     Schema schema = visitor.getSchema();
