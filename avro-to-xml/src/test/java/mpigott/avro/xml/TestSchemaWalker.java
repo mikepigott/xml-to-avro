@@ -75,7 +75,7 @@ public class TestSchemaWalker {
       this.name = null;
       this.typeName = null;
       this.facets = null;
-      this.schema = null;
+      this.baseType = null;
       this.minOccurs = 1;
       this.maxOccurs = 1;
     }
@@ -97,9 +97,9 @@ public class TestSchemaWalker {
       this.typeName = typeName;
     }
 
-    StackEntry(Type type, String name, String typeName, Schema schema) {
+    StackEntry(Type type, String name, String typeName, XmlSchemaBaseSimpleType baseType) {
       this(type, name, typeName);
-      this.schema = schema;
+      this.baseType = baseType;
     }
 
     StackEntry(Type type, String name, String typeName, long minOccurs, long maxOccurs) {
@@ -108,14 +108,14 @@ public class TestSchemaWalker {
       this.maxOccurs = maxOccurs;
     }
 
-    StackEntry(Type type, String name, String typeName, Schema schema, long minOccurs, long maxOccurs) {
-      this(type, name, typeName, schema);
+    StackEntry(Type type, String name, String typeName, XmlSchemaBaseSimpleType baseType, long minOccurs, long maxOccurs) {
+      this(type, name, typeName, baseType);
       this.minOccurs = minOccurs;
       this.maxOccurs = maxOccurs;
     }
 
-    StackEntry(Type type, String name, String typeName, Schema schema, Set<XmlSchemaRestriction> facets) {
-      this(type, name, typeName, schema);
+    StackEntry(Type type, String name, String typeName, XmlSchemaBaseSimpleType baseType, Set<XmlSchemaRestriction> facets) {
+      this(type, name, typeName, baseType);
       this.facets = facets;
     }
 
@@ -123,12 +123,12 @@ public class TestSchemaWalker {
         Type type,
         String name,
         String typeName,
-        Schema schema,
+        XmlSchemaBaseSimpleType baseType,
         long minOccurs,
         long maxOccurs,
         Set<XmlSchemaRestriction> facets) {
 
-      this(type, name, typeName, schema, minOccurs, maxOccurs);
+      this(type, name, typeName, baseType, minOccurs, maxOccurs);
       this.facets = facets;
       
     }
@@ -139,29 +139,30 @@ public class TestSchemaWalker {
     Set<XmlSchemaRestriction> facets;
     long minOccurs;
     long maxOccurs;
-    Schema schema;
+    XmlSchemaBaseSimpleType baseType;
   }
 
   private static class Attribute {
-    public Attribute(String name, String typeName, Schema schema) {
+    public Attribute(String name, String typeName, XmlSchemaTypeInfo.Type type, XmlSchemaBaseSimpleType baseType) {
       this.name = name;
       this.typeName = typeName;
       this.isOptional = false;
-      this.schema = schema;
+      this.type = type;
+      this.baseType = baseType;
     }
 
-    public Attribute(String name, String typeName, Schema schema, boolean isOptional) {
-      this(name, typeName, schema);
+    public Attribute(String name, String typeName, XmlSchemaTypeInfo.Type type, XmlSchemaBaseSimpleType baseType, boolean isOptional) {
+      this(name, typeName, type, baseType);
       this.isOptional = isOptional;
     }
 
-    public Attribute(String name, String typeName, Schema schema, Set<XmlSchemaRestriction> facets) {
-      this(name, typeName, schema);
+    public Attribute(String name, String typeName, XmlSchemaTypeInfo.Type type, XmlSchemaBaseSimpleType baseType, Set<XmlSchemaRestriction> facets) {
+      this(name, typeName, type, baseType);
       this.facets = facets;
     }
 
-    public Attribute(String name, String typeName, Schema schema, boolean isOptional, Set<XmlSchemaRestriction> facets) {
-      this(name, typeName, schema, isOptional);
+    public Attribute(String name, String typeName, XmlSchemaTypeInfo.Type type, XmlSchemaBaseSimpleType baseType, boolean isOptional, Set<XmlSchemaRestriction> facets) {
+      this(name, typeName, type, baseType, isOptional);
       this.facets = facets;
     }
 
@@ -169,7 +170,8 @@ public class TestSchemaWalker {
     String typeName;
     boolean isOptional;
     Set<XmlSchemaRestriction> facets;
-    Schema schema;
+    XmlSchemaBaseSimpleType baseType;
+    XmlSchemaTypeInfo.Type type;
   }
 
   private static class Visitor implements XmlSchemaVisitor {
@@ -202,30 +204,34 @@ public class TestSchemaWalker {
 
       if (typeInfo != null) {
         final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets = typeInfo.getFacets();
-        if (facets.isEmpty() && !next.facets.isEmpty()) {
+        if ((facets == null) && (next.facets != null)) {
+          throw new IllegalStateException("Expected " + next.facets.size() + " facets for element \"" + next.name + "\" but received null facets.");
+        } else if ((facets != null) && facets.isEmpty() && (next.facets != null) && !next.facets.isEmpty()) {
           throw new IllegalStateException("Expected " + next.facets.size() + " facets for element \"" + next.name + "\" but found none.");
-        } else if (!facets.isEmpty() && next.facets.isEmpty()) {
+        } else if ((facets != null) && !facets.isEmpty() && (next.facets != null) && next.facets.isEmpty()) {
           throw new IllegalStateException("Element " + next.name + " has facets, but none were expected.");
         }
   
-        for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facetsForType : facets.entrySet()) {
-          for (XmlSchemaRestriction facet : facetsForType.getValue()) {
-            if (!next.facets.remove(facet)) {
-              throw new IllegalStateException("Element \"" + next.name + "\" has unexpected facet \"" + facet + "\".");
+        if (facets != null) {
+          for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facetsForType : facets.entrySet()) {
+            for (XmlSchemaRestriction facet : facetsForType.getValue()) {
+              if (!next.facets.remove(facet)) {
+                throw new IllegalStateException("Element \"" + next.name + "\" has unexpected facet \"" + facet + "\".");
+              }
             }
           }
         }
 
-        if ((next.schema == null) && (typeInfo.getAvroType() != null)) {
-          throw new IllegalStateException("Element \"" + next.name + "\" was not expected to have an Avro schema, but has a schema of " + typeInfo.getAvroType());
-        } else if ((next.schema != null) && (typeInfo.getAvroType() == null)) {
-          throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.schema + " but instead has no schema.");
-        } else if ((next.schema != null) && !next.schema.equals(typeInfo.getAvroType())) {
-          throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.schema + " but instead has a schema of " + typeInfo.getAvroType());
+        if ((next.baseType == null) && (typeInfo.getBaseType() != null) && !typeInfo.getBaseType().equals(XmlSchemaBaseSimpleType.ANYTYPE)) {
+          throw new IllegalStateException("Element \"" + next.name + "\" was not expected to have an Avro schema, but has a schema of " + typeInfo.getBaseType());
+        } else if ((next.baseType != null) && (typeInfo.getBaseType() == null)) {
+          throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.baseType + " but instead has no schema.");
+        } else if ((next.baseType != null) && !next.baseType.equals(typeInfo.getBaseType())) {
+          throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.baseType + " but instead has a schema of " + typeInfo.getBaseType());
         }
 
-      } else if (next.schema != null) {
-        throw new IllegalStateException("Expected a schema of " + next.schema + " but received none.");
+      } else if (next.baseType != null) {
+        throw new IllegalStateException("Expected a schema of " + next.baseType + " but received none.");
       }
 
       if ((next.facets != null) && !next.facets.isEmpty()) {
@@ -288,8 +294,14 @@ public class TestSchemaWalker {
           } else if (!attr.isOptional && attribute.getUse().equals(XmlSchemaUse.OPTIONAL)) {
             throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose usage was expected to be required, but is actually optional.");
 
-          } else if (!attr.schema.equals(attributeType.getAvroType())) {
-            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose schema was expected to be " + attr.schema + " but actually was " + attributeType.getAvroType());
+          } else if (!attr.type.equals(attributeType.getType())) {
+            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose type was expected to be " + attr.type + " but actually was " + attributeType.getType());
+
+          } else if (attr.type.equals(XmlSchemaTypeInfo.Type.ATOMIC) && !attr.baseType.equals(attributeType.getBaseType())) {
+            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose type was expected to be " + attr.baseType.name() + " but actually was " + attributeType.getBaseType());
+
+          } else if (attr.type.equals(XmlSchemaTypeInfo.Type.LIST) && !attr.baseType.equals( attributeType.getChildTypes().get(0).getBaseType() )) {
+            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" with a type of " + attr.type + " whose base type is expected to be " + attr.baseType + " but actually is " + attributeType.getChildTypes().get(0).getBaseType());
 
           } else {
             found = true;
@@ -407,120 +419,120 @@ public class TestSchemaWalker {
     // Build the expectations.
     ArrayList<Attribute> attrGroupAttrs = new ArrayList<Attribute>(43);
     
-    attrGroupAttrs.add( new Attribute("anySimpleType", "anySimpleType", Schema.create(Schema.Type.STRING), true) );
+    attrGroupAttrs.add( new Attribute("anySimpleType", "anySimpleType", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.ANYSIMPLETYPE, true) );
 
     HashSet<XmlSchemaRestriction> whiteSpaceCollapseFixedRestrictions = new HashSet<XmlSchemaRestriction>();
     whiteSpaceCollapseFixedRestrictions.add( new XmlSchemaRestriction(new XmlSchemaWhiteSpaceFacet("collapse", true)) );
 
-    attrGroupAttrs.add( new Attribute("duration",     "duration",     Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("dateTime",     "dateTime",     Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("date",         "date",         Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("time",         "time",         Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("gYearMonth",   "gYearMonth",   Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("gYear",        "gYear",        Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("gDay",         "gDay",         Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("gMonth",       "gMonth",       Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("gMonthDay",    "gMonthDay",    Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("boolean",      "boolean",      Schema.create(Schema.Type.BOOLEAN), true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("base64Binary", "base64Binary", Schema.create(Schema.Type.BYTES),   true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("hexBinary",    "hexBinary",    Schema.create(Schema.Type.BYTES),   true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("float",        "float",        Schema.create(Schema.Type.FLOAT),   true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("decimal",      "decimal",      Schema.create(Schema.Type.DOUBLE),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("double",       "double",       Schema.create(Schema.Type.DOUBLE),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("anyURI",       "anyURI",       Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("qname",        "QName",        Schema.create(Schema.Type.STRING),  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("duration",     "duration",     XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DURATION,   true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("dateTime",     "dateTime",     XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DATETIME,   true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("date",         "date",         XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DATE,       true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("time",         "time",         XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.TIME,       true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("gYearMonth",   "gYearMonth",   XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.YEARMONTH,  true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("gYear",        "gYear",        XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.YEAR,       true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("gDay",         "gDay",         XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DAY,        true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("gMonth",       "gMonth",       XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.MONTH,      true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("gMonthDay",    "gMonthDay",    XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.MONTHDAY,   true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("boolean",      "boolean",      XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.BOOLEAN,    true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("base64Binary", "base64Binary", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.BIN_BASE64, true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("hexBinary",    "hexBinary",    XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.BIN_HEX,    true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("float",        "float",        XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.FLOAT,      true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("decimal",      "decimal",      XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL,    true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("double",       "double",       XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DOUBLE,     true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("anyURI",       "anyURI",       XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.ANYURI,     true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+    attrGroupAttrs.add( new Attribute("qname",        "QName",        XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.QNAME,      true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
 
     HashSet<XmlSchemaRestriction> integerFacets = (HashSet<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone();
     integerFacets.add( new XmlSchemaRestriction(new XmlSchemaFractionDigitsFacet(new Integer(0), true)));
     integerFacets.add( new XmlSchemaRestriction(new XmlSchemaPatternFacet("[\\-+]?[0-9]+", false)));
-    attrGroupAttrs.add( new Attribute("integer", "integer", Schema.create(Schema.Type.DOUBLE), true, integerFacets) );
+    attrGroupAttrs.add( new Attribute("integer", "integer", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, integerFacets) );
 
     HashSet<XmlSchemaRestriction> nonPositiveIntegerFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     nonPositiveIntegerFacets.add( new XmlSchemaRestriction(new XmlSchemaMaxInclusiveFacet(new Integer(0), false)) );
-    attrGroupAttrs.add( new Attribute("nonPositiveInteger", "nonPositiveInteger", Schema.create(Schema.Type.DOUBLE), true, nonPositiveIntegerFacets) );
+    attrGroupAttrs.add( new Attribute("nonPositiveInteger", "nonPositiveInteger", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, nonPositiveIntegerFacets) );
 
     HashSet<XmlSchemaRestriction> negativeIntegerFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     negativeIntegerFacets.add( new XmlSchemaRestriction(new XmlSchemaMaxInclusiveFacet(new Integer(-1), false)) );
-    attrGroupAttrs.add( new Attribute("negativeInteger", "negativeInteger", Schema.create(Schema.Type.DOUBLE), true, negativeIntegerFacets) );
+    attrGroupAttrs.add( new Attribute("negativeInteger", "negativeInteger", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, negativeIntegerFacets) );
 
     HashSet<XmlSchemaRestriction> longFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     longFacets.add( new XmlSchemaRestriction(new XmlSchemaMinInclusiveFacet(new Long(-9223372036854775808L), false)) );
     longFacets.add( new XmlSchemaRestriction(new XmlSchemaMaxInclusiveFacet(new Long( 9223372036854775807L), false)) );
-    attrGroupAttrs.add( new Attribute("long", "long", Schema.create(Schema.Type.LONG), true, longFacets) );
+    attrGroupAttrs.add( new Attribute("long", "long", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, longFacets) );
 
     HashSet<XmlSchemaRestriction> intFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     intFacets.add( new XmlSchemaRestriction( new XmlSchemaMinInclusiveFacet(new Integer(-2147483648), false) ) );
     intFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(2147483647, false) ) );
-    attrGroupAttrs.add( new Attribute("int", "int", Schema.create(Schema.Type.INT), true, intFacets) );
+    attrGroupAttrs.add( new Attribute("int", "int", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, intFacets) );
 
     HashSet<XmlSchemaRestriction> shortFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     shortFacets.add( new XmlSchemaRestriction( new XmlSchemaMinInclusiveFacet(new Short((short) -32768), false) ) );
     shortFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new Short((short)  32767), false) ) );
-    attrGroupAttrs.add( new Attribute("short", "short", Schema.create(Schema.Type.INT), true, shortFacets) );
+    attrGroupAttrs.add( new Attribute("short", "short", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, shortFacets) );
 
     HashSet<XmlSchemaRestriction> byteFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     byteFacets.add( new XmlSchemaRestriction( new XmlSchemaMinInclusiveFacet(new Byte((byte) -128), false) ) );
     byteFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new Byte((byte)  127), false) ) );
-    attrGroupAttrs.add( new Attribute("byte", "byte", Schema.create(Schema.Type.INT), true, byteFacets) );
+    attrGroupAttrs.add( new Attribute("byte", "byte", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, byteFacets) );
 
     HashSet<XmlSchemaRestriction> nonNegativeIntegerFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     nonNegativeIntegerFacets.add( new XmlSchemaRestriction( new XmlSchemaMinInclusiveFacet(new Integer(0), false) ) );
-    attrGroupAttrs.add( new Attribute("nonNegativeInteger", "nonNegativeInteger", Schema.create(Schema.Type.DOUBLE), true, nonNegativeIntegerFacets) );
+    attrGroupAttrs.add( new Attribute("nonNegativeInteger", "nonNegativeInteger", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, nonNegativeIntegerFacets) );
 
     HashSet<XmlSchemaRestriction> positiveIntegerFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     positiveIntegerFacets.add( new XmlSchemaRestriction(new XmlSchemaMinInclusiveFacet(new Integer(1), false)) );
-    attrGroupAttrs.add( new Attribute("positiveInteger", "positiveInteger", Schema.create(Schema.Type.DOUBLE), true, positiveIntegerFacets) );
+    attrGroupAttrs.add( new Attribute("positiveInteger", "positiveInteger", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, positiveIntegerFacets) );
 
     HashSet<XmlSchemaRestriction> unsignedLongFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     unsignedLongFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new BigInteger("18446744073709551615"), false) ) );
-    attrGroupAttrs.add( new Attribute("unsignedLong", "unsignedLong", Schema.create(Schema.Type.DOUBLE), true, unsignedLongFacets) );
+    attrGroupAttrs.add( new Attribute("unsignedLong", "unsignedLong", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, unsignedLongFacets) );
 
     HashSet<XmlSchemaRestriction> unsignedIntFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     unsignedIntFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new Long(4294967295L), false) ) );
-    attrGroupAttrs.add( new Attribute("unsignedInt", "unsignedInt", Schema.create(Schema.Type.LONG), true, unsignedIntFacets) );
+    attrGroupAttrs.add( new Attribute("unsignedInt", "unsignedInt", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, unsignedIntFacets) );
 
     HashSet<XmlSchemaRestriction> unsignedShortFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     unsignedShortFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new Integer(65535), false) ) );
-    attrGroupAttrs.add( new Attribute("unsignedShort", "unsignedShort", Schema.create(Schema.Type.INT), true, unsignedShortFacets) );
+    attrGroupAttrs.add( new Attribute("unsignedShort", "unsignedShort", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, unsignedShortFacets) );
 
     HashSet<XmlSchemaRestriction> unsignedByteFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
     unsignedByteFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new Short((short) 255), false) ) );
-    attrGroupAttrs.add( new Attribute("unsignedByte", "unsignedByte", Schema.create(Schema.Type.INT), true, unsignedByteFacets) );
+    attrGroupAttrs.add( new Attribute("unsignedByte", "unsignedByte", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, unsignedByteFacets) );
 
     HashSet<XmlSchemaRestriction> stringFacets = new HashSet<XmlSchemaRestriction>();
     stringFacets.add( new XmlSchemaRestriction( new XmlSchemaWhiteSpaceFacet("preserve", false) ) );
-    attrGroupAttrs.add( new Attribute("string", "string", Schema.create(Schema.Type.STRING), true, stringFacets) );
+    attrGroupAttrs.add( new Attribute("string", "string", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, stringFacets) );
 
     HashSet<XmlSchemaRestriction> normalizedStringFacets = new HashSet<XmlSchemaRestriction>();
     normalizedStringFacets.add( new XmlSchemaRestriction( new XmlSchemaWhiteSpaceFacet("replace", false) ) );
-    attrGroupAttrs.add( new Attribute("normalizedString", "normalizedString", Schema.create(Schema.Type.STRING), true, normalizedStringFacets) );
+    attrGroupAttrs.add( new Attribute("normalizedString", "normalizedString", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, normalizedStringFacets) );
 
     HashSet<XmlSchemaRestriction> tokenFacets = new HashSet<XmlSchemaRestriction>();
     tokenFacets.add( new XmlSchemaRestriction( new XmlSchemaWhiteSpaceFacet("collapse", false) ) );
-    attrGroupAttrs.add( new Attribute("token", "token", Schema.create(Schema.Type.STRING), true, tokenFacets) );
+    attrGroupAttrs.add( new Attribute("token", "token", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, tokenFacets) );
 
     HashSet<XmlSchemaRestriction> languageFacets = (HashSet<XmlSchemaRestriction>) tokenFacets.clone();
     languageFacets.add( new XmlSchemaRestriction( new XmlSchemaPatternFacet("[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*", false) ) );
-    attrGroupAttrs.add( new Attribute("language", "language", Schema.create(Schema.Type.STRING), true, languageFacets) );
+    attrGroupAttrs.add( new Attribute("language", "language", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, languageFacets) );
 
     HashSet<XmlSchemaRestriction> nmTokenFacets = (HashSet<XmlSchemaRestriction>) tokenFacets.clone();
     nmTokenFacets.add( new XmlSchemaRestriction( new XmlSchemaPatternFacet("\\c+", false) ) );
-    attrGroupAttrs.add( new Attribute("nmtoken", "NMTOKEN", Schema.create(Schema.Type.STRING), true, nmTokenFacets) );
+    attrGroupAttrs.add( new Attribute("nmtoken", "NMTOKEN", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, nmTokenFacets) );
 
     HashSet<XmlSchemaRestriction> nameFacets = (HashSet<XmlSchemaRestriction>) tokenFacets.clone();
     nameFacets.add( new XmlSchemaRestriction( new XmlSchemaPatternFacet("\\i\\c*", false) ) );
-    attrGroupAttrs.add( new Attribute("name", "Name", Schema.create(Schema.Type.STRING), true, nameFacets) );
+    attrGroupAttrs.add( new Attribute("name", "Name", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, nameFacets) );
 
     HashSet<XmlSchemaRestriction> ncNameFacets = (HashSet<XmlSchemaRestriction>) tokenFacets.clone();
     ncNameFacets.add( new XmlSchemaRestriction( new XmlSchemaPatternFacet("[\\i-[:]][\\c-[:]]*", false) ) );
-    attrGroupAttrs.add( new Attribute("ncName", "NCName", Schema.create(Schema.Type.STRING), true, ncNameFacets) );
+    attrGroupAttrs.add( new Attribute("ncName", "NCName", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, ncNameFacets) );
 
-    attrGroupAttrs.add( new Attribute("id",       "ID",       Schema.create(Schema.Type.STRING),                       true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
-    attrGroupAttrs.add( new Attribute("idref",    "IDREF",    Schema.create(Schema.Type.STRING),                       true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
-    attrGroupAttrs.add( new Attribute("idrefs",   "IDREFS",   Schema.createArray( Schema.create(Schema.Type.STRING) ), true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
-    attrGroupAttrs.add( new Attribute("entity",   "ENTITY",   Schema.create(Schema.Type.STRING),                       true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
-    attrGroupAttrs.add( new Attribute("entities", "ENTITIES", Schema.createArray( Schema.create(Schema.Type.STRING) ), true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
-    attrGroupAttrs.add( new Attribute("nmtokens", "NMTOKENS", Schema.createArray( Schema.create(Schema.Type.STRING) ), true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
+    attrGroupAttrs.add( new Attribute("id",       "ID",       XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
+    attrGroupAttrs.add( new Attribute("idref",    "IDREF",    XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
+    attrGroupAttrs.add( new Attribute("idrefs",   "IDREFS",   XmlSchemaTypeInfo.Type.LIST,   XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
+    attrGroupAttrs.add( new Attribute("entity",   "ENTITY",   XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
+    attrGroupAttrs.add( new Attribute("entities", "ENTITIES", XmlSchemaTypeInfo.Type.LIST,   XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
+    attrGroupAttrs.add( new Attribute("nmtokens", "NMTOKENS", XmlSchemaTypeInfo.Type.LIST,   XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
 
     HashSet<XmlSchemaRestriction> nonNullPrimitiveTypeFacets =
         new HashSet<XmlSchemaRestriction>(14);
@@ -535,8 +547,8 @@ public class TestSchemaWalker {
     nonNullPrimitiveTypeFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.PATTERN,     "\\c+",     false) );
     nonNullPrimitiveTypeFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.WHITESPACE,  "collapse", false) );
 
-    Schema nonNullPrimitiveTypeSchema = Schema.create(Schema.Type.STRING);
-    Schema primitiveTypeSchema = Schema.create(Schema.Type.STRING);
+    XmlSchemaBaseSimpleType nonNullPrimitiveType = XmlSchemaBaseSimpleType.STRING;
+    XmlSchemaBaseSimpleType primitiveType = XmlSchemaBaseSimpleType.STRING;
 
     HashSet<XmlSchemaRestriction> primitiveTypeFacets =
         new HashSet<XmlSchemaRestriction>(15);
@@ -549,34 +561,34 @@ public class TestSchemaWalker {
     stack.add( new StackEntry(Type.ELEMENT, "root") );
       stack.add( new StackEntry(Type.SEQUENCE) );
         stack.add( new StackEntry(Type.CHOICE, 0, Long.MAX_VALUE) );
-          stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
-          stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveTypeSchema, (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
+          stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveType, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+          stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveType, (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
           stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
             stack.add( new StackEntry(Type.ELEMENT, "record", "recordType") );
               stack.add( new StackEntry(Type.SEQUENCE) );
                 stack.add( new StackEntry(Type.CHOICE, 0, Long.MAX_VALUE) );
-/* 10 */          stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
-                  stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveTypeSchema, (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
+/* 10 */          stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveType, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+                  stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveType, (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
                   stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
                     stack.add( new StackEntry(Type.ELEMENT, "record", "recordType") );
                     stack.add( new StackEntry(Type.ELEMENT, "map") );
                       stack.add( new StackEntry(Type.SEQUENCE) );
                       stack.add( new StackEntry(Type.CHOICE, 0, Long.MAX_VALUE) );
-                        stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
-                        stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveTypeSchema, (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
+                        stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveType, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+                        stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveType, (Set<XmlSchemaRestriction>) nonNullPrimitiveTypeFacets.clone()) );
                         stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
 /* 20 */                  stack.add( new StackEntry(Type.ELEMENT, "record", "recordType") );
                           stack.add( new StackEntry(Type.ELEMENT, "map") );
                         stack.add( new StackEntry(Type.ELEMENT, "list") );
                           stack.add( new StackEntry(Type.CHOICE) );
-                            stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, 1, 100, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+                            stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveType, 1, 100, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
                             stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record", "recordType", 1, 100) );
                               stack.add( new StackEntry(Type.ELEMENT, "record", "recordType", 1, 1) );
                               stack.add( new StackEntry(Type.ELEMENT, "map") );
                         stack.add( new StackEntry(Type.ELEMENT, "tuple") );
                           stack.add( new StackEntry(Type.ALL) );
-/* 30 */                    stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveTypeSchema, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
-                            stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveTypeSchema, (Set<XmlSchemaRestriction>)nonNullPrimitiveTypeFacets.clone()) );
+/* 30 */                    stack.add( new StackEntry(Type.ELEMENT, "primitive", "primitiveType", primitiveType, (Set<XmlSchemaRestriction>)primitiveTypeFacets.clone()) );
+                            stack.add( new StackEntry(Type.ELEMENT, "nonNullPrimitive", "nonNullPrimitiveType", nonNullPrimitiveType, (Set<XmlSchemaRestriction>)nonNullPrimitiveTypeFacets.clone()) );
                             stack.add( new StackEntry(Type.SUBSTITUTION_GROUP, "record") );
                               stack.add( new StackEntry(Type.ELEMENT, "record", "recordType") );
                               stack.add( new StackEntry(Type.ELEMENT, "map") );
@@ -594,13 +606,13 @@ public class TestSchemaWalker {
     HashSet<XmlSchemaRestriction> listAttrFacets = (HashSet<XmlSchemaRestriction>) nonNegativeIntegerFacets.clone();
     listAttrFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.EXCLUSIVE_MAX, 100, false) );
     ArrayList<Attribute> listAttributes = new ArrayList<Attribute>(1);
-    listAttributes.add( new Attribute("size", null, Schema.create(Schema.Type.DOUBLE), listAttrFacets) );
+    listAttributes.add( new Attribute("size", null, XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, listAttrFacets) );
     attributes.put("list", listAttributes);
 
     HashSet<XmlSchemaRestriction> mapAttrFacets = (HashSet<XmlSchemaRestriction>) ncNameFacets.clone();
     mapAttrFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.LENGTH_MIN, 1, false) );
     ArrayList<Attribute> mapAttributes = new ArrayList<Attribute>(1);
-    mapAttributes.add( new Attribute("id", null, Schema.create(Schema.Type.STRING), mapAttrFacets) );
+    mapAttributes.add( new Attribute("id", null, XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, mapAttrFacets) );
     attributes.put("map", mapAttributes);
 
     // Compare against the actual.
