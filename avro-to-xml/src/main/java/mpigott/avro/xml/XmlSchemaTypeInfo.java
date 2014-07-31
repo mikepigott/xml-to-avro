@@ -91,7 +91,7 @@ final class XmlSchemaTypeInfo implements Cloneable {
 
   XmlSchemaTypeInfo(XmlSchemaBaseSimpleType typeName) {
     type = Type.SIMPLE;
-    baseSimpleType = typeName; // TODO: Is this anySimpleType, one of its children, or its parent?
+    baseSimpleType = typeName;
   }
 
   public XmlSchemaTypeInfo clone() {

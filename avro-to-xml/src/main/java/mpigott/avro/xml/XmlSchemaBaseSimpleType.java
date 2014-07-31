@@ -28,6 +28,7 @@ import org.apache.ws.commons.schema.constants.Constants;
  * @author  Mike Pigott
  */
 enum XmlSchemaBaseSimpleType {
+  ANYSIMPLETYPE(Constants.XSD_ANYSIMPLETYPE),
   DURATION(Constants.XSD_DURATION),
   DATETIME(Constants.XSD_DATETIME),
   TIME(Constants.XSD_TIME),
