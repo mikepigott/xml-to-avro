@@ -211,7 +211,7 @@ public class TestSchemaWalker {
         } else if ((facets != null) && !facets.isEmpty() && (next.facets != null) && next.facets.isEmpty()) {
           throw new IllegalStateException("Element " + next.name + " has facets, but none were expected.");
         }
-  
+
         if (facets != null) {
           for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facetsForType : facets.entrySet()) {
             for (XmlSchemaRestriction facet : facetsForType.getValue()) {
