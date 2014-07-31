@@ -688,7 +688,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       final String text = new String(ch, start, length).trim();
 
       final boolean elemExpectsContent =
-          (elemTypeInfo != null) && (elemTypeInfo.getAvroType() != null);
+          (elemTypeInfo != null)
+          && ((elemTypeInfo.getBaseType() != null)
+              && !elemTypeInfo
+                    .getBaseType()
+                    .equals(XmlSchemaBaseSimpleType.ANYTYPE));
 
       if (!elemExpectsContent && text.isEmpty()) {
         // Nothing to see here.

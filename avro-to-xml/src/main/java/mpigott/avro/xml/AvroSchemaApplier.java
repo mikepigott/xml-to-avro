@@ -315,8 +315,10 @@ final class AvroSchemaApplier {
         }
       }
 
-      if (!confirmEquivalent(attributeType, attrType)) {
-        throw new IllegalStateException("Cannot convert element " + elementName + " attribute " + attribute.getQName() + " types between " + attributeType + " and " + attrField.schema());
+      if (!confirmEquivalent(
+          attributeType,
+          attrType)) {
+        throw new IllegalStateException("Cannot convert element " + elementName + " attribute " + attribute.getQName() + " types between " + attributeType.getBaseType() + " and " + attrField.schema());
       }
     }
   }
@@ -379,24 +381,23 @@ final class AvroSchemaApplier {
       XmlSchemaTypeInfo xmlType,
       Schema avroType) {
 
-    if ((avroType != null)
-        && ((xmlType == null) || (xmlType.getAvroType() == null))) {
+    final Schema xmlAvroType = Utils.getAvroSchemaFor(xmlType, false);
+
+    if ((avroType != null) && (xmlAvroType == null)) {
       return false;
 
-    } else if ((avroType == null)
-        && ((xmlType != null) && (xmlType.getAvroType() != null))) {
+    } else if ((avroType == null) && (xmlAvroType != null)) {
       return false;
 
-    } else if ((avroType == null)
-        && ((xmlType == null) || (xmlType.getAvroType() == null))) {
+    } else if ((avroType == null) && (xmlAvroType == null)) {
       return true;
 
     }
 
     if (xmlIsWritten) {
-      return confirmEquivalent(avroType, xmlType.getAvroType());
+      return confirmEquivalent(avroType, xmlAvroType);
     } else {
-      return confirmEquivalent(xmlType.getAvroType(), avroType);
+      return confirmEquivalent(xmlAvroType, avroType);
     }
   }
 
