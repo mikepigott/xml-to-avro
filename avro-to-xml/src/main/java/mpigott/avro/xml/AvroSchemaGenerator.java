@@ -235,8 +235,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     } else if ((children != null) && !children.isEmpty()) {
       boolean isMixedType = false;
       if (typeInfo != null) {
-        isMixedType =
-            typeInfo.getContentType().equals(XmlSchemaContentType.MIXED);
+        isMixedType = typeInfo.isMixed();
       }
 
       if (isMixedType) {

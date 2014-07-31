@@ -36,6 +36,7 @@ import org.apache.ws.commons.schema.XmlSchemaAttributeGroup;
 import org.apache.ws.commons.schema.XmlSchemaAttributeGroupMember;
 import org.apache.ws.commons.schema.XmlSchemaAttributeGroupRef;
 import org.apache.ws.commons.schema.XmlSchemaAttributeOrGroupRef;
+import org.apache.ws.commons.schema.XmlSchemaComplexContent;
 import org.apache.ws.commons.schema.XmlSchemaComplexContentExtension;
 import org.apache.ws.commons.schema.XmlSchemaComplexContentRestriction;
 import org.apache.ws.commons.schema.XmlSchemaComplexType;
@@ -322,7 +323,7 @@ final class XmlSchemaScope {
        * reached the root of the type hierarchy.
        */
       typeInfo =
-          new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.ANY);
+          new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.ANYTYPE);
 
     } else if (content instanceof XmlSchemaSimpleTypeList) {
         XmlSchemaSimpleTypeList list = (XmlSchemaSimpleTypeList) content;
@@ -460,7 +461,18 @@ final class XmlSchemaScope {
      * If there aren't any, the content is be defined by the particle.
      */
     if (complexContent != null) {
-      walk(complexType.getContentType(), complexContent);
+      boolean isMixed = false;
+      if (complexType.getContentType() != null) {
+        isMixed =
+            complexType.getContentType().equals(XmlSchemaContentType.MIXED);
+      } else if (complexType.getContentModel()
+                   instanceof XmlSchemaComplexContent) {
+        isMixed =
+            ((XmlSchemaComplexContent) complexType.getContentModel())
+            .isMixed();
+      }
+
+      walk(isMixed, complexContent);
 
     } else {
       child = complexType.getParticle();
@@ -469,7 +481,7 @@ final class XmlSchemaScope {
     }
   }
 
-  private void walk(XmlSchemaContentType contentType, XmlSchemaContent content) {
+  private void walk(boolean isMixed, XmlSchemaContent content) {
     if (content instanceof XmlSchemaComplexContentExtension) {
       XmlSchemaComplexContentExtension ext =
           (XmlSchemaComplexContentExtension) content;
@@ -560,7 +572,7 @@ final class XmlSchemaScope {
         anyAttr.setUnhandledAttributes( ext.getUnhandledAttributes() );
       }
 
-      typeInfo = new XmlSchemaTypeInfo(contentType);
+      typeInfo = new XmlSchemaTypeInfo(isMixed);
 
     } else if (content instanceof XmlSchemaComplexContentRestriction) {
       XmlSchemaComplexContentRestriction rstr = (XmlSchemaComplexContentRestriction) content;
@@ -593,7 +605,7 @@ final class XmlSchemaScope {
        */
       anyAttr = rstr.getAnyAttribute();
 
-      typeInfo = new XmlSchemaTypeInfo(contentType);
+      typeInfo = new XmlSchemaTypeInfo(isMixed);
 
     } else if (content instanceof XmlSchemaSimpleContentExtension) {
       XmlSchemaSimpleContentExtension ext =
@@ -841,16 +853,19 @@ final class XmlSchemaScope {
 
     if (userRecognizedTypes == null) {
       return null;
+    } else if (simpleType == null) {
+      return (parent == null) ? null : parent.getUserRecognizedType();
 
     } else if ( userRecognizedTypes.contains(simpleType) ) {
       return simpleType;
     }
 
     if ( XmlSchemaBaseSimpleType.isBaseSimpleType(simpleType) ) {
+
       boolean checkAnyType = true;
       boolean checkAnySimpleType = true;
       switch ( XmlSchemaBaseSimpleType.getBaseSimpleTypeFor(simpleType) ) {
-      case ANY:
+      case ANYTYPE:
         checkAnyType = false;
       case ANYSIMPLETYPE:
         checkAnySimpleType = false;
@@ -866,7 +881,7 @@ final class XmlSchemaScope {
       }
 
       if (checkAnyType) {
-        final QName anyType = XmlSchemaBaseSimpleType.ANY.getQName();
+        final QName anyType = XmlSchemaBaseSimpleType.ANYTYPE.getQName();
         if (userRecognizedTypes.contains(anyType)) {
           return anyType;
         }

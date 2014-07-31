@@ -104,10 +104,10 @@ final class XmlSchemaTypeInfo {
 
   XmlSchemaTypeInfo(XmlSchemaTypeInfo listType) {
     type = Type.LIST;
-    contentType = XmlSchemaContentType.TEXT_ONLY;
     childTypes = new ArrayList<XmlSchemaTypeInfo>(1);
     childTypes.add(listType);
 
+    isMixed = false;
     facets = null;
     userRecognizedType = null;
   }
@@ -121,9 +121,9 @@ final class XmlSchemaTypeInfo {
 
   XmlSchemaTypeInfo(List<XmlSchemaTypeInfo> unionTypes) {
     type = Type.UNION;
-    contentType = XmlSchemaContentType.TEXT_ONLY;
     childTypes = unionTypes;
 
+    isMixed = false;
     facets = null;
     userRecognizedType = null;
   }
@@ -136,15 +136,15 @@ final class XmlSchemaTypeInfo {
   }
 
   XmlSchemaTypeInfo(XmlSchemaBaseSimpleType baseSimpleType) {
-    if (baseSimpleType.equals(XmlSchemaBaseSimpleType.ANY)) {
+    if (baseSimpleType.equals(XmlSchemaBaseSimpleType.ANYTYPE)) {
       type = Type.COMPLEX;
     } else {
       type = Type.ATOMIC;
     }
 
-    contentType = XmlSchemaContentType.TEXT_ONLY;
     this.baseSimpleType = baseSimpleType;
 
+    isMixed = false;
     facets = null;
     childTypes = null;
     userRecognizedType = null;
@@ -158,13 +158,10 @@ final class XmlSchemaTypeInfo {
     this.facets = facets;
   }
 
-  XmlSchemaTypeInfo(XmlSchemaContentType contentType) {
-    if (contentType.equals(XmlSchemaContentType.TEXT_ONLY)) {
-      throw new IllegalArgumentException("Text-only types must use one of the other constructors.");
-    }
+  XmlSchemaTypeInfo(boolean isMixed) {
     type = Type.COMPLEX;
-    baseSimpleType = XmlSchemaBaseSimpleType.ANY;
-    this.contentType = contentType;
+    baseSimpleType = XmlSchemaBaseSimpleType.ANYTYPE;
+    this.isMixed = isMixed;
 
     facets = null;
     childTypes = null;
@@ -191,8 +188,8 @@ final class XmlSchemaTypeInfo {
     return userRecognizedType;
   }
 
-  XmlSchemaContentType getContentType() {
-    return contentType;
+  boolean isMixed() {
+    return isMixed;
   }
 
   void setUserRecognizedType(QName userRecType) {
@@ -204,7 +201,7 @@ final class XmlSchemaTypeInfo {
 
   private Type type;
   private HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets;
-  private XmlSchemaContentType contentType;
+  private boolean isMixed;
   private XmlSchemaBaseSimpleType baseSimpleType;
   private QName userRecognizedType;
   private List<XmlSchemaTypeInfo> childTypes;

@@ -76,6 +76,11 @@ class Utils {
       {
         Schema.Type avroType =
           xmlToAvroTypeMap.get( typeInfo.getUserRecognizedType() );
+
+        if (avroType == null) {
+          throw new IllegalArgumentException("No Avro type recognized for " + typeInfo.getUserRecognizedType());
+        }
+
         Schema schema = Schema.create(avroType);
 
         if (isOptional) {
@@ -87,7 +92,9 @@ class Utils {
     case LIST:
       {
         Schema schema =
-          getAvroSchemaFor(typeInfo.getChildTypes().get(0), false);
+            Schema.createArray(
+                getAvroSchemaFor(
+                    typeInfo.getChildTypes().get(0), false) );
 
         if (isOptional) {
           schema = createOptionalTypeOf(schema);

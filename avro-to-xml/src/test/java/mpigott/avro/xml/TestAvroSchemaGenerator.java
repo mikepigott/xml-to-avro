@@ -206,7 +206,7 @@ public class TestAvroSchemaGenerator {
 
   private void checkOptionalPrimitiveField(Schema.Field field, Schema.Type type, Schema.Type subType) {
     assertNotNull(field);
-    assertEquals(field.schema().getType(), Schema.Type.UNION);
+    assertEquals(Schema.Type.UNION, field.schema().getType());
     assertEquals(2, field.schema().getTypes().size());
 
     boolean foundNullType = false;
