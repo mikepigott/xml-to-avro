@@ -347,7 +347,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
             documentation,
             Utils.createJsonNodeFor(defaultValue, attrSchema));
 
-    attr.addProp("xmlSchema", attributeType.getXmlSchemaAsJson());
+    attr.addProp("xmlSchema", getXmlSchemaAsJson(attributeType));
 
     List<Schema.Field> attrs = attributesByElement.get(entry.elementQName);
     if (attrs == null) {
@@ -556,6 +556,59 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     }
 
     return null;
+  }
+
+  private static JsonNode getXmlSchemaAsJson(XmlSchemaTypeInfo typeInfo) {
+    ObjectNode type = JsonNodeFactory.instance.objectNode();
+
+    JsonNode xmlSchemaType = null;
+    switch (typeInfo.getType()) {
+    case ATOMIC:
+      xmlSchemaType = createJsonNodeFor( typeInfo.getBaseType().getQName() );
+      break;
+    case LIST:
+      {
+        JsonNode childNode =
+            getXmlSchemaAsJson( typeInfo.getChildTypes().get(0) );
+        xmlSchemaType = createJsonNodeForList(childNode);
+        break;
+      }
+    case UNION:
+      {
+        List<JsonNode> jsonNodes =
+            new ArrayList<JsonNode>( typeInfo.getChildTypes().size() );
+        for (XmlSchemaTypeInfo childType : typeInfo.getChildTypes()) {
+          jsonNodes.add( getXmlSchemaAsJson(childType) );
+        }
+        xmlSchemaType = createJsonNodeForUnion(jsonNodes);
+        break;
+      }
+    default:
+      throw new IllegalArgumentException("Cannot create a JSON node of a " + typeInfo.getType() + " type.");
+    }
+
+    type.put("baseType", xmlSchemaType);
+
+    final Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets =
+        typeInfo.getFacets();
+
+    if ((facets != null) && !facets.isEmpty()) {
+      ArrayNode facetsArray = JsonNodeFactory.instance.arrayNode();
+
+      for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facetsForType : facets.entrySet()) {
+        for (XmlSchemaRestriction facet : facetsForType.getValue()) {
+          ObjectNode facetNode = JsonNodeFactory.instance.objectNode();
+          facetNode.put("type", facet.getType().name());
+          facetNode.put("value", facet.getValue().toString());
+          facetNode.put("fixed", facet.isFixed());
+          facetsArray.add(facetNode);
+        }
+      }
+    
+      type.put("facets", facetsArray);
+    }
+
+    return type;
   }
 
   private static JsonNode createJsonNodeFor(QName baseType) {
