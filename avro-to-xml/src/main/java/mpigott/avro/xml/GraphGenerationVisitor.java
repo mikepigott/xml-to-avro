@@ -88,7 +88,7 @@ public class GraphGenerationVisitor implements XmlSchemaVisitor {
 
     StringBuilder name = new StringBuilder( element.getQName().toString() );
     if (typeInfo != null) {
-      name.append(": ").append( typeInfo.getAvroType().toString() ).append( typeInfo.getXmlSchemaAsJson() );
+      name.append(": ").append( typeInfo.getType() ).append(" ").append( typeInfo.getBaseType() );
     }
 
     String elemNodeName = getElemNodeName(counter++);
@@ -120,8 +120,8 @@ public class GraphGenerationVisitor implements XmlSchemaVisitor {
     StackEntry top = getTopEntry(element, false);
 
     StringBuilder name = new StringBuilder( attribute.getQName().toString() );
-    name.append(": ").append( attributeType.getAvroType().toString() );
-    name.append(" ").append( attributeType.getXmlSchemaAsJson() );
+    name.append(": ").append( attributeType.getType() );
+    name.append(" ").append( attributeType.getBaseType() );
 
     String attrNodeName = getAttrNodeName(counter++);
 

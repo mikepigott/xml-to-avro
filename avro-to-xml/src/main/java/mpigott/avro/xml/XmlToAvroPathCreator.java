@@ -791,7 +791,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         final XmlSchemaTypeInfo elemTypeInfo = state.getElementType();
 
         final boolean elemExpectsContent =
-            (elemTypeInfo != null) && (elemTypeInfo.getAvroType() != null);
+            (elemTypeInfo != null)
+            && (!elemTypeInfo.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX)
+                || elemTypeInfo.isMixed());
 
         if (elemExpectsContent
             && !state.getElement().isNillable()

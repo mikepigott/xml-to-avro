@@ -51,57 +51,6 @@ final class XmlSchemaTypeInfo {
     COMPLEX;
   }
 
-  Schema getAvroType() {
-    return avroSchemaType;
-  }
-
-  JsonNode getXmlSchemaType() {
-    return xmlSchemaType;
-  }
-
-  /**
-   * Creates a JSON representation of the base type and
-   * the restrictions imposed on it.  This will look like:
-   *
-   * <pre>
-   * {
-   *   "baseType": { <type info of base> },
-   *   "facets": [
-   *      {
-   *        "type": "<type: LENGTH | LENGTH_MIN | LENGTH_MAX | ...>",
-   *        "value" "<value>",
-   *        "fixed": true/false
-   *      },
-   *      ...
-   *   ]
-   * }
-   * </pre>
-   */
-  JsonNode getXmlSchemaAsJson() {
-    ObjectNode type = JsonNodeFactory.instance.objectNode();
-    type.put("baseType", xmlSchemaType);
-
-    if ((facets != null) && !facets.isEmpty()) {
-      ArrayNode facetsArray = JsonNodeFactory.instance.arrayNode();
-
-      for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facetsForType : facets.entrySet()) {
-        for (XmlSchemaRestriction facet : facetsForType.getValue()) {
-          ObjectNode facetNode = JsonNodeFactory.instance.objectNode();
-          facetNode.put("type", facet.getType().name());
-          facetNode.put("value", facet.getValue().toString());
-          facetNode.put("fixed", facet.isFixed());
-          facetsArray.add(facetNode);
-        }
-      }
-    
-      type.put("facets", facetsArray);
-    }
-
-    return type;
-  }
-
-  // REWRITE STARTS HERE
-
   XmlSchemaTypeInfo(XmlSchemaTypeInfo listType) {
     type = Type.LIST;
     childTypes = new ArrayList<XmlSchemaTypeInfo>(1);
@@ -195,9 +144,6 @@ final class XmlSchemaTypeInfo {
   void setUserRecognizedType(QName userRecType) {
     userRecognizedType = userRecType;
   }
-
-  private Schema avroSchemaType;
-  private JsonNode xmlSchemaType;
 
   private Type type;
   private HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets;
