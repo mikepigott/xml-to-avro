@@ -288,7 +288,8 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     record.setFields(fields);
 
-    if (typeInfo != null) {
+    if ((typeInfo != null)
+        && !typeInfo.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX)) {
       record.addProp("xmlSchema", getXmlSchemaAsJson(typeInfo));
     }
   }
