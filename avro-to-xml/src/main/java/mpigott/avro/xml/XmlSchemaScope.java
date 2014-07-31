@@ -336,16 +336,7 @@ final class XmlSchemaScope {
        * reached the root of the type hierarchy.
        */
       typeInfo =
-          new XmlSchemaTypeInfo(
-              Schema.create(xmlToAvroTypeMap.get(simpleType.getQName())),
-              createJsonNodeFor(simpleType.getQName()));
-
-    } else if ( xmlToAvroTypeMap.containsKey(simpleType.getQName()) ) {
-      // This is a recognized Avro type.  Use it!
-      typeInfo =
-          new XmlSchemaTypeInfo(
-              Schema.create(xmlToAvroTypeMap.get(simpleType.getQName())),
-              createJsonNodeFor(simpleType.getQName()));
+          new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.ANY);
 
     } else if (content instanceof XmlSchemaSimpleTypeList) {
         XmlSchemaSimpleTypeList list = (XmlSchemaSimpleTypeList) content;
@@ -359,15 +350,19 @@ final class XmlSchemaScope {
         }
 
         XmlSchemaScope parentScope = getScope(listType);
-        typeInfo =
-            new XmlSchemaTypeInfo(
-                Schema.createArray( parentScope.getTypeInfo().getAvroType() ),
-                createJsonNodeForList( parentScope.getTypeInfo().getXmlSchemaAsJson() ));
+        switch ( parentScope.getTypeInfo().getType() ) {
+        case UNION:
+        case ATOMIC:
+          break;
+        default:
+          throw new IllegalStateException("Attempted to create a list from a " + parentScope.getTypeInfo().getType() + " type.");
+        }
+
+        typeInfo = new XmlSchemaTypeInfo( parentScope.getTypeInfo() );
 
     } else if (content instanceof XmlSchemaSimpleTypeUnion) {
         XmlSchemaSimpleTypeUnion union = (XmlSchemaSimpleTypeUnion) content;
         QName[] namedBaseTypes = union.getMemberTypesQNames();
-
         List<XmlSchemaSimpleType> baseTypes = union.getBaseTypes();
 
         if (namedBaseTypes != null) {
@@ -389,27 +384,26 @@ final class XmlSchemaScope {
           throw new IllegalArgumentException("Unrecognized base types for union " + getName(simpleType, "{Anonymous Union Type}"));
         }
 
-        HashSet<Schema> unionSchemas = new HashSet<Schema>( baseTypes.size() );
-        ArrayList<JsonNode> unionNodes = new ArrayList<JsonNode>( baseTypes.size() );
+        List<XmlSchemaTypeInfo> childTypes =
+            new ArrayList<XmlSchemaTypeInfo>( baseTypes.size() );
+
         for (XmlSchemaSimpleType baseType : baseTypes) {
           XmlSchemaScope parentScope = getScope(baseType);
-          unionSchemas.add( parentScope.getTypeInfo().getAvroType() );
-          unionNodes.add( parentScope.getTypeInfo().getXmlSchemaAsJson() );
+          if (parentScope
+                .getTypeInfo()
+                .getType()
+                .equals(XmlSchemaTypeInfo.Type.UNION) ) {
+            childTypes.addAll( parentScope.getTypeInfo().getChildTypes() );
+          } else {
+            childTypes.add( parentScope.getTypeInfo() );
+          }
         }
 
-        typeInfo =
-            new XmlSchemaTypeInfo(
-                Schema.createUnion(Arrays.asList(unionSchemas.toArray(new Schema[0]))),
-                createJsonNodeForUnion(unionNodes));
+        typeInfo = new XmlSchemaTypeInfo(childTypes);
 
     } else if (content instanceof XmlSchemaSimpleTypeRestriction) {
-        XmlSchemaSimpleTypeRestriction restr = (XmlSchemaSimpleTypeRestriction) content;
-
-        XmlSchemaSimpleType baseType = restr.getBaseType();
-        if (baseType == null) {
-            XmlSchema schema = schemasByNamespace.get( restr.getBaseTypeName().getNamespaceURI() );
-            baseType = (XmlSchemaSimpleType) schema.getTypeByName(restr.getBaseTypeName());
-        }
+        final XmlSchemaSimpleTypeRestriction restr =
+            (XmlSchemaSimpleTypeRestriction) content;
 
         List<XmlSchemaFacet> facets = restr.getFacets();
         if ((facets == null) || facets.isEmpty()) {
@@ -417,21 +411,47 @@ final class XmlSchemaScope {
           facets = facetsOfSchemaTypes.get( simpleType.getQName() );
         }
 
-        if (baseType != null) {
-          XmlSchemaScope parentScope = getScope(baseType);
-
-          /* We need to track the original type as well as the set of facets
-           * imposed on that type.  Once the recursion ends, and we make it
-           * all the way back to the first scope, we can create a JSON node
-           * that represents the derived type and all of its imposed facets.
-           */
+        if ( XmlSchemaBaseSimpleType.isBaseSimpleType(simpleType.getQName()) ) {
+          // If this is a base simple type, use it!
           typeInfo =
               new XmlSchemaTypeInfo(
-                  parentScope.getTypeInfo().getAvroType(),
-                  parentScope.getTypeInfo().getXmlSchemaType(),
-                  mergeFacets(parentScope.getTypeInfo().getFacets(), facets));
+                  XmlSchemaBaseSimpleType.getBaseSimpleTypeFor(
+                      simpleType.getQName()),
+                  mergeFacets(null, facets));
+
         } else {
-            throw new IllegalArgumentException("Unrecognized base type for " + getName(simpleType, "{Anonymous Simple Type}"));
+          XmlSchemaSimpleType baseType = restr.getBaseType();
+          if (baseType == null) {
+              XmlSchema schema =
+                  schemasByNamespace.get(
+                      restr.getBaseTypeName().getNamespaceURI());
+              baseType =
+                  (XmlSchemaSimpleType) schema.getTypeByName(
+                      restr.getBaseTypeName());
+          }
+
+          if (baseType != null) {
+            final XmlSchemaScope parentScope = getScope(baseType);
+
+            /* We need to track the original type as well as the set of facets
+             * imposed on that type.  Once the recursion ends, and we make it
+             * all the way back to the first scope, the user of this type info
+             * will know the derived type and all of its imposed facets.
+             *
+             * Unions can restrict unions, lists can restrict lists, and atomic
+             * types restrict other atomic types.  We need to follow all of
+             * these too.
+             */
+            final XmlSchemaTypeInfo parentTypeInfo = parentScope.getTypeInfo();
+
+            HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
+              mergedFacets = mergeFacets(parentTypeInfo.getFacets(), facets);
+
+            typeInfo = restrictTypeInfo(parentTypeInfo, mergedFacets);
+
+          } else {
+              throw new IllegalArgumentException("Unrecognized base type for " + getName(simpleType, "{Anonymous Simple Type}"));
+          }
         }
     } else {
         throw new IllegalArgumentException("XmlSchemaSimpleType " + getName(simpleType, "{Anonymous Simple Type}") + "contains unrecognized XmlSchemaSimpleTypeContent " + content.getClass().getName());
@@ -460,9 +480,11 @@ final class XmlSchemaScope {
   private void walk(XmlSchemaContent content) {
 
     if (content instanceof XmlSchemaComplexContentExtension) {
-      XmlSchemaComplexContentExtension ext = (XmlSchemaComplexContentExtension) content;
+      XmlSchemaComplexContentExtension ext =
+          (XmlSchemaComplexContentExtension) content;
 
-      XmlSchema schema = schemasByNamespace.get( ext.getBaseTypeName().getNamespaceURI() );
+      XmlSchema schema =
+          schemasByNamespace.get( ext.getBaseTypeName().getNamespaceURI() );
       XmlSchemaType baseType = schema.getTypeByName( ext.getBaseTypeName() );
 
       XmlSchemaParticle baseParticle = null;
@@ -475,7 +497,8 @@ final class XmlSchemaScope {
          * straight add.
          */
         XmlSchemaScope parentScope = getScope(baseType);
-        Collection<XmlSchemaAttribute> parentAttrs = parentScope.getAttributesInScope();
+        Collection<XmlSchemaAttribute> parentAttrs =
+            parentScope.getAttributesInScope();
 
         attributes = createAttributeMap( ext.getAttributes() );
 
@@ -578,20 +601,19 @@ final class XmlSchemaScope {
       anyAttr = rstr.getAnyAttribute();
 
     } else if (content instanceof XmlSchemaSimpleContentExtension) {
-      XmlSchemaSimpleContentExtension ext = (XmlSchemaSimpleContentExtension) content;
+      XmlSchemaSimpleContentExtension ext =
+          (XmlSchemaSimpleContentExtension) content;
       attributes = createAttributeMap( ext.getAttributes() );
 
-      XmlSchema schema = schemasByNamespace.get( ext.getBaseTypeName().getNamespaceURI() );
+      XmlSchema schema =
+          schemasByNamespace.get( ext.getBaseTypeName().getNamespaceURI() );
       XmlSchemaType baseType = schema.getTypeByName( ext.getBaseTypeName() );
 
       if (baseType != null) {
         XmlSchemaScope parentScope = getScope(baseType);
 
-        typeInfo =
-            new XmlSchemaTypeInfo(
-                parentScope.getTypeInfo().getAvroType(),
-                parentScope.getTypeInfo().getXmlSchemaType(),
-                parentScope.getTypeInfo().getFacets());
+        // TODO: Does this need to be cloned?
+        typeInfo = parentScope.getTypeInfo();
       }
 
       anyAttr = ext.getAnyAttribute();
@@ -611,10 +633,11 @@ final class XmlSchemaScope {
       if (baseType != null) {
         XmlSchemaScope parentScope = getScope(baseType);
         typeInfo =
-            new XmlSchemaTypeInfo(
-                parentScope.getTypeInfo().getAvroType(),
-                parentScope.getTypeInfo().getXmlSchemaType(),
-                mergeFacets(parentScope.getTypeInfo().getFacets(), rstr.getFacets()));
+            restrictTypeInfo(
+                parentScope.getTypeInfo(),
+                mergeFacets(
+                    parentScope.getTypeInfo().getFacets(),
+                    rstr.getFacets()));
       }
 
       anyAttr = rstr.getAnyAttribute();
@@ -884,6 +907,38 @@ final class XmlSchemaScope {
     }
 
     return mergedFacets;
+  }
+
+  private static XmlSchemaTypeInfo restrictTypeInfo(
+      XmlSchemaTypeInfo parentTypeInfo,
+      HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
+
+    XmlSchemaTypeInfo typeInfo = null;
+
+    switch(parentTypeInfo.getType()) {
+    case LIST:
+      typeInfo =
+        new XmlSchemaTypeInfo(
+            parentTypeInfo.getChildTypes().get(0),
+            facets);
+      break;
+    case UNION:
+      typeInfo =
+        new XmlSchemaTypeInfo(
+            parentTypeInfo.getChildTypes(),
+            facets);
+      break;
+    case ATOMIC:
+      typeInfo =
+        new XmlSchemaTypeInfo(
+          parentTypeInfo.getBaseType(),
+          facets);
+      break;
+    default:
+      throw new IllegalStateException("Cannot restrict on a " + parentTypeInfo.getType() + " type.");
+    }
+
+    return typeInfo;
   }
 
   private Map<String, XmlSchema> schemasByNamespace;

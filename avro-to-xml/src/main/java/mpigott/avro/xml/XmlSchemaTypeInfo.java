@@ -47,78 +47,8 @@ final class XmlSchemaTypeInfo implements Cloneable {
   enum Type {
     LIST,
     UNION,
-    RESTRICTION,
-    SIMPLE;
-  }
-
-  XmlSchemaTypeInfo(Schema avroType, JsonNode xmlType) {
-    this.avroSchemaType = avroType;
-    this.xmlSchemaType = xmlType;
-    this.facets = null;
-    this.contentType = null;
-    this.baseSimpleType = null;
-    this.userRecognizedType = null;
-    this.childTypes = null;
-  }
-
-  XmlSchemaTypeInfo(
-      Schema avroType,
-      JsonNode xmlType,
-      HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
-
-    this(avroType, xmlType);
-    this.facets = facets;
-  }
-
-  XmlSchemaTypeInfo(XmlSchemaTypeInfo listType) {
-    type = Type.LIST;
-    childTypes = new ArrayList<XmlSchemaTypeInfo>(1);
-    childTypes.add(listType);
-  }
-
-  XmlSchemaTypeInfo(List<XmlSchemaTypeInfo> unionTypes) {
-    type = Type.UNION;
-    childTypes = unionTypes;
-  }
-
-  XmlSchemaTypeInfo(
-      XmlSchemaBaseSimpleType baseSimpleType,
-      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
-
-    type = Type.RESTRICTION;
-    this.baseSimpleType = baseSimpleType;
-  }
-
-  XmlSchemaTypeInfo(XmlSchemaBaseSimpleType typeName) {
-    type = Type.SIMPLE;
-    baseSimpleType = typeName;
-  }
-
-  public XmlSchemaTypeInfo clone() {
-    XmlSchemaTypeInfo clone = null;
-
-    switch (type) {
-    case LIST:
-      clone = new XmlSchemaTypeInfo(childTypes.get(0));
-      break;
-    case UNION:
-      clone = new XmlSchemaTypeInfo(childTypes);
-      break;
-    case RESTRICTION:
-      clone = new XmlSchemaTypeInfo(baseSimpleType, facets);
-      break;
-    case SIMPLE:
-      clone = new XmlSchemaTypeInfo(baseSimpleType);
-      break;
-    default:
-      throw new IllegalStateException("Unrecognized type for XmlSchemaTypeInfo of " + type);
-    }
-
-    if (userRecognizedType != null) {
-      clone.setUserRecognizedType(userRecognizedType);
-    }
-
-    return clone;
+    ATOMIC,
+    COMPLEX;
   }
 
   Schema getAvroType() {
@@ -127,10 +57,6 @@ final class XmlSchemaTypeInfo implements Cloneable {
 
   JsonNode getXmlSchemaType() {
     return xmlSchemaType;
-  }
-
-  HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> getFacets() {
-    return facets;
   }
 
   /**
@@ -172,6 +98,101 @@ final class XmlSchemaTypeInfo implements Cloneable {
     }
 
     return type;
+  }
+
+  // REWRITE STARTS HERE
+
+  XmlSchemaTypeInfo(XmlSchemaTypeInfo listType) {
+    type = Type.LIST;
+    contentType = XmlSchemaContentType.TEXT_ONLY;
+    childTypes = new ArrayList<XmlSchemaTypeInfo>(1);
+    childTypes.add(listType);
+
+    facets = null;
+    userRecognizedType = null;
+  }
+
+  XmlSchemaTypeInfo(
+      XmlSchemaTypeInfo listType,
+      HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
+    this(listType);
+    this.facets = facets;
+  }
+
+  XmlSchemaTypeInfo(List<XmlSchemaTypeInfo> unionTypes) {
+    type = Type.UNION;
+    contentType = XmlSchemaContentType.TEXT_ONLY;
+    childTypes = unionTypes;
+
+    facets = null;
+    userRecognizedType = null;
+  }
+
+  XmlSchemaTypeInfo(
+      List<XmlSchemaTypeInfo> unionTypes,
+      HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
+    this(unionTypes);
+    this.facets = facets;
+  }
+
+  XmlSchemaTypeInfo(XmlSchemaBaseSimpleType baseSimpleType) {
+    if (baseSimpleType.equals(XmlSchemaBaseSimpleType.ANY)) {
+      type = Type.COMPLEX;
+    } else {
+      type = Type.ATOMIC;
+    }
+
+    contentType = XmlSchemaContentType.TEXT_ONLY;
+    this.baseSimpleType = baseSimpleType;
+
+    facets = null;
+    childTypes = null;
+    userRecognizedType = null;
+  }
+
+  XmlSchemaTypeInfo(
+      XmlSchemaBaseSimpleType baseSimpleType,
+      HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
+
+    this(baseSimpleType);
+    this.facets = facets;
+  }
+
+  XmlSchemaTypeInfo(XmlSchemaContentType contentType) {
+    if (contentType.equals(XmlSchemaContentType.TEXT_ONLY)) {
+      throw new IllegalArgumentException("Text-only types must use one of the other constructors.");
+    }
+    type = Type.COMPLEX;
+    baseSimpleType = XmlSchemaBaseSimpleType.ANY;
+    this.contentType = contentType;
+
+    facets = null;
+    childTypes = null;
+    userRecognizedType = null;
+  }
+
+  HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> getFacets() {
+    return facets;
+  }
+
+  XmlSchemaBaseSimpleType getBaseType() {
+    return baseSimpleType;
+  }
+
+  Type getType() {
+    return type;
+  }
+
+  List<XmlSchemaTypeInfo> getChildTypes() {
+    return childTypes;
+  }
+
+  QName getUserRecognizedType() {
+    return userRecognizedType;
+  }
+
+  XmlSchemaContentType getContentType() {
+    return contentType;
   }
 
   void setUserRecognizedType(QName userRecType) {
