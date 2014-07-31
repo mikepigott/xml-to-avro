@@ -230,7 +230,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
           && !children.isEmpty()
           && (typeInfo != null)
           && (typeInfo.getUserRecognizedType() != null)) {
-      throw new IllegalStateException("Element \"" + entry.elementQName + "\" has both a type (" + typeInfo.getAvroType() + ") and " + children.size() + " child elements.");
+      throw new IllegalStateException("Element \"" + entry.elementQName + "\" has both a type (" + typeInfo.getUserRecognizedType() + ") and " + children.size() + " child elements.");
 
     } else if ((children != null) && !children.isEmpty()) {
       boolean isMixedType = false;
@@ -345,7 +345,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
             attrQName.getLocalPart(),
             attrSchema,
             documentation,
-            Utils.createJsonNodeFor(defaultValue, attributeType.getAvroType()));
+            Utils.createJsonNodeFor(defaultValue, attrSchema));
 
     attr.addProp("xmlSchema", attributeType.getXmlSchemaAsJson());
 
