@@ -423,6 +423,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     final QName elemQName = new QName(uri, localName);
 
+    if (localName.equals("context")) {
+      System.err.println("Starting the context tag.");
+    }
+
     try {
       XmlSchemaPathNode startOfPath = currentPath;
 
@@ -951,9 +955,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             fulfilled = false;
             break;
           }
-        }
-        if (stateIndex < nextStates.size()) {
-          possiblePaths.add(stateIndex);
+
+          if (stateIndex < nextStates.size()) {
+            possiblePaths.add(stateIndex);
+          }
         }
         break;
       }
@@ -973,6 +978,13 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     final boolean isFulfilled =
         isPositionFulfilled(startNode, childrenNodes);
 
+    if (elemQName.getLocalPart().equals("context")) {
+      System.out.println("Path starting at " + startNode.getStateMachineNode().getNodeType() + " has " + childrenNodes.size() + " opportunities to follow.");
+      for (Integer i : childrenNodes) {
+        System.out.println("\t" + startNode.getStateMachineNode().getPossibleNextStates().get(i));
+      }
+    }
+
     // First, try searching down the tree.
     List<PathSegment> choices = null;
     List<PathSegment> currChoices = null;
@@ -981,6 +993,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       choices = find(startNode, elemQName, 0);
     } else {
       for (Integer childPath : childrenNodes) {
+        if ( startNode.getStateMachineNode().getPossibleNextStates().get(childPath).getNodeType().equals(XmlSchemaStateMachineNode.Type.CHOICE) ) {
+          System.out.println("Investigating the CHOICE.");
+        }
+
         final XmlSchemaPathNode currPath =
             pathMgr.addChildNodeToPath(startNode, childPath);
   
@@ -1056,9 +1072,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         }
 
         if (choices == null) {
-          choices = currChoices;
+          choices = pathsOfParent;
         } else {
-          choices.addAll(currChoices);
+          choices.addAll(pathsOfParent);
         }
       } else {
         // path would not have been recycled at a lower level.

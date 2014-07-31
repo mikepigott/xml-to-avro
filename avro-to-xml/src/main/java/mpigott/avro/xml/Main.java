@@ -120,7 +120,6 @@ public class Main {
 
       visualizeStateMachine(startNode, "xbrl_sm.dot");
 
-      /* TODO
       XmlToAvroPathCreator pathCreator = new XmlToAvroPathCreator(startNode);
       SAXParserFactory spf = SAXParserFactory.newInstance();
       spf.setNamespaceAware(true);
@@ -130,7 +129,6 @@ public class Main {
 
       XmlSchemaPathNode rootPath =
           pathCreator.getXmlSchemaDocumentPath();
-       */
     } finally {
       long endXbrlWalk = System.currentTimeMillis();
       System.out.println("Walking the xbrl node took " + (endXbrlWalk - startXbrlWalk) + " milliseconds.");
