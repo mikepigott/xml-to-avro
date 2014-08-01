@@ -96,7 +96,7 @@ final class XmlSchemaDocumentNode<U> {
       return false;
     }
 
-    if (visitors.size() != children.size()) {
+    if ((children != null) && (visitors.size() != children.size())) {
       throw new IllegalStateException("The number of visitors (" + visitors.size() + ") does not match the number of occurrences (" + children.size() + ").");
     }
 
@@ -112,7 +112,11 @@ final class XmlSchemaDocumentNode<U> {
     }
 
     visitors.remove(visitorIndex);
-    children.remove(visitorIndex);
+
+    if (children != null) {
+      children.remove(visitorIndex);
+    }
+
     return true;
   }
 

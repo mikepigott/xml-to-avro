@@ -620,6 +620,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
               followPath(nextPath);
 
             } else if ( te.traversal.equals(TraversedElement.Traversal.END) ) {
+              walkUpToElement(te.elemName);
               walkUpTree(te.elemName);
 
             } else {
@@ -1482,11 +1483,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       return;
     }
 
-    while ((iter != null)
-            && !iter
-                  .getStateMachineNode()
-                  .getNodeType()
-                  .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
+    do {
 
       iter = iter.getParent();
       if (iter != null) {
@@ -1498,7 +1495,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         currentPath.setNextNode(-1, nextPath);
         currentPath = nextPath;
       }
-    }
+    } while ((iter != null)
+        && !iter
+        .getStateMachineNode()
+        .getNodeType()
+        .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
 
     if (!currentPath
           .getStateMachineNode()
