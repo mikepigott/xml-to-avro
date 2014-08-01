@@ -69,7 +69,10 @@ public class Main {
     try {
       //File file = new File("src\\test\\resources\\test_schema.xsd");
       //System.out.println("Reading from: " + file.getAbsolutePath());
-      URL url = new URL("http://xbrl.fasb.org/us-gaap/2013/elts/us-gaap-2013-01-31.xsd");
+      // http://xbrl.fasb.org/us-gaap/2013/elts/us-gaap-2013-01-31.xsd
+      // http://xbrl.fasb.org/us-gaap/2012/elts/us-gaap-2012-01-31.xsd
+      // http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd
+      URL url = new URL("http://xbrl.fasb.org/us-gaap/2012/elts/us-gaap-2012-01-31.xsd");
       collection = new XmlSchemaCollection();
       collection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
       collection.setBaseUri("http://xbrl.fasb.org/us-gaap/2013/elts/");

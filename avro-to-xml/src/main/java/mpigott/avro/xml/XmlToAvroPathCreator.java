@@ -536,7 +536,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
          *    paths.
          */
         if (possiblePaths.size() > 1) {
-          System.err.println("Found " + possiblePaths.size() + " paths to " + elemQName);
           final DecisionPoint decisionPoint =
               new DecisionPoint(
                   currentPath,
@@ -1185,6 +1184,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     switch (state.getNodeType()) {
     case ELEMENT:
       {
+        if (elemQName.getLocalPart().equals("Revenues")
+            && state.getElement().getQName().getLocalPart().equals("Revenues")) {
+          System.err.println("Found revenues in the schema tree!");
+        }
+
         if (state.getElement().getQName().equals(elemQName)
             && startNode.getIteration() <= state.getMaxOccurs()) {
 
