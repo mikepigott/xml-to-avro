@@ -429,10 +429,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     final QName elemQName = new QName(uri, localName);
 
-    if (localName.equals("Revenues")) {
-      System.err.println("Processing Revenues tag ...");
-    }
-
     try {
       XmlSchemaPathNode startOfPath = currentPath;
 
@@ -560,6 +556,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       } else {
         // OR: If no paths are returned:
+        System.err.println("Cannot find a path to " + elemQName + "; backtracking.");
 
         while ((decisionPoints != null) && !decisionPoints.isEmpty()) {
           /* 2a. Backtrack to the most recent decision point.
@@ -1184,17 +1181,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     switch (state.getNodeType()) {
     case ELEMENT:
       {
-        if (elemQName.getLocalPart().equals("Revenues")
-            && state.getElement().getQName().getLocalPart().equals("Revenues")) {
-          System.err.println("Found revenues in the schema tree!");
-        }
-
         if (state.getElement().getQName().equals(elemQName)
             && startNode.getIteration() <= state.getMaxOccurs()) {
 
           choices = new ArrayList<PathSegment>(1);
           choices.add( createPathSegment(startNode) );
-
         }
       }
       break;
