@@ -429,6 +429,10 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     final QName elemQName = new QName(uri, localName);
 
+    if (localName.equals("Revenues")) {
+      System.err.println("Processing Revenues tag ...");
+    }
+
     try {
       XmlSchemaPathNode startOfPath = currentPath;
 
@@ -532,6 +536,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
          *    paths.
          */
         if (possiblePaths.size() > 1) {
+          System.err.println("Found " + possiblePaths.size() + " paths to " + elemQName);
           final DecisionPoint decisionPoint =
               new DecisionPoint(
                   currentPath,
@@ -908,7 +913,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
          * If all elements meet the maximum number, we are completely fulfilled.
          */
         boolean groupPartiallyFulfilled = false;
-        boolean groupCompletelyFulfilled = true;
+        boolean groupCompletelyFulfilled = false;
         for (int stateIndex = 0;
             stateIndex < nextStates.size();
             ++stateIndex) {
@@ -924,24 +929,22 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                 possiblePaths.clear();
                 if (iteration < nextState.getMaxOccurs()) {
                   possiblePaths.add(stateIndex);
+                } else {
+                  groupCompletelyFulfilled = true;
                 }
               }
-            }
-            if (iteration < nextState.getMaxOccurs()) {
-              groupCompletelyFulfilled = false;
-              if (possiblePaths != null) {
-                possiblePaths.add(stateIndex);
-              }
+              break;
+            } else if (possiblePaths != null) {
+              possiblePaths.add(stateIndex);
             }
           } else {
             if (nextState.getMinOccurs() == 0) {
               groupPartiallyFulfilled = true;
             }
-            if (nextState.getMaxOccurs() > 0) {
-              groupCompletelyFulfilled = false;
-              if (possiblePaths != null) {
-                possiblePaths.add(stateIndex);
-              }
+            if (nextState.getMaxOccurs() == 0) {
+              groupCompletelyFulfilled = true;
+            } else if (possiblePaths != null) {
+              possiblePaths.add(stateIndex);
             }
           }
         }
