@@ -238,9 +238,11 @@ final class XmlSchemaPathManager<U> {
       iter = prev;
       prev = iter.getPrevious();
 
-      iter.getDocumentNode().removeVisitor(iter);
-      if (iter.getDocIteration() == 0) {
-        recycleDocumentNode(iter.getDocumentNode());
+      if (iter.getDocumentNode() != null) {
+        iter.getDocumentNode().removeVisitor(iter);
+        if (iter.getDocIteration() == 0) {
+          recycleDocumentNode(iter.getDocumentNode());
+        }
       }
       recyclePathNode(iter);
     }

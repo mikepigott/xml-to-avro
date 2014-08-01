@@ -376,6 +376,12 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     Traversal traversal;
   }
 
+  enum Fulfillment {
+    NOT,
+    PARTIAL,
+    COMPLETE
+  }
+
   /**
    * Creates a new <code>XmlToAvroPathCreator</code> with the root
    * {@link XmlSchemaStateMachineNode} to start from when evaluating documents.
@@ -436,7 +442,9 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       } else if (currentPath
                    .getStateMachineNode()
                    .getNodeType()
-                   .equals(XmlSchemaStateMachineNode.Type.ANY)) {
+                   .equals(XmlSchemaStateMachineNode.Type.ANY)
+                   && (anyStack != null)
+                   && !anyStack.isEmpty()) {
         /* If we are currently following a wildcard element node, we don't know
          * anything about the element or its children.  So it does not make
          * sense to follow the children or grandchildren of this element.
@@ -633,6 +641,15 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         traversedElements.add(
             new TraversedElement(elemQName, TraversedElement.Traversal.START));
         elementStack.add(elemQName);
+        if (currentPath
+              .getStateMachineNode()
+              .getNodeType()
+              .equals(XmlSchemaStateMachineNode.Type.ANY)) {
+          if (anyStack == null) {
+            anyStack = new ArrayList<QName>();
+          }
+          anyStack.add(elemQName);
+        }
       } else {
         /* If we go through all prior decision points and are unable to find
          * one or more paths through the XML Schema that match the document,
@@ -666,33 +683,27 @@ final class XmlToAvroPathCreator extends DefaultHandler {
      */
 
     try {
-      final XmlSchemaStateMachineNode state =
-          currentPath.getStateMachineNode();
-
-      if ( state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ANY) ) {
+      if ( currentPath
+             .getStateMachineNode()
+             .getNodeType()
+             .equals(XmlSchemaStateMachineNode.Type.ANY) ) {
         /* If this represents a wildcard element, we don't
          * care - we won't be processing the content.
          */
         return;
-
       } 
 
-      if (!getQNameOfOwningElement()
-            .equals(elementStack.get(elementStack.size() - 1))) {
-
-        throw new IllegalStateException("We are processing characters for " + elementStack.get(elementStack.size() - 1) + " but our current position is for element " + state.getElement().getQName() + " !!");
-      }
+      final XmlSchemaStateMachineNode state =
+          getStateMachineOfOwningElement();
 
       final XmlSchemaTypeInfo elemTypeInfo = state.getElementType();
 
       final String text = new String(ch, start, length).trim();
 
       final boolean elemExpectsContent =
-          (elemTypeInfo != null)
-          && ((elemTypeInfo.getBaseType() != null)
-              && !elemTypeInfo
-                    .getBaseType()
-                    .equals(XmlSchemaBaseSimpleType.ANYTYPE));
+          ((elemTypeInfo != null)
+          && (!elemTypeInfo.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX)
+              || elemTypeInfo.isMixed()));
 
       if (!elemExpectsContent && text.isEmpty()) {
         // Nothing to see here.
@@ -771,11 +782,21 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     final QName elemQName = new QName(uri, localName);
 
     try {
-      if ( !elementStack.get(elementStack.size() - 1).equals(elemQName) ) {
+      final boolean isAny =
+          (currentPath
+            .getStateMachineNode()
+            .getNodeType()
+            .equals(XmlSchemaStateMachineNode.Type.ANY)
+            && (anyStack != null) && !anyStack.isEmpty());
+
+      if (!isAny
+            && !elementStack.get(elementStack.size() - 1).equals(elemQName) ) {
         throw new IllegalStateException("Attempting to end element " + elemQName + " but the stack is expecting " + elementStack.get(elementStack.size() - 1));
       }
 
-      walkUpToElement(elemQName);
+      if (!isAny) {
+        walkUpToElement(elemQName);
+      }
 
       final XmlSchemaStateMachineNode state =
           currentPath.getStateMachineNode();
@@ -806,7 +827,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       traversedElements.add(
           new TraversedElement(elemQName, TraversedElement.Traversal.END));
+
       elementStack.remove(elementStack.size() - 1);
+      if (isAny) {
+        anyStack.remove(anyStack.size() - 1);
+      }
 
     } catch (Exception e) {
       throw new RuntimeException("Error occurred while ending element " + elemQName + "; traversed path was " + getElementsTraversedAsString(), e);
@@ -834,20 +859,32 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return rootPathNode;
   }
 
-  private boolean isPositionFulfilled(
+  private Fulfillment isPositionFulfilled(
       XmlSchemaPathNode currentPath,
       List<Integer> possiblePaths) {
 
+    boolean completelyFulfilled = true;
+    boolean partiallyFulfilled = true;
+
     final XmlSchemaStateMachineNode state = currentPath.getStateMachineNode();
 
-    boolean fulfilled = true;
     if (currentPath.getDocumentNode() == null) {
       // This is the root node.  It is not fulfilled.
-      fulfilled = false;
+      partiallyFulfilled = false;
     } else if ( currentPath.getDocIteration() >= state.getMinOccurs() ) {
-      fulfilled = true;
+      partiallyFulfilled = true;
     } else {
-      fulfilled = false;
+      partiallyFulfilled = false;
+    }
+
+    if (currentPath.getDocumentNode() == null) {
+      completelyFulfilled = false;
+    } else if (currentPath.getDocIteration() == state.getMaxOccurs()) {
+      completelyFulfilled = true;
+    } else if (currentPath.getDocIteration() > state.getMaxOccurs()) {
+      throw new IllegalStateException("Current path's document iteration of " + currentPath.getDocIteration() + " is greater than the maximum number of occurrences (" + state.getMaxOccurs() + ").");
+    } else {
+      completelyFulfilled = false;
     }
 
     final List<XmlSchemaStateMachineNode> nextStates =
@@ -866,8 +903,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     case CHOICE:
     case SUBSTITUTION_GROUP:
       {
-        // If any child meets the minimum number, we succeeded.
-        boolean groupFulfilled = false;
+        /* If any child meets the minimum number, we are partially fulfilled.
+         * If all elements meet the maximum number, we are completely fulfilled.
+         */
+        boolean groupPartiallyFulfilled = false;
+        boolean groupCompletelyFulfilled = true;
         for (int stateIndex = 0;
             stateIndex < nextStates.size();
             ++stateIndex) {
@@ -878,29 +918,34 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
             final int iteration = child.getIteration();
             if (iteration >= nextState.getMinOccurs()) {
-              groupFulfilled = true;
+              groupPartiallyFulfilled = true;
               if (possiblePaths != null) {
                 possiblePaths.clear();
                 if (iteration < nextState.getMaxOccurs()) {
                   possiblePaths.add(stateIndex);
                 }
               }
-              break;
             }
-            if ((possiblePaths != null)
-                && (iteration < nextState.getMaxOccurs())) {
-              possiblePaths.add(stateIndex);
+            if (iteration < nextState.getMaxOccurs()) {
+              groupCompletelyFulfilled = false;
+              if (possiblePaths != null) {
+                possiblePaths.add(stateIndex);
+              }
             }
           } else {
             if (nextState.getMinOccurs() == 0) {
-              groupFulfilled = true;
+              groupPartiallyFulfilled = true;
             }
-            if ((possiblePaths != null) && (nextState.getMaxOccurs() > 0)) {
-              possiblePaths.add(stateIndex);
+            if (nextState.getMaxOccurs() > 0) {
+              groupCompletelyFulfilled = false;
+              if (possiblePaths != null) {
+                possiblePaths.add(stateIndex);
+              }
             }
           }
         }
-        fulfilled &= groupFulfilled;
+        partiallyFulfilled &= groupPartiallyFulfilled;
+        completelyFulfilled &= groupCompletelyFulfilled;
         break;
       }
     case ALL:
@@ -915,18 +960,23 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
             final int iteration = child.getIteration();
             if (iteration < nextState.getMinOccurs()) {
-              fulfilled = false;
+              partiallyFulfilled = false;
             }
-            if ((possiblePaths != null)
-                && (iteration < nextState.getMaxOccurs())) {
-              possiblePaths.add(stateIndex);
+            if (iteration < nextState.getMaxOccurs()) {
+              completelyFulfilled = false;
+              if (possiblePaths != null) {
+                possiblePaths.add(stateIndex);
+              }
             }
           } else {
             if (nextState.getMinOccurs() > 0) {
-              fulfilled = false;
+              partiallyFulfilled = false;
             }
-            if ((possiblePaths != null) && (nextState.getMaxOccurs() > 0)) {
-              possiblePaths.add(stateIndex);
+            if (nextState.getMaxOccurs() > 0) {
+              completelyFulfilled = false;
+              if (possiblePaths != null) {
+                possiblePaths.add(stateIndex);
+              }
             }
           }
         }
@@ -948,24 +998,25 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
             if (child.getIteration()
                 < nextState.getMinOccurs()) {
-              fulfilled = false;
-              break;
-            } else if ((possiblePaths != null)
-                        && (child.getIteration() < nextState.getMaxOccurs())) {
-              possiblePaths.add(stateIndex);
+              partiallyFulfilled = false;
             }
-          } else if (nextState.getMinOccurs() > 0) {
-            fulfilled = false;
-            break;
-          } else if ((possiblePaths != null)
-                      && (nextState.getMinOccurs() == 0)
-                      && (nextState.getMaxOccurs() > 0)) {
-            possiblePaths.add(stateIndex);
-          }
-        }
-        if ((possiblePaths != null)
-            && (stateIndex < nextStates.size())) {
-          possiblePaths.add(stateIndex);
+            if (child.getIteration() < nextState.getMaxOccurs()) {
+              completelyFulfilled = false;
+              if (possiblePaths != null) {
+                possiblePaths.add(stateIndex);
+              }
+            }
+          } else {
+            if (nextState.getMinOccurs() > 0) {
+              partiallyFulfilled = false;
+            }
+            if (nextState.getMaxOccurs() > 0) {
+              completelyFulfilled = false;
+              if (possiblePaths != null) {
+                possiblePaths.add(stateIndex);
+              }
+            }
+          } 
         }
         break;
       }
@@ -973,7 +1024,13 @@ final class XmlToAvroPathCreator extends DefaultHandler {
       throw new IllegalStateException("Current position has a node of unrecognized type \"" + currentPath.getStateMachineNode().getNodeType() + '\"');
     }
 
-    return fulfilled;
+    Fulfillment fulfillment = Fulfillment.NOT;
+    if (completelyFulfilled) {
+      fulfillment = Fulfillment.COMPLETE;
+    } else if (partiallyFulfilled) {
+      fulfillment = Fulfillment.PARTIAL;
+    }
+    return fulfillment;
   }
 
   private List<PathSegment> find(
@@ -983,7 +1040,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     final ArrayList<Integer> childrenNodes =
         new ArrayList<Integer>();
     final boolean isFulfilled =
-        isPositionFulfilled(startNode, childrenNodes);
+        !isPositionFulfilled(startNode, childrenNodes).equals(Fulfillment.NOT);
 
     // First, try searching down the tree.
     List<PathSegment> choices = null;
@@ -1269,6 +1326,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
         boolean needTargetNamespace = false;
         boolean matches = false;
+        boolean matchOnNotTargetNamespace = false;
 
         List<String> validNamespaces = null;
 
@@ -1278,6 +1336,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
         } else if ( any.getNamespace().equals("##other") ) {
           needTargetNamespace = true;
+          matchOnNotTargetNamespace = true;
           validNamespaces = new ArrayList<String>(1);
 
         } else {
@@ -1305,33 +1364,20 @@ final class XmlToAvroPathCreator extends DefaultHandler {
            * an actual namespace, or ##any, or ##local, there is no way to
            * validate it.
            *
-           * The work-around is to walk upwards through the tree and find
-           * the owning element, then use its namespace as the target
-           * namespace.
+           * The work-around is to use the namespace of the owning element as
+           * the target namespace.
            */
           if (needTargetNamespace) {
-            XmlSchemaDocumentNode iter = startNode.getDocumentNode();
-            while ( !iter
-                      .getStateMachineNode()
-                      .getNodeType()
-                      .equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
-
-              iter = iter.getParent();
-
-              if (iter == null) {
-                throw new IllegalStateException("Walking up the StateMachineTreeWithState to determine the target namespace of a wildcard element, and reached the root without finding any elements.  Searching for " + elemQName + '.');
-              }
-            }
-
-            validNamespaces.add(
-              iter
-                .getStateMachineNode()
-                .getElement()
-                .getQName()
-                .getNamespaceURI());
+            final String targetNamespace =
+                elementStack.get(elementStack.size() - 1).getNamespaceURI();
+            validNamespaces.add(targetNamespace);
           }
 
           matches = validNamespaces.contains( elemQName.getNamespaceURI() );
+
+          if (matchOnNotTargetNamespace) {
+            matches = !matches;
+          }
         }
 
         if (matches) {
@@ -1393,8 +1439,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
         break;
       }
 
-      if (!isPositionFulfilled(path, null)) {
-        System.err.println("Node " + path.getStateMachineNode() + " is not fulfilled.  currentPath.getDocInstance() " + path.getDocIteration() + " vs. min occurrences " + path.getMinOccurs());
+      if (!isPositionFulfilled(path, null).equals(Fulfillment.COMPLETE)) {
         break;
       }
 
@@ -1543,12 +1588,43 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     return elemName;
   }
 
-  private QName getQNameOfOwningElement() {
-    if ( elementStack.isEmpty() ) {
-      return null;
-    } else {
-      return elementStack.get(elementStack.size() - 1);
+  private XmlSchemaStateMachineNode getStateMachineOfOwningElement() {
+    QName element = elementStack.get(elementStack.size() - 1);
+    XmlSchemaDocumentNode iter = currentPath.getDocumentNode();
+
+    if (iter
+          .getStateMachineNode()
+          .getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+          && iter
+               .getStateMachineNode()
+               .getElement()
+               .getQName()
+               .equals(element)) {
+      // We are already at the element!
+      return currentPath.getStateMachineNode();
     }
+
+    do {
+      iter = iter.getParent();
+    } while ((iter != null)
+            && !iter
+                  .getStateMachineNode()
+                  .getNodeType()
+                  .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
+
+    if (!iter
+          .getStateMachineNode()
+          .getNodeType()
+          .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+        || !iter
+              .getStateMachineNode()
+              .getElement()
+              .getQName()
+              .equals(element)) {
+      throw new IllegalStateException("Walked up tree and stopped at node " + currentPath.getStateMachineNode() + ", which does not represent element " + element);
+    }
+
+    return iter.getStateMachineNode();
   }
 
   private final XmlSchemaStateMachineNode rootNode;
@@ -1562,6 +1638,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
   private ArrayList<DecisionPoint> decisionPoints;
 
   private ArrayList<QName> elementStack;
+  private ArrayList<QName> anyStack;
 
   private XmlSchemaPathManager pathMgr;
 }
