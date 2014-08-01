@@ -423,10 +423,6 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
     final QName elemQName = new QName(uri, localName);
 
-    if (localName.equals("context")) {
-      System.err.println("Starting the context tag.");
-    }
-
     try {
       XmlSchemaPathNode startOfPath = currentPath;
 
@@ -883,20 +879,23 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             final int iteration = child.getIteration();
             if (iteration >= nextState.getMinOccurs()) {
               groupFulfilled = true;
-              possiblePaths.clear();
-              if (iteration < nextState.getMaxOccurs()) {
-                possiblePaths.add(stateIndex);
+              if (possiblePaths != null) {
+                possiblePaths.clear();
+                if (iteration < nextState.getMaxOccurs()) {
+                  possiblePaths.add(stateIndex);
+                }
               }
               break;
             }
-            if (iteration < nextState.getMaxOccurs()) {
+            if ((possiblePaths != null)
+                && (iteration < nextState.getMaxOccurs())) {
               possiblePaths.add(stateIndex);
             }
           } else {
             if (nextState.getMinOccurs() == 0) {
               groupFulfilled = true;
             }
-            if (nextState.getMaxOccurs() > 0) {
+            if ((possiblePaths != null) && (nextState.getMaxOccurs() > 0)) {
               possiblePaths.add(stateIndex);
             }
           }
@@ -918,14 +917,15 @@ final class XmlToAvroPathCreator extends DefaultHandler {
             if (iteration < nextState.getMinOccurs()) {
               fulfilled = false;
             }
-            if (iteration < nextState.getMaxOccurs()) {
+            if ((possiblePaths != null)
+                && (iteration < nextState.getMaxOccurs())) {
               possiblePaths.add(stateIndex);
             }
           } else {
             if (nextState.getMinOccurs() > 0) {
               fulfilled = false;
             }
-            if (nextState.getMaxOccurs() > 0) {
+            if ((possiblePaths != null) && (nextState.getMaxOccurs() > 0)) {
               possiblePaths.add(stateIndex);
             }
           }
@@ -950,15 +950,22 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                 < nextState.getMinOccurs()) {
               fulfilled = false;
               break;
+            } else if ((possiblePaths != null)
+                        && (child.getIteration() < nextState.getMaxOccurs())) {
+              possiblePaths.add(stateIndex);
             }
           } else if (nextState.getMinOccurs() > 0) {
             fulfilled = false;
             break;
-          }
-
-          if (stateIndex < nextStates.size()) {
+          } else if ((possiblePaths != null)
+                      && (nextState.getMinOccurs() == 0)
+                      && (nextState.getMaxOccurs() > 0)) {
             possiblePaths.add(stateIndex);
           }
+        }
+        if ((possiblePaths != null)
+            && (stateIndex < nextStates.size())) {
+          possiblePaths.add(stateIndex);
         }
         break;
       }
@@ -978,25 +985,14 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     final boolean isFulfilled =
         isPositionFulfilled(startNode, childrenNodes);
 
-    if (elemQName.getLocalPart().equals("context")) {
-      System.out.println("Path starting at " + startNode.getStateMachineNode().getNodeType() + " has " + childrenNodes.size() + " opportunities to follow.");
-      for (Integer i : childrenNodes) {
-        System.out.println("\t" + startNode.getStateMachineNode().getPossibleNextStates().get(i));
-      }
-    }
-
     // First, try searching down the tree.
     List<PathSegment> choices = null;
     List<PathSegment> currChoices = null;
 
-    if (!isFulfilled) {
+    if (startNode.getIteration() > startNode.getDocIteration()) {
       choices = find(startNode, elemQName, 0);
     } else {
       for (Integer childPath : childrenNodes) {
-        if ( startNode.getStateMachineNode().getPossibleNextStates().get(childPath).getNodeType().equals(XmlSchemaStateMachineNode.Type.CHOICE) ) {
-          System.out.println("Investigating the CHOICE.");
-        }
-
         final XmlSchemaPathNode currPath =
             pathMgr.addChildNodeToPath(startNode, childPath);
   
@@ -1394,6 +1390,11 @@ final class XmlToAvroPathCreator extends DefaultHandler {
     do {
       if (iter.getIteration()
             < iter.getStateMachineNode().getMaxOccurs()) {
+        break;
+      }
+
+      if (!isPositionFulfilled(path, null)) {
+        System.err.println("Node " + path.getStateMachineNode() + " is not fulfilled.  currentPath.getDocInstance() " + path.getDocIteration() + " vs. min occurrences " + path.getMinOccurs());
         break;
       }
 
