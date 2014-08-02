@@ -462,9 +462,8 @@ final class XmlSchemaScope {
      */
     if (complexContent != null) {
       boolean isMixed = false;
-      if (complexType.getContentType() != null) {
-        isMixed =
-            complexType.getContentType().equals(XmlSchemaContentType.MIXED);
+      if (complexType.isMixed()) {
+        isMixed = complexType.isMixed();
       } else if (complexType.getContentModel()
                    instanceof XmlSchemaComplexContent) {
         isMixed =
@@ -478,6 +477,7 @@ final class XmlSchemaScope {
       child = complexType.getParticle();
       attributes = createAttributeMap( complexType.getAttributes() );
       anyAttr = complexType.getAnyAttribute();
+      typeInfo = new XmlSchemaTypeInfo( complexType.isMixed() );
     }
   }
 

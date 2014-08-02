@@ -716,9 +716,8 @@ final class XmlToAvroPathCreator extends DefaultHandler {
 
       } else if (elemExpectsContent
                    && text.isEmpty()
-                   && !state.getElement().isNillable()) {
-        // TODO: Also handle mixed content; some of it could be empty.
-
+                   && !state.getElement().isNillable()
+                   && !elemTypeInfo.isMixed()) {
         throw new IllegalStateException("Received empty text for element " + state.getElement().getQName() + " when content was expected.");
       }
 
