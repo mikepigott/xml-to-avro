@@ -129,7 +129,7 @@ public class Main {
 
       visualizeStateMachine(startNode, "xbrl_sm.dot");
 
-      XmlToAvroPathCreator pathCreator = new XmlToAvroPathCreator(startNode);
+      XmlSchemaPathCreator pathCreator = new XmlSchemaPathCreator(startNode);
       SAXParserFactory spf = SAXParserFactory.newInstance();
       spf.setNamespaceAware(true);
       SAXParser saxParser = spf.newSAXParser();

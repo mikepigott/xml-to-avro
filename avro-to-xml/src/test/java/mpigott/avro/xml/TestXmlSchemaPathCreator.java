@@ -44,12 +44,12 @@ import org.junit.Test;
 import org.xml.sax.SAXException;
 
 /**
- * Tests the {@link XmlToAvroPathCreator} with XML documents following
+ * Tests the {@link XmlSchemaPathCreator} with XML documents following
  * the <code>src/test/resources/test_schema.xsd</code> XML Schema.
  *
  * @author  Mike Pigott
  */
-public class TestXmlToAvroPathCreator {
+public class TestXmlSchemaPathCreator {
 
   @BeforeClass
   public static void createStateMachine() throws FileNotFoundException {
@@ -102,7 +102,7 @@ public class TestXmlToAvroPathCreator {
   @Before
   public void createSaxParser() throws Exception {
     saxParser = spf.newSAXParser();
-    pathCreator = new XmlToAvroPathCreator(root);
+    pathCreator = new XmlSchemaPathCreator(root);
   }
 
   @Test
@@ -321,7 +321,7 @@ public class TestXmlToAvroPathCreator {
   }
 
   private SAXParser saxParser;
-  private XmlToAvroPathCreator pathCreator;
+  private XmlSchemaPathCreator pathCreator;
 
   private static XmlSchemaStateMachineNode root;
   private static SAXParserFactory spf;
