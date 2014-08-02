@@ -605,7 +605,7 @@ final class XmlToAvroPathCreator extends DefaultHandler {
                     new DecisionPoint(
                         currentPath,
                         possiblePaths,
-                        traversedElements.size() - 1);
+                        index);
                 decisionPoints.add(decisionPoint);
                 nextPath = decisionPoint.tryNextPath();
 
