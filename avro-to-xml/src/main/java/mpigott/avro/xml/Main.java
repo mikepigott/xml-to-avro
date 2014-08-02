@@ -73,10 +73,15 @@ public class Main {
       // http://xbrl.fasb.org/us-gaap/2012/elts/us-gaap-2012-01-31.xsd
       // http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd
       URL url = new URL("http://xbrl.fasb.org/us-gaap/2012/elts/us-gaap-2012-01-31.xsd");
+      URL fdsUrl = new URL("http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd");
+      URL deiUrl = new URL("http://xbrl.sec.gov/dei/2012/dei-2012-01-31.xsd");
+
       collection = new XmlSchemaCollection();
       collection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
       collection.setBaseUri("http://xbrl.fasb.org/us-gaap/2013/elts/");
       collection.read(new StreamSource(url.openStream(), url.toString()));
+      collection.read(new StreamSource(fdsUrl.openStream(), fdsUrl.toString()));
+      collection.read(new StreamSource(deiUrl.openStream(), deiUrl.toString()));
       //FileReader fileReader = new FileReader(file);
       //collection.read(new StreamSource(fileReader, file.getAbsolutePath()));
       //fileReader.close();
@@ -110,7 +115,7 @@ public class Main {
       System.out.println("Walking the CostOfServices node took " + (endCosWalk - startCosWalk) + " milliseconds.");
     }
     */
-
+    XmlSchemaPathNode rootPath = null;
     long startXbrlWalk = System.currentTimeMillis();
     try {
       XmlSchemaElement xbrl = getElementOf(collection, "xbrl");
@@ -129,13 +134,25 @@ public class Main {
       SAXParser saxParser = spf.newSAXParser();
       final File xsdFile = new File("C:\\Users\\Mike Pigott\\Google Drive\\workspace\\edgar_xbrl\\src\\test\\resources\\fds-20130228.xml");
       saxParser.parse(xsdFile, pathCreator);
-
-      XmlSchemaPathNode rootPath =
-          pathCreator.getXmlSchemaDocumentPath();
+      rootPath = pathCreator.getXmlSchemaDocumentPath();
     } finally {
       long endXbrlWalk = System.currentTimeMillis();
       System.out.println("Walking the xbrl node took " + (endXbrlWalk - startXbrlWalk) + " milliseconds.");
     }
+
+    XmlSchemaPathNode iter = rootPath;
+    XmlSchemaPathNode.Direction prevDirection = XmlSchemaPathNode.Direction.CHILD;
+    int nodeCount = 0;
+    do {
+      if (!prevDirection.equals(XmlSchemaPathNode.Direction.CONTENT) || !iter.getDirection().equals(XmlSchemaPathNode.Direction.CONTENT)) {
+        System.out.println(iter.getDirection() + " " + iter.getStateMachineNode() + " " + iter.getIteration());
+      }
+      prevDirection = iter.getDirection();
+      iter = iter.getNext();
+      ++nodeCount;
+    } while (iter != null);
+
+    System.out.println("Path contained " + nodeCount + " nodes.");
 
     /*
     XmlSchemaElement root = getElementOf(collection, "root");
