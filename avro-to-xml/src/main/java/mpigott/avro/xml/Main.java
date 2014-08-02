@@ -85,6 +85,7 @@ public class Main {
       //FileReader fileReader = new FileReader(file);
       //collection.read(new StreamSource(fileReader, file.getAbsolutePath()));
       //fileReader.close();
+      System.out.println("Parsed " + collection.getXmlSchemas().length + " XML schemas.");
     } finally {
       endResolve = System.currentTimeMillis();
 
