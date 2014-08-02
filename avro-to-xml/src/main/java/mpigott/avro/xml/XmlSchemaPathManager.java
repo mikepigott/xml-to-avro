@@ -190,14 +190,14 @@ final class XmlSchemaPathManager<U> {
           throw new IllegalStateException("XmlSchemaPathNode has a direction of " + iter.getDirection() + " but it does not have an XmlSchemaDocumentNode to represent its state machine (" + iter.getStateMachineNode() + ").");
         }
 
-        final XmlSchemaDocumentNode newDocNode = 
+        final XmlSchemaDocumentNode<U> newDocNode = 
             createDocumentNode(
                 prev.getDocumentNode(),
                 iter.getStateMachineNode());
 
         iter.setDocumentNode(newDocNode);
 
-        final Map<Integer, XmlSchemaDocumentNode> siblings =
+        final Map<Integer, XmlSchemaDocumentNode<U>> siblings =
             prev.getDocumentNode().getChildren();
 
         if (prev.getIndexOfNextNodeState() < 0) {
@@ -268,17 +268,17 @@ final class XmlSchemaPathManager<U> {
     }
   }
 
-  private XmlSchemaDocumentNode createDocumentNode(
-      XmlSchemaDocumentNode parent,
+  private XmlSchemaDocumentNode<U> createDocumentNode(
+      XmlSchemaDocumentNode<U> parent,
       XmlSchemaStateMachineNode state) {
 
     if ( !unusedDocNodes.isEmpty() ) {
-      XmlSchemaDocumentNode node =
+      XmlSchemaDocumentNode<U> node =
           unusedDocNodes.remove(unusedDocNodes.size() - 1);
       node.set(parent, state);
       return node;
     } else {
-      return new XmlSchemaDocumentNode(parent, state);
+      return new XmlSchemaDocumentNode<U>(parent, state);
     }
   }
 

@@ -50,6 +50,7 @@ final class AvroSchemaApplier {
 
     conversionCache = new HashMap<Schema.Type, Set<Schema.Type>>();
     unionOfValidElementsStack = new ArrayList<Schema>();
+    avroRecordStack = new ArrayList<AvroRecordInfo>();
 
     if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
       // ARRAY of UNION of RECORDs/MAPs is not valid when writing XML.
@@ -95,7 +96,7 @@ final class AvroSchemaApplier {
     }
   }
 
-  void apply(XmlSchemaDocumentNode<Schema> docNode) {
+  void apply(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
     switch (docNode.getStateMachineNode().getNodeType()) {
     case ELEMENT:
       processElement(docNode);
@@ -114,7 +115,7 @@ final class AvroSchemaApplier {
     }
   }
 
-  private void processElement(XmlSchemaDocumentNode<Schema> doc) {
+  private void processElement(XmlSchemaDocumentNode<AvroRecordInfo> doc) {
     if (!doc
            .getStateMachineNode()
            .getNodeType()
@@ -130,8 +131,10 @@ final class AvroSchemaApplier {
           .getTypes();
 
     Schema elemSchema = null;
+    int schemaIndex = 0;
     if (validNextElements != null) {
-      for (Schema possibleSchema : validNextElements) {
+      for (; schemaIndex < validNextElements.size(); ++schemaIndex) {
+        Schema possibleSchema = validNextElements.get(schemaIndex);
         Schema valueType = possibleSchema;
         if ( possibleSchema.getType().equals(Schema.Type.MAP) ) {
           valueType = possibleSchema.getValueType();
@@ -247,7 +250,16 @@ final class AvroSchemaApplier {
         }
       }
 
-      doc.setUserDefinedContent(elemSchema);
+      AvroRecordInfo recordInfo = null;
+      if ( avroRecordStack.isEmpty() ) {
+        recordInfo = new AvroRecordInfo(elemSchema);
+        avroRecordStack.add(recordInfo);
+      } else {
+        recordInfo = new AvroRecordInfo(elemSchema, schemaIndex);
+        avroRecordStack.get(avroRecordStack.size() - 1).incrementChildCount();
+        avroRecordStack.add(recordInfo);
+      }
+      doc.setUserDefinedContent(recordInfo);
     }
 
     /* If the root schema is an ARRAY of UNION, then the next valid
@@ -267,6 +279,10 @@ final class AvroSchemaApplier {
       unionOfValidElementsStack.add(unionOfChildrenTypes);
       processChildren(doc);
       unionOfValidElementsStack.remove(unionOfValidElementsStack.size() - 1);
+    }
+
+    if (elemSchema != null) {
+      avroRecordStack.remove(avroRecordStack.size() - 1);
     }
   }
 
@@ -323,13 +339,13 @@ final class AvroSchemaApplier {
     }
   }
 
-  private void processChildren(XmlSchemaDocumentNode<Schema> doc) {
+  private void processChildren(XmlSchemaDocumentNode<AvroRecordInfo> doc) {
     for (int iteration = 1; iteration <= doc.getIteration(); ++iteration) {
-      final SortedMap<Integer, XmlSchemaDocumentNode<Schema>> children =
-          doc.getChildren(iteration);
+      final SortedMap<Integer, XmlSchemaDocumentNode<AvroRecordInfo>>
+        children = doc.getChildren(iteration);
 
       if (children != null) {
-        for (Map.Entry<Integer, XmlSchemaDocumentNode<Schema>> child :
+        for (Map.Entry<Integer, XmlSchemaDocumentNode<AvroRecordInfo>> child :
               children.entrySet()) {
           apply(child.getValue());
         }
@@ -337,7 +353,7 @@ final class AvroSchemaApplier {
     }
   }
 
-  private void processGroup(XmlSchemaDocumentNode<Schema> doc) {
+  private void processGroup(XmlSchemaDocumentNode<AvroRecordInfo> doc) {
     /* The union of valid types is already on the stack from
      * the owning element.  We just need to walk the children.
      */
@@ -509,6 +525,7 @@ final class AvroSchemaApplier {
   }
 
   private List<Schema> unionOfValidElementsStack;
+  private List<AvroRecordInfo> avroRecordStack;
 
   private final Schema avroSchema;
   private final Map<Schema.Type, Set<Schema.Type>> conversionCache;

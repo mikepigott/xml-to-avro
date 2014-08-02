@@ -113,7 +113,7 @@ final class XmlSchemaPathNode<U> {
     return true;
   }
 
-  XmlSchemaDocumentNode getDocumentNode() {
+  XmlSchemaDocumentNode<U> getDocumentNode() {
     return documentNode;
   }
 

@@ -118,7 +118,7 @@ public class TestAvroSchemaApplier {
     XmlSchemaPathNode rootPath =
         pathCreator.getXmlSchemaDocumentPath();
 
-    XmlSchemaDocumentNode rootDoc = rootPath.getDocumentNode();
+    XmlSchemaDocumentNode<AvroRecordInfo> rootDoc = rootPath.getDocumentNode();
 
     assertNotNull(rootPath);
     assertNotNull(rootDoc);
@@ -132,7 +132,7 @@ public class TestAvroSchemaApplier {
     assertEquals(7, numElemsProcessed);
   }
 
-  private int checkDoc(XmlSchemaDocumentNode<Schema> doc) {
+  private int checkDoc(XmlSchemaDocumentNode<AvroRecordInfo> doc) {
     int numElemsProcessed = 0;
     if (doc
           .getStateMachineNode()
@@ -140,7 +140,8 @@ public class TestAvroSchemaApplier {
           .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
       assertNotNull( doc.getUserDefinedContent() );
 
-      final Schema schema = doc.getUserDefinedContent();
+      final AvroRecordInfo recordInfo = doc.getUserDefinedContent();
+      final Schema schema = recordInfo.getAvroSchema();
       assertTrue(
           schema.getType().equals(Schema.Type.RECORD)
           || schema.getType().equals(Schema.Type.MAP));
@@ -155,11 +156,11 @@ public class TestAvroSchemaApplier {
     }
 
     for (int iter = 1; iter <= doc.getIteration(); ++iter) {
-      final SortedMap<Integer, XmlSchemaDocumentNode<Schema>> children =
-          doc.getChildren(iter);
+      final SortedMap<Integer, XmlSchemaDocumentNode<AvroRecordInfo>>
+        children = doc.getChildren(iter);
 
       if (children != null) {
-        for (Map.Entry<Integer, XmlSchemaDocumentNode<Schema>> child :
+        for (Map.Entry<Integer, XmlSchemaDocumentNode<AvroRecordInfo>> child :
               children.entrySet()) {
           numElemsProcessed += checkDoc( child.getValue() );
         }
