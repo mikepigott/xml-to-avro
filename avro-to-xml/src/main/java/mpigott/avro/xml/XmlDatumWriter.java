@@ -592,43 +592,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     }
   }
 
-  private void encodeElement(
-      XmlSchemaDocumentNode<AvroRecordInfo> doc,
-      Encoder out)
-          throws IOException {
-    if (!doc
-          .getStateMachineNode()
-          .getNodeType()
-          .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
-      throw new IllegalStateException("Attempted to encode an element when the node type is " + doc.getStateMachineNode().getNodeType());
-    }
-
-    final XmlSchemaElement element = doc.getStateMachineNode().getElement();
-    final AvroRecordInfo recordInfo = doc.getUserDefinedContent();
-
-    switch ( recordInfo.getAvroSchema().getType() ) {
-    case RECORD:
-      {
-        out.startItem();
-        if (recordInfo.getUnionIndex() >= 0) {
-          out.writeIndex( recordInfo.getUnionIndex() );
-        }
-        for (Schema.Field field : recordInfo.getAvroSchema().getFields()) {
-          if (field.name().equals( element.getName() )) {
-            // These are the children; they will be processed later.
-            continue;
-          }
-          // TODO: Get contents.
-        }
-        break;
-      }
-    case MAP:
-      // TODO
-    default:
-      throw new IllegalStateException("Attempted to process an element with a record type of " + recordInfo.getAvroSchema().getType());
-    }
-  }
-
   private final XmlSchemaCollection xmlSchemaCollection;
   private final XmlSchemaStateMachineNode stateMachine;
   private Schema schema;
