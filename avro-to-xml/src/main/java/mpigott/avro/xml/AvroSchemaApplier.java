@@ -44,7 +44,7 @@ final class AvroSchemaApplier {
    * Creates a new <code>AvroSchemaApplier</code>
    * with the provided root node.
    */
-  public AvroSchemaApplier(Schema avroSchema, boolean xmlIsWritten) {
+  AvroSchemaApplier(Schema avroSchema, boolean xmlIsWritten) {
     this.avroSchema = avroSchema;
     this.xmlIsWritten = xmlIsWritten;
 
