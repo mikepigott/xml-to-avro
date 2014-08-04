@@ -100,7 +100,7 @@ public class TestAvroSchemaApplier {
   @Before
   public void createSaxParser() throws Exception {
     saxParser = spf.newSAXParser();
-    pathCreator = new XmlSchemaPathCreator(root);
+    pathCreator = new XmlSchemaPathFinder(root);
   }
 
   @Test
@@ -181,7 +181,7 @@ public class TestAvroSchemaApplier {
   }
 
   private SAXParser saxParser;
-  private XmlSchemaPathCreator pathCreator;
+  private XmlSchemaPathFinder pathCreator;
 
   private static XmlSchemaStateMachineNode root;
   private static SAXParserFactory spf;

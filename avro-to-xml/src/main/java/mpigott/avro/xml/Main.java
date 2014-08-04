@@ -165,7 +165,7 @@ public class Main {
 
       visualizeStateMachine(startNode, "xbrl_sm.dot");
 
-      XmlSchemaPathCreator pathCreator = new XmlSchemaPathCreator(startNode);
+      XmlSchemaPathFinder pathCreator = new XmlSchemaPathFinder(startNode);
       SAXParserFactory spf = SAXParserFactory.newInstance();
       spf.setNamespaceAware(true);
       SAXParser saxParser = spf.newSAXParser();

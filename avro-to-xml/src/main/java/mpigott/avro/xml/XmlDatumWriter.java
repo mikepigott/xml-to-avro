@@ -145,7 +145,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
 
           try {
-            write(field.schema(), value, -1);
+            write(field.schema(), value);
           } catch (Exception ioe) {
             throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemName, ioe);
           }
@@ -182,8 +182,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             write(avroSchema
                     .getField( elemName.getLocalPart() )
                     .schema(),
-                  null,
-                  -1);
+                  null);
           }
         }
 
@@ -270,7 +269,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
              .schema();
 
         try {
-          write(avroSchema, result, -1);
+          write(avroSchema, result);
         } catch (Exception ioe) {
           final QName elemQName =
               stack
@@ -385,6 +384,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 .equals(elemName)) {
         throw new IllegalStateException("The next element in the path is " + currLocation.getStateMachineNode().getElement().getQName() + " (" + currLocation.getDirection() + "), not " + elemName + ".");
       }
+    }
+
+    private void write(Schema schema, String data) throws IOException {
+      write(schema, data, -1);
     }
 
     private void write(Schema schema, String data, int unionIndex)
@@ -684,7 +687,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
   @Override
   public void write(Document doc, Encoder out) throws IOException {
     // 1. Build the path through the schema that describes the document.
-    XmlSchemaPathCreator pathCreator = new XmlSchemaPathCreator(stateMachine);
+    XmlSchemaPathFinder pathCreator = new XmlSchemaPathFinder(stateMachine);
     SaxWalkerOverDom walker = new SaxWalkerOverDom(pathCreator);
     try {
       walker.walk(doc);

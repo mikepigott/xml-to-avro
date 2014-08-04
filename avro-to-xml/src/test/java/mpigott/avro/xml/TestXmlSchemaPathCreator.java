@@ -44,7 +44,7 @@ import org.junit.Test;
 import org.xml.sax.SAXException;
 
 /**
- * Tests the {@link XmlSchemaPathCreator} with XML documents following
+ * Tests the {@link XmlSchemaPathFinder} with XML documents following
  * the <code>src/test/resources/test_schema.xsd</code> XML Schema.
  *
  * @author  Mike Pigott
@@ -102,7 +102,7 @@ public class TestXmlSchemaPathCreator {
   @Before
   public void createSaxParser() throws Exception {
     saxParser = spf.newSAXParser();
-    pathCreator = new XmlSchemaPathCreator(root);
+    pathCreator = new XmlSchemaPathFinder(root);
   }
 
   @Test
@@ -321,7 +321,7 @@ public class TestXmlSchemaPathCreator {
   }
 
   private SAXParser saxParser;
-  private XmlSchemaPathCreator pathCreator;
+  private XmlSchemaPathFinder pathCreator;
 
   private static XmlSchemaStateMachineNode root;
   private static SAXParserFactory spf;

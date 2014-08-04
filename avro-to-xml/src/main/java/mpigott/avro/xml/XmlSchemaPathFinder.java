@@ -34,7 +34,7 @@ import org.xml.sax.helpers.DefaultHandler;
  *
  * @author  Mike Pigott
  */
-final class XmlSchemaPathCreator extends DefaultHandler {
+final class XmlSchemaPathFinder extends DefaultHandler {
 
   /* If a group loops back on itself, we don't want to loop
    * until the stack overflows looking for a valid match.
@@ -386,7 +386,7 @@ final class XmlSchemaPathCreator extends DefaultHandler {
    * Creates a new <code>XmlToAvroPathCreator</code> with the root
    * {@link XmlSchemaStateMachineNode} to start from when evaluating documents.
    */
-  XmlSchemaPathCreator(XmlSchemaStateMachineNode root) {
+  XmlSchemaPathFinder(XmlSchemaStateMachineNode root) {
     pathMgr = new XmlSchemaPathManager();
 
     rootNode = root;
