@@ -430,14 +430,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     final QName elemQName = new QName(uri, localName);
 
     try {
-      XmlSchemaPathNode startOfPath = currentPath;
-
       if (currentPath == null) {
         /* We just started a new document.  Likewise we need
          * to move into a position to process the root element.
          */
         currentPath = rootPathNode;
-        startOfPath = rootPathNode;
 
       } else if (currentPath
                    .getStateMachineNode()
@@ -450,65 +447,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
          * sense to follow the children or grandchildren of this element.
          */
         return;
-
-      } else if (
-          currentPath
-            .getStateMachineNode()
-            .getNodeType()
-            .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-          && currentPath
-               .getStateMachineNode()
-               .getElement()
-               .getQName()
-               .equals( elementStack.get(elementStack.size() - 1) )) {
-
-        /* We are at an element in an existing document.  This
-         * is the start node of a child.  Likewise we need to
-         * move down one level to the children.
-         */
-        verifyCurrentPositionIsAtElement("Started element " + elemQName);
-
-        if (currentPath
-             .getStateMachineNode()
-             .getPossibleNextStates() == null) {
-
-          final String elemName =
-              getLeafNodeName( currentPath.getStateMachineNode() );
-
-          throw new IllegalStateException("Element " + elemName + " has null children!  Exactly one is expected.");
-
-        } else if (currentPath
-                  .getStateMachineNode()
-                  .getPossibleNextStates()
-                  .isEmpty()) {
-
-          final String elemName =
-              getLeafNodeName( currentPath.getStateMachineNode() );
-
-          throw new IllegalStateException("Element " + elemName + " has zero children!  Exactly one is expected.");
-
-        } else if (currentPath
-                  .getStateMachineNode()
-                  .getPossibleNextStates().size() > 1) {
-
-          final String elemName =
-              getLeafNodeName( currentPath.getStateMachineNode() );
-
-          throw new IllegalStateException("Element " + elemName + " has " + currentPath.getStateMachineNode().getPossibleNextStates().size() + " children!  Only one was expected.");
-        }
-
-        if ((currentPath.getDocumentNode() != null)
-            && (currentPath.getDocumentNode().getChildren() != null)
-            && !currentPath.getDocumentNode().getChildren().isEmpty()
-            && (currentPath.getDocumentNode().getChildren().size() > 1)) {
-            throw new IllegalStateException("There are multiple children in the document node for element " + currentPath.getStateMachineNode().getElement().getQName());
-        }
-
-        final XmlSchemaPathNode childPath =
-            pathMgr.addChildNodeToPath(currentPath, 0);
-
-        currentPath.setNextNode(0, childPath);
-        currentPath = childPath;
       }
 
       // 1. Find possible paths.
@@ -517,15 +455,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       PathSegment nextPath = null;
   
       if ((possiblePaths != null) && !possiblePaths.isEmpty()) {
-        /* If we moved down to the children of an element,
-         * we still need to link it all together.
-         */
-        if (startOfPath != currentPath) {
-          for (PathSegment possiblePath : possiblePaths) {
-            possiblePath.prepend(startOfPath, 0);
-          }
-        }
-
         /* 2. If multiple paths were returned, add a DecisionPoint.
          *    Sort the paths where paths ending in elements are favored over
          *    element wild cards, and shorter paths are favored over longer
@@ -1036,6 +965,72 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       XmlSchemaPathNode startNode,
       QName elemQName) {
 
+    final XmlSchemaPathNode startOfPath = startNode;
+
+    if (startNode
+          .getStateMachineNode()
+          .getNodeType()
+          .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+        && !elementStack.isEmpty()
+        && startNode
+             .getStateMachineNode()
+             .getElement()
+             .getQName()
+             .equals( elementStack.get(elementStack.size() - 1) )) {
+
+      /* We are at an element in an existing document.  This
+       * is the start node of a child.  Likewise we need to
+       * move down one level to the children.
+       *
+       * This is only true on the first call to find().  All
+       * recursive calls to find confirm they do not start
+       * from the parent element first.
+       */
+      verifyCurrentPositionIsAtElement("Started element " + elemQName);
+
+      if (startNode
+           .getStateMachineNode()
+           .getPossibleNextStates() == null) {
+
+        final String elemName =
+            getLeafNodeName( startNode.getStateMachineNode() );
+
+        throw new IllegalStateException("Element " + elemName + " has null children!  Exactly one is expected.");
+
+      } else if (startNode
+                   .getStateMachineNode()
+                   .getPossibleNextStates()
+                   .isEmpty()) {
+
+        final String elemName =
+            getLeafNodeName( startNode.getStateMachineNode() );
+
+        throw new IllegalStateException("Element " + elemName + " has zero children!  Exactly one is expected.");
+
+      } else if (currentPath
+                   .getStateMachineNode()
+                   .getPossibleNextStates().size() > 1) {
+
+        final String elemName =
+            getLeafNodeName( currentPath.getStateMachineNode() );
+
+        throw new IllegalStateException("Element " + elemName + " has " + currentPath.getStateMachineNode().getPossibleNextStates().size() + " children!  Only one was expected.");
+      }
+
+      if ((startNode.getDocumentNode() != null)
+          && (startNode.getDocumentNode().getChildren() != null)
+          && !startNode.getDocumentNode().getChildren().isEmpty()
+          && (startNode.getDocumentNode().getChildren().size() > 1)) {
+        throw new IllegalStateException("There are multiple children in the document node for element " + currentPath.getStateMachineNode().getElement().getQName());
+      }
+
+      final XmlSchemaPathNode childPath =
+          pathMgr.addChildNodeToPath(startNode, 0);
+
+      startNode.setNextNode(0, childPath);
+      startNode = childPath;
+    }
+
     final ArrayList<Integer> childrenNodes =
         new ArrayList<Integer>();
     final boolean isFulfilled =
@@ -1131,6 +1126,15 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       } else {
         // path would not have been recycled at a lower level.
         pathMgr.recyclePathNode(path);
+      }
+    }
+
+    if ((choices != null) && (startOfPath != startNode)) {
+      /* If we moved down to the children, we need to
+       * prepend the path with the original start node.
+       */
+      for (PathSegment choice : choices) {
+        choice.prepend(startOfPath, 0);
       }
     }
 
