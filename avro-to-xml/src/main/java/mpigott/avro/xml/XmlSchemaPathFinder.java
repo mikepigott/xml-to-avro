@@ -317,7 +317,9 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     DecisionPoint(
         XmlSchemaPathNode decisionPoint,
         List<PathSegment> choices,
-        int traversedElementIndex) {
+        int traversedElementIndex,
+        ArrayList<QName> elementStack,
+        ArrayList<QName> anyStack) {
 
       if (decisionPoint == null) {
         throw new IllegalArgumentException("The decision point path node cannot be null.");
@@ -330,6 +332,14 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       this.decisionPoint = decisionPoint;
       this.choices = choices;
       this.traversedElementIndex = traversedElementIndex;
+      this.elementStack = (ArrayList<QName>) elementStack.clone();
+
+      if (anyStack == null) {
+        this.anyStack = null;
+      } else {
+        this.anyStack = (ArrayList<QName>) anyStack.clone();
+      }
+
       java.util.Collections.sort(choices);
     }
 
@@ -350,9 +360,19 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       return decisionPoint;
     }
 
+    ArrayList<QName> getElementStack() {
+      return (ArrayList<QName>) elementStack.clone();
+    }
+
+    ArrayList<QName> getAnyStack() {
+      return (anyStack == null) ? null : ((ArrayList<QName>) anyStack.clone());
+    }
+
     private final XmlSchemaPathNode decisionPoint;
     private final List<PathSegment> choices;
     private final int traversedElementIndex;
+    private final ArrayList<QName> elementStack;
+    private final ArrayList<QName> anyStack;
   }
 
   private static class TraversedElement {
@@ -465,7 +485,9 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               new DecisionPoint(
                   currentPath,
                   possiblePaths,
-                  traversedElements.size());
+                  traversedElements.size(),
+                  elementStack,
+                  anyStack);
 
           if (decisionPoints == null) {
             decisionPoints = new ArrayList<DecisionPoint>(4);
@@ -507,6 +529,9 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
           pathMgr.unfollowPath(priorPoint.getDecisionPoint());
 
+          elementStack = priorPoint.getElementStack();
+          anyStack = priorPoint.getAnyStack();
+
           /* Walk through the traversedElements list again from that
            * index and see if we traverse through all of the elements
            * in the list, including this one.  If not, repeat step 2a,
@@ -534,7 +559,9 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                     new DecisionPoint(
                         currentPath,
                         possiblePaths,
-                        index);
+                        index,
+                        elementStack,
+                        anyStack);
                 decisionPoints.add(decisionPoint);
                 nextPath = decisionPoint.tryNextPath();
 
@@ -549,9 +576,42 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               // If we find (a) path(s) that match(es), success!  Follow it.
               followPath(nextPath);
 
+              if (currentPath
+                  .getStateMachineNode()
+                  .getNodeType()
+                  .equals(XmlSchemaStateMachineNode.Type.ANY)) {
+                if (anyStack == null) {
+                  anyStack = new ArrayList<QName>();
+                }
+                anyStack.add(elemQName);
+              }
+
+              elementStack.add(te.elemName);
+
             } else if ( te.traversal.equals(TraversedElement.Traversal.END) ) {
-              walkUpToElement(te.elemName);
+              final boolean isAny =
+                  (currentPath
+                    .getStateMachineNode()
+                    .getNodeType()
+                    .equals(XmlSchemaStateMachineNode.Type.ANY)
+                    && (anyStack != null) && !anyStack.isEmpty());
+
+              if (!isAny) {
+                walkUpToElement(te.elemName);
+              }
+
               walkUpTree(te.elemName);
+
+              final QName endingElemName =
+                  elementStack.remove(elementStack.size() - 1);
+
+              if (!te.elemName.equals(endingElemName)) {
+                throw new IllegalStateException("Attempted to end element " + te.elemName + " but found " + endingElemName + " on the stack instead!");
+              }
+
+              if (isAny) {
+                anyStack.remove(anyStack.size() - 1);
+              }
 
             } else {
               throw new IllegalStateException("Unrecognized element traversal direction for " + te.elemName + " of " + te.traversal + '.');
@@ -657,15 +717,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         throw new IllegalStateException("Received empty text for element " + state.getElement().getQName() + " when content was expected.");
       }
 
-      /* TODO: Confirm the text conforms to the facets associated with the
-       *       type.  This will require knowing if the type is a list or
-       *       union, because rules like LENGTH, MIN_LENGTH, and MAX_LENGTH
-       *       have different meanings based on the type.  This will have to
-       *       wait until a refactor to remove the Avro-specific information
-       *       from XmlSchemaTypeInfo.
-       *
-       *       This check likely belongs as a static method in the Utils class.
-       */
       currentPath.getDocumentNode().setReceivedContent(true);
 
       final XmlSchemaPathNode contentPath =
