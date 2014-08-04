@@ -268,7 +268,10 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       final Schema.Field field =
           new Schema.Field(
               entry.elementQName.getLocalPart(),
-              Utils.getAvroSchemaFor(typeInfo, element.isNillable()),
+              Utils.getAvroSchemaFor(
+                  typeInfo,
+                  element.getQName(),
+                  element.isNillable()),
               "Simple type " + typeInfo.getUserRecognizedType(),
               null);
       fields.add(field);
@@ -339,7 +342,11 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       isOptional = true;
     }
 
-    Schema attrSchema = Utils.getAvroSchemaFor(attributeType, isOptional);
+    Schema attrSchema =
+        Utils.getAvroSchemaFor(
+            attributeType,
+            attribute.getQName(),
+            isOptional);
 
     final Schema.Field attr =
         new Schema.Field(

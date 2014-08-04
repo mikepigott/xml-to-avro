@@ -43,6 +43,8 @@ import org.xml.sax.InputSource;
  */
 class Utils {
 
+  private static final int UNDERSCORE_CP = '_';
+
   private static final Map<QName, Schema.Type> xmlToAvroTypeMap =
       new HashMap<QName, Schema.Type>();
 
@@ -71,19 +73,53 @@ class Utils {
 
   static Schema getAvroSchemaFor(
       XmlSchemaTypeInfo typeInfo,
+      QName qName,
       boolean isOptional) {
 
     switch ( typeInfo.getType() ) {
     case ATOMIC:
       {
-        Schema.Type avroType =
-          xmlToAvroTypeMap.get( typeInfo.getUserRecognizedType() );
 
-        if (avroType == null) {
-          throw new IllegalArgumentException("No Avro type recognized for " + typeInfo.getUserRecognizedType());
+        Schema schema = null;
+        if ( isValidEnum(typeInfo) ) {
+          // This is an enumeration!
+          final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
+            facets = typeInfo.getFacets();
+
+          String ns = null;
+          try {
+            ns = Utils.getAvroNamespaceFor(qName.getNamespaceURI()) + ".enums";
+          } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(qName + " does not have a valid namespace.", e);
+          }
+
+          final List<XmlSchemaRestriction> enumFacet =
+              facets.get(XmlSchemaRestriction.Type.ENUMERATION);
+
+          final ArrayList<String> symbols =
+              new ArrayList<String>( enumFacet.size() );
+          for (XmlSchemaRestriction enumSym : enumFacet) {
+            symbols.add( enumSym.getValue().toString() );
+          }
+
+          schema =
+              Schema.createEnum(
+                  qName.getLocalPart(),
+                  "Enumeration of symbols in " + qName,
+                  ns,
+                  symbols);
+
+        } else {
+
+          final Schema.Type avroType =
+            xmlToAvroTypeMap.get( typeInfo.getUserRecognizedType() );
+  
+          if (avroType == null) {
+            throw new IllegalArgumentException("No Avro type recognized for " + typeInfo.getUserRecognizedType());
+          }
+  
+          schema = Schema.create(avroType);
         }
-
-        final Schema schema = Schema.create(avroType);
 
         return createSchemaOf(schema, isOptional, typeInfo.isMixed());
       }
@@ -92,7 +128,7 @@ class Utils {
         Schema schema =
             Schema.createArray(
                 getAvroSchemaFor(
-                    typeInfo.getChildTypes().get(0), false) );
+                    typeInfo.getChildTypes().get(0), qName, false) );
 
         return createSchemaOf(schema, isOptional, typeInfo.isMixed());
       }
@@ -102,7 +138,7 @@ class Utils {
         Set<Schema> avroTypes = new HashSet<Schema>( unionTypes.size() );
 
         for (XmlSchemaTypeInfo unionType : unionTypes) {
-          avroTypes.add( getAvroSchemaFor(unionType, false) );
+          avroTypes.add( getAvroSchemaFor(unionType, qName, false) );
         }
 
         if (isOptional) {
@@ -146,6 +182,39 @@ class Utils {
     }
     schema = Schema.createUnion(unionTypes);
     return schema;
+  }
+
+  private static boolean isValidEnum(XmlSchemaTypeInfo typeInfo) {
+    final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
+      facets = typeInfo.getFacets();
+
+    if (facets == null) {
+      return false;
+    }
+
+    final List<XmlSchemaRestriction> enumFacets =
+        facets.get(XmlSchemaRestriction.Type.ENUMERATION);
+
+    if (enumFacets == null) {
+      return false;
+    }
+
+    for (XmlSchemaRestriction enumFacet : enumFacets) {
+      final String symbol = enumFacet.getValue().toString();
+
+      final int length = symbol.length();
+      for (int offset = 0; offset < length; ) {
+        final int codepoint = symbol.codePointAt(offset);
+        if (!Character.isLetterOrDigit(codepoint)
+            && (codepoint != UNDERSCORE_CP)) {
+          return false;
+        }
+
+        offset += Character.charCount(codepoint);
+      }
+    }
+
+    return true;
   }
 
   static String getAvroNamespaceFor(String xmlSchemaNamespace) throws URISyntaxException {

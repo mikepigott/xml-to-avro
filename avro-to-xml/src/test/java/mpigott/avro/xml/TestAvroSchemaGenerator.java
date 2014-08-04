@@ -126,8 +126,8 @@ public class TestAvroSchemaGenerator {
       rootSchemasByName.put(rootSchema.getName(), rootSchema);
     }
 
-    checkPrimitiveField(rootSchemasByName.get("primitive").getField("primitive"),               Schema.Type.STRING, null);
-    checkPrimitiveField(rootSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"), Schema.Type.STRING, null);
+    checkPrimitiveField(rootSchemasByName.get("primitive").getField("primitive"),               Schema.Type.ENUM, null);
+    checkPrimitiveField(rootSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"), Schema.Type.ENUM, null);
 
     List<Schema> recordSchemas = rootSchemasByName.get("record").getField("record").schema().getElementType().getTypes();
     Map<String, Schema> recordSchemasByName = new HashMap<String, Schema>();

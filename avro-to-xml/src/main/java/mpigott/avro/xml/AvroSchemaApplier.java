@@ -241,7 +241,10 @@ final class AvroSchemaApplier {
         case LONG:
         case STRING:
           {
-            if ( !confirmEquivalent(typeInfo, childrenSchema) ) {
+            if (!confirmEquivalent(
+                    typeInfo,
+                    element.getQName(),
+                    childrenSchema) ) {
               throw new IllegalStateException("Cannot convert between " + typeInfo + " and " + childrenSchema + " for simple content of " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName());
             }
           }
@@ -344,6 +347,7 @@ final class AvroSchemaApplier {
 
       if (!confirmEquivalent(
           attributeType,
+          attribute.getQName(),
           attrType)) {
         throw new IllegalStateException("Cannot convert element " + elementName + " attribute " + attribute.getQName() + " types between " + attributeType.getBaseType() + " and " + attrField.schema());
       }
@@ -406,9 +410,11 @@ final class AvroSchemaApplier {
    */
   private boolean confirmEquivalent(
       XmlSchemaTypeInfo xmlType,
+      QName xmlTypeQName,
       Schema avroType) {
 
-    final Schema xmlAvroType = Utils.getAvroSchemaFor(xmlType, false);
+    final Schema xmlAvroType =
+        Utils.getAvroSchemaFor(xmlType, xmlTypeQName, false);
 
     if ((avroType != null) && (xmlAvroType == null)) {
       return false;
