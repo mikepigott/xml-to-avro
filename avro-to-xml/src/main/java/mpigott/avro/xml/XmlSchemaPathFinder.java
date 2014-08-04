@@ -572,6 +572,12 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         traversedElements.add(
             new TraversedElement(elemQName, TraversedElement.Traversal.START));
         elementStack.add(elemQName);
+
+        /* If this is element is of type xsd:any, we do not track it or its
+         * children.  So, we keep a stack of the element and its children,
+         * allowing us to know when we leave and can start tracking elements
+         * again.
+         */
         if (currentPath
               .getStateMachineNode()
               .getNodeType()
@@ -581,6 +587,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
           }
           anyStack.add(elemQName);
         }
+
       } else {
         /* If we go through all prior decision points and are unable to find
          * one or more paths through the XML Schema that match the document,
