@@ -19,7 +19,9 @@ import java.net.URISyntaxException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,13 +83,9 @@ class Utils {
           throw new IllegalArgumentException("No Avro type recognized for " + typeInfo.getUserRecognizedType());
         }
 
-        Schema schema = Schema.create(avroType);
+        final Schema schema = Schema.create(avroType);
 
-        if (isOptional) {
-          schema = createOptionalTypeOf(schema);
-        }
-
-        return schema;
+        return createSchemaOf(schema, isOptional, typeInfo.isMixed());
       }
     case LIST:
       {
@@ -96,35 +94,58 @@ class Utils {
                 getAvroSchemaFor(
                     typeInfo.getChildTypes().get(0), false) );
 
-        if (isOptional) {
-          schema = createOptionalTypeOf(schema);
-        }
-
-        return schema;
+        return createSchemaOf(schema, isOptional, typeInfo.isMixed());
       }
     case UNION:
-      List<XmlSchemaTypeInfo> unionTypes = typeInfo.getChildTypes();
-      List<Schema> avroTypes = new ArrayList<Schema>( unionTypes.size() );
+      {
+        List<XmlSchemaTypeInfo> unionTypes = typeInfo.getChildTypes();
+        Set<Schema> avroTypes = new HashSet<Schema>( unionTypes.size() );
 
-      for (XmlSchemaTypeInfo unionType : unionTypes) {
-        avroTypes.add( getAvroSchemaFor(unionType, false) );
+        for (XmlSchemaTypeInfo unionType : unionTypes) {
+          avroTypes.add( getAvroSchemaFor(unionType, false) );
+        }
+
+        if (isOptional) {
+          avroTypes.add( Schema.create(Schema.Type.NULL) );
+        }
+        if ( typeInfo.isMixed() ) {
+          avroTypes.add( Schema.create(Schema.Type.STRING) );
+        }
+
+        final List<Schema> avroUnionTypes =
+            Arrays.asList(avroTypes.toArray(new Schema[avroTypes.size()]));
+
+        return Schema.createUnion(avroUnionTypes);
       }
-
-      if (isOptional) {
-        avroTypes.add( Schema.create(Schema.Type.NULL) );
+    case COMPLEX:
+      {
+        if ( typeInfo.isMixed() ) {
+          return Schema.create(Schema.Type.STRING);
+        }
       }
-
-      return Schema.createUnion(avroTypes);
     default:
       throw new IllegalArgumentException("Cannot create an Avro schema for a " + typeInfo.getType() + " type.");
     }
   }
 
-  private static Schema createOptionalTypeOf(Schema schema) {
+  private static Schema createSchemaOf(
+      Schema schema,
+      boolean isOptional,
+      boolean isMixed) {
+
+    if (!isOptional && !isMixed) {
+      return schema;
+    }
     List<Schema> unionTypes = new ArrayList<Schema>(2);
     unionTypes.add(schema);
-    unionTypes.add( Schema.create(Schema.Type.NULL) );
-    return Schema.createUnion(unionTypes);
+    if (isOptional) {
+      unionTypes.add( Schema.create(Schema.Type.NULL) );
+    }
+    if (isMixed) {
+      unionTypes.add( Schema.create(Schema.Type.STRING) );
+    }
+    schema = Schema.createUnion(unionTypes);
+    return schema;
   }
 
   static String getAvroNamespaceFor(String xmlSchemaNamespace) throws URISyntaxException {

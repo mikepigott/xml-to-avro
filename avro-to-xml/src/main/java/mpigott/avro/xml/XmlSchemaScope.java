@@ -617,9 +617,8 @@ final class XmlSchemaScope {
       XmlSchemaType baseType = schema.getTypeByName( ext.getBaseTypeName() );
 
       if (baseType != null) {
-        XmlSchemaScope parentScope = getScope(baseType);
-
-        // TODO: Does this need to be cloned?
+        final XmlSchemaScope parentScope = getScope(baseType);
+        // TODO: Do we need to clone this?
         typeInfo = parentScope.getTypeInfo();
       }
 
@@ -964,6 +963,10 @@ final class XmlSchemaScope {
       break;
     default:
       throw new IllegalStateException("Cannot restrict on a " + parentTypeInfo.getType() + " type.");
+    }
+
+    if (parentTypeInfo.getUserRecognizedType() != null) {
+      typeInfo.setUserRecognizedType( parentTypeInfo.getUserRecognizedType() );
     }
 
     return typeInfo;

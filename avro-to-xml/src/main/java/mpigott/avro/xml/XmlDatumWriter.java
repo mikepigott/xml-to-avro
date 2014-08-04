@@ -45,6 +45,9 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 public class XmlDatumWriter implements DatumWriter<Document> {
 
+  private static final QName NIL_ATTR =
+      new QName("http://www.w3.org/2001/XMLSchema-instance", "nil");
+
   private static class Writer extends DefaultHandler {
     Writer(XmlSchemaPathNode path, Encoder out) {
       this.path = path;
@@ -95,13 +98,15 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         return;
       }
 
-      final XmlSchemaDocumentNode<AvroRecordInfo> doc =
-          currLocation.getDocumentNode();
-      final AvroRecordInfo recordInfo = doc.getUserDefinedContent();
-      final Schema avroSchema = recordInfo.getAvroSchema();
-
       try {
-        out.startItem();
+        final XmlSchemaDocumentNode<AvroRecordInfo> doc =
+            currLocation.getDocumentNode();
+        final AvroRecordInfo recordInfo = doc.getUserDefinedContent();
+        final Schema avroSchema = recordInfo.getAvroSchema();
+
+        if ( !stack.isEmpty() ) {
+          out.startItem();
+        }
         if (recordInfo.getUnionIndex() >= 0) {
           out.writeIndex( recordInfo.getUnionIndex() );
         }
@@ -140,22 +145,52 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
 
           try {
-            write(field.schema(), value);
-          } catch (IOException ioe) {
-            throw new SAXException("Could not write " + field.name() + " in " + avroSchema.toString() + " to the output stream for element " + elemName, ioe);
+            write(field.schema(), value, -1);
+          } catch (Exception ioe) {
+            throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemName, ioe);
           }
         }
 
         // If there are children, we want to start an array and end it later.
-        if (recordInfo.getNumChildren() > 0) {
+        
+        if (recordInfo
+              .getAvroSchema() // TODO: Handle MAPs.
+              .getField( elemName.getLocalPart() )
+              .schema()
+              .getType()
+              .equals(Schema.Type.ARRAY)) {
           out.writeArrayStart();
-          out.setItemCount( recordInfo.getNumChildren() );
+
+          if (recordInfo.getNumChildren() > 0) {
+            out.setItemCount( recordInfo.getNumChildren() );
+          } else {
+            out.setItemCount(0);
+          }
+        } else if (avroSchema
+                     .getField( elemName.getLocalPart() )
+                     .schema()
+                     .getType().equals(Schema.Type.NULL) ) {
+          out.writeNull();
+        } else {
+          final int nilIndex =
+              atts.getIndex(
+                  NIL_ATTR.getNamespaceURI(),
+                  NIL_ATTR.getLocalPart()); 
+
+          if ((nilIndex >= 0)
+              && Boolean.parseBoolean(atts.getValue(nilIndex))) {
+            write(avroSchema
+                    .getField( elemName.getLocalPart() )
+                    .schema(),
+                  null,
+                  -1);
+          }
         }
 
         stack.add(currLocation.getDocumentNode());
 
-      } catch (IOException ioe) {
-        throw new SAXException("Unable to write " + elemName + " to the output stream.", ioe);
+      } catch (Exception e) {
+        throw new RuntimeException("Unable to write " + elemName + " to the output stream.", e);
       }
     }
 
@@ -175,7 +210,13 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           || !currLocation
                 .getDirection()
                 .equals(XmlSchemaPathNode.Direction.CONTENT)) {
-        throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).getStateMachineNode().getElement().getQName() + " but the current direction is " + currLocation.getDirection() + ", not CONTENT.");
+        String str = new String(ch, start, length).trim();
+        if (str.isEmpty()) {
+          currLocation = currLocation.getPrevious();
+          return;
+        } else {
+          throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).getStateMachineNode().getElement().getQName() + " but the current direction is " + currLocation.getDirection() + ", not CONTENT.");
+        }
 
       } else if (currLocation.getNext() == null) {
         throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).getStateMachineNode().getElement().getQName() + " but somehow the path ends here!");
@@ -213,22 +254,31 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
 
       if (result != null) {
+        final XmlSchemaDocumentNode<AvroRecordInfo> docNode =
+            stack.get(stack.size() - 1);
+
         final Schema avroSchema =
-            stack
-              .get(stack.size() - 1)
-              .getUserDefinedContent()
-              .getAvroSchema();
+           docNode
+             .getUserDefinedContent()
+             .getAvroSchema()
+             .getField(
+                 docNode
+                   .getStateMachineNode()
+                   .getElement()
+                   .getQName()
+                   .getLocalPart())
+             .schema();
 
         try {
-          write(avroSchema, result);
-        } catch (IOException ioe) {
+          write(avroSchema, result, -1);
+        } catch (Exception ioe) {
           final QName elemQName =
               stack
                 .get(stack.size() - 1)
                 .getStateMachineNode()
                 .getElement()
                 .getQName();
-          throw new SAXException("Unable to write the content \"" + result + "\" for " + elemQName + "", ioe);
+          throw new RuntimeException("Unable to write the content \"" + result + "\" for " + elemQName + "", ioe);
         }
       }
     }
@@ -261,11 +311,17 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         throw new SAXException("We are leaving " + elemName + " but the element on the stack is " + stackElemName + ".");
       }
 
-      if (docNode.getUserDefinedContent().getNumChildren() > 0) {
+      if (docNode
+            .getUserDefinedContent()
+            .getAvroSchema() // TODO: Handle MAPs.
+            .getField( elemName.getLocalPart() )
+            .schema()
+            .getType()
+            .equals(Schema.Type.ARRAY)) {
         try {
           out.writeArrayEnd();
         } catch (IOException ioe) {
-          throw new SAXException("Unable to end the array for " + elemName, ioe);
+          throw new RuntimeException("Unable to end the array for " + elemName, ioe);
         }
       }
     }
@@ -273,39 +329,65 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     @Override
     public void endDocument() throws SAXException {
       if (currLocation.getNext() != null) {
-        throw new IllegalStateException("Reached the end of the document, but the path has more nodes.");
+        currLocation = currLocation.getNext();
+        while (currLocation != null) {
+          if (!currLocation
+                 .getDirection()
+                 .equals(XmlSchemaPathNode.Direction.PARENT)) {
+            throw new IllegalStateException("Reached the end of the document, but the path has more nodes: " + currLocation.getStateMachineNode());
+          }
+          currLocation = currLocation.getNext();
+        }
       }
     }
 
     private void walkToElement(QName elemName) {
-      while ((currLocation != null)
-          && !currLocation
-                .getStateMachineNode()
-                .getNodeType()
-                .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-          && !currLocation
-                .getStateMachineNode()
-                .getNodeType()
-                .equals(XmlSchemaStateMachineNode.Type.ANY)) {
-        currLocation = currLocation.getNext();
+      if (stack.isEmpty()
+          && currLocation
+               .getStateMachineNode()
+               .getNodeType()
+               .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+          && currLocation
+               .getStateMachineNode()
+               .getElement()
+               .getQName()
+               .equals(elemName)) {
+        return;
       }
+
+      do {
+        currLocation = currLocation.getNext();
+      } while ((currLocation != null)
+                  && (currLocation
+                        .getDirection()
+                        .equals(XmlSchemaPathNode.Direction.PARENT)
+                  || (!currLocation.getDirection().equals(XmlSchemaPathNode.Direction.PARENT)
+                        && !currLocation
+                              .getStateMachineNode()
+                              .getNodeType()
+                              .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+                        && !currLocation
+                              .getStateMachineNode()
+                              .getNodeType()
+                              .equals(XmlSchemaStateMachineNode.Type.ANY))));
 
       if (currLocation == null) {
         throw new IllegalStateException("Cannot find " + elemName + " in the path!");
       } else if (
           currLocation
             .getStateMachineNode()
+            .getNodeType()
             .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
           && !currLocation
                 .getStateMachineNode()
                 .getElement()
                 .getQName()
                 .equals(elemName)) {
-        throw new IllegalStateException("The next element in the path is " + currLocation.getStateMachineNode().getElement().getQName() + ", not " + elemName + ".");
+        throw new IllegalStateException("The next element in the path is " + currLocation.getStateMachineNode().getElement().getQName() + " (" + currLocation.getDirection() + "), not " + elemName + ".");
       }
     }
 
-    private void write(Schema schema, String data)
+    private void write(Schema schema, String data, int unionIndex)
         throws IOException {
 
       /* If the data is empty or null, write
@@ -358,22 +440,29 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       switch ( schema.getType() ) {
       case UNION:
         {
-          Schema textType = null;
+          int textIndex = -1;
+          int bytesIndex = -1;
+
           Schema bytesType = null;
+
           final List<Schema> subTypes = schema.getTypes();
           boolean written = false;
-          for (Schema subType : subTypes) {
+          for (int subTypeIndex = 0;
+              subTypeIndex < subTypes.size();
+              ++subTypeIndex) {
             // Try the text types last.
+            final Schema subType = subTypes.get(subTypeIndex);
             if (subType.getType().equals(Schema.Type.BYTES)) {
+              bytesIndex = subTypeIndex;
               bytesType = subType;
               continue;
             } else if (subType.getType().equals(Schema.Type.STRING)) {
-              textType = subType;
+              textIndex = subTypeIndex;
               continue;
             }
 
             try {
-              write(subType, data);
+              write(subType, data, subTypeIndex);
               written = true;
               break;
             } catch (IOException ioe) {
@@ -384,15 +473,16 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
 
           if (!written) {
-            if (bytesType != null) {
+            if (bytesIndex >= 0) {
               try {
-                write(bytesType, data);
+                write(bytesType, data, bytesIndex);
                 written = true;
               } catch (IOException ioe) {
                 // Cannot write the data as bytes either.
               }
             }
-            if (!written && (textType != null)) {
+            if (!written && (textIndex >= 0)) {
+              out.writeIndex(textIndex);
               out.writeString(data);
 
             } else if (!written) {
@@ -407,6 +497,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         }
       case STRING:
         {
+          if (unionIndex >= 0) {
+            out.writeIndex(unionIndex);
+          }
           out.writeString(data);
           break;
         }
@@ -429,13 +522,20 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
             throw new IOException( errMsg.toString() );
           }
+          if (unionIndex >= 0) {
+            out.writeIndex(unionIndex);
+          }
           out.writeEnum( schema.getEnumOrdinal(data) );
           break;
         }
       case DOUBLE:
         {
           try {
-            out.writeDouble( Double.parseDouble(data) );
+            final double value = Double.parseDouble(data);
+            if (unionIndex >= 0) {
+              out.writeIndex(unionIndex);
+            }
+            out.writeDouble(value);
           } catch (NumberFormatException nfe) {
             throw new IOException("\"" + data + "\" is not a double.", nfe);
           }
@@ -444,7 +544,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       case FLOAT:
         {
           try {
-            out.writeFloat( Float.parseFloat(data) );
+            final float value = Float.parseFloat(data);
+            if (unionIndex >= 0) {
+              out.writeIndex(unionIndex);
+            }
+            out.writeFloat(value);
           } catch (NumberFormatException nfe) {
             throw new IOException("\"" + data + "\" is not a float.", nfe);
           }
@@ -453,7 +557,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       case LONG:
         {
           try {
-            out.writeLong( Long.parseLong(data) );
+            final long value = Long.parseLong(data);
+            if (unionIndex >= 0) {
+              out.writeIndex(unionIndex);
+            }
+            out.writeLong(value);
           } catch (NumberFormatException nfe) {
             throw new IOException("\"" + data + "\" is not a long.", nfe);
           }
@@ -462,7 +570,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       case INT:
         {
           try {
-            out.writeInt( Integer.parseInt(data) );
+            final int value = Integer.parseInt(data);
+            if (unionIndex >= 0) {
+              out.writeIndex(unionIndex);
+            }
+            out.writeInt(value);
           } catch (NumberFormatException nfe) {
             throw new IOException("\"" + data + "\" is not an int.", nfe);
           }
@@ -470,6 +582,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         }
       case BOOLEAN:
         {
+          if (unionIndex >= 0) {
+            out.writeIndex(unionIndex);
+          }
           out.writeBoolean( Boolean.parseBoolean(data) );
           break;
         }
@@ -506,6 +621,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     final XmlSchemaWalker walker =
         new XmlSchemaWalker(xmlSchemaCollection, stateMachineGen);
+    walker.setUserRecognizedTypes( Utils.getAvroRecognizedTypes() );
 
     AvroSchemaGenerator avroSchemaGen = null;
     if (avroSchema == null) {

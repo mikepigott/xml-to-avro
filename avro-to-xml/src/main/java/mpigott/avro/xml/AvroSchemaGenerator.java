@@ -261,13 +261,14 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       fields.add(field);
 
     } else if ((typeInfo != null)
-                && (typeInfo.getUserRecognizedType() != null)) {
+                && (typeInfo.getType().equals(XmlSchemaTypeInfo.Type.LIST)
+                    || typeInfo.getType().equals(XmlSchemaTypeInfo.Type.UNION)
+                    || typeInfo.isMixed()
+                    || (typeInfo.getUserRecognizedType() != null))) {
       final Schema.Field field =
           new Schema.Field(
               entry.elementQName.getLocalPart(),
-              Schema.create(
-                  Utils.getAvroSchemaTypeFor(
-                      typeInfo.getUserRecognizedType())),
+              Utils.getAvroSchemaFor(typeInfo, element.isNillable()),
               "Simple type " + typeInfo.getUserRecognizedType(),
               null);
       fields.add(field);

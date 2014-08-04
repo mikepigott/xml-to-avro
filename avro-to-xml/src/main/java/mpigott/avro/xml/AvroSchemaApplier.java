@@ -215,6 +215,10 @@ final class AvroSchemaApplier {
         switch (childrenSchema.getType()) {
         case ARRAY:
           {
+            if (typeInfo.getType().equals(XmlSchemaTypeInfo.Type.LIST)) {
+              break;
+            }
+
             // All group types are ARRAY of UNION of MAP/RECORD.
             if ( !childrenSchema
                     .getElementType()
@@ -245,6 +249,13 @@ final class AvroSchemaApplier {
         case NULL:
           // There are no children, so no further types are valid.
           break;
+        case UNION:
+          if (typeInfo.getType().equals(XmlSchemaTypeInfo.Type.UNION)) {
+            break;
+          } else if (element.isNillable()
+                      && (childrenSchema.getTypes().size() == 2)) {
+            break;
+          }
         default:
           throw new IllegalStateException("Children of element " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName() + " must be either an ARRAY of UNION of MAP/RECORD or a primitive type, not " + childrenSchema.getType());
         }

@@ -145,6 +145,17 @@ final class XmlSchemaTypeInfo {
     userRecognizedType = userRecType;
   }
 
+  @Override
+  public String toString() {
+    StringBuilder str = new StringBuilder("XmlSchemaTypeInfo [");
+    str.append(type).append("] Base Type: ").append(baseSimpleType);
+    str.append(" User Recognized Type: ").append(userRecognizedType);
+    str.append(" Is Mixed: ").append(isMixed);
+    str.append(" Num Children: ");
+    str.append((childTypes == null) ? 0 : childTypes.size());
+    return str.toString();
+  }
+
   private Type type;
   private HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets;
   private boolean isMixed;

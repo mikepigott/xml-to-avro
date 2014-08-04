@@ -2,6 +2,7 @@ package mpigott.avro.xml;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -14,6 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.stream.StreamSource;
@@ -21,10 +24,13 @@ import javax.xml.transform.stream.StreamSource;
 import org.antlr.stringtemplate.StringTemplate;
 import org.antlr.stringtemplate.StringTemplateGroup;
 import org.apache.avro.Schema;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.io.JsonEncoder;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.junit.Assert;
+import org.w3c.dom.Document;
 
 public class Main {
 
@@ -40,13 +46,43 @@ public class Main {
      }    
     
      return classpath.toString();
- }
+  }
+
+  public static void main(String[] args) throws Exception {
+    final XmlDatumConfig config = new XmlDatumConfig(new URL("http://xbrl.fasb.org/us-gaap/2012/elts/us-gaap-2012-01-31.xsd"), new QName("http://www.xbrl.org/2003/instance", "xbrl"));
+    config.addSchemaUrl(new URL("http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd"));
+    config.addSchemaUrl(new URL("http://xbrl.sec.gov/dei/2012/dei-2012-01-31.xsd"));
+
+    final XmlDatumWriter writer = new XmlDatumWriter(config);
+
+    FileWriter schemaWriter = new FileWriter("xbrl.avsc");
+    schemaWriter.write( writer.getSchema().toString(true) );
+    schemaWriter.close();
+
+    final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    dbf.setNamespaceAware(true);
+    final DocumentBuilder db = dbf.newDocumentBuilder();
+    final File xbrlFile = new File("C:\\Users\\Mike Pigott\\Google Drive\\workspace\\edgar_xbrl\\src\\test\\resources\\fds-20130228.xml");
+    final Document xbrlDoc = db.parse(xbrlFile);
+
+    final EncoderFactory ef = EncoderFactory.get();
+
+    final FileOutputStream outStream = new FileOutputStream("xbrl.avro");
+
+    final JsonEncoder encoder = ef.jsonEncoder(writer.getSchema(), outStream, true);
+
+    writer.write(xbrlDoc, encoder);
+
+    encoder.flush();
+
+    outStream.close();
+  }
 
   /**
    * @param args
    * @throws IOException 
    */
-  public static void main(String[] args) throws Exception {
+  public static void oldMain(String[] args) throws Exception {
     Main main = new Main();
     System.out.println( main.getClasspathString() );
 
