@@ -981,10 +981,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       /* We are at an element in an existing document.  This
        * is the start node of a child.  Likewise we need to
        * move down one level to the children.
-       *
-       * This is only true on the first call to find().  All
-       * recursive calls to find confirm they do not start
-       * from the parent element first.
        */
       verifyCurrentPositionIsAtElement("Started element " + elemQName);
 
@@ -1031,6 +1027,25 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       startNode = childPath;
     }
 
+    final List<PathSegment> choices = find(startNode, elemQName, null);
+
+    if ((choices != null) && (startOfPath != startNode)) {
+      /* If we moved down to the children, we need to
+       * prepend the path with the original start node.
+       */
+      for (PathSegment choice : choices) {
+        choice.prepend(startOfPath, 0);
+      }
+    }
+
+    return choices;
+  }
+
+  private List<PathSegment> find(
+      XmlSchemaPathNode startNode,
+      QName elemQName,
+      XmlSchemaStateMachineNode doNotFollow) {
+
     final ArrayList<Integer> childrenNodes =
         new ArrayList<Integer>();
     final boolean isFulfilled =
@@ -1044,6 +1059,16 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       choices = find(startNode, elemQName, 0);
     } else {
       for (Integer childPath : childrenNodes) {
+        if (doNotFollow
+              == startNode
+                   .getStateMachineNode()
+                   .getPossibleNextStates()
+                   .get(childPath)) {
+          /* We are coming up from a child node; do
+           * not traverse back down to that child.
+           */
+          continue;
+        }
         final XmlSchemaPathNode currPath =
             pathMgr.addChildNodeToPath(startNode, childPath);
   
@@ -1111,7 +1136,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       }
 
       final List<PathSegment> pathsOfParent =
-          find(path, elemQName);
+          find(path, elemQName, startNode.getStateMachineNode());
 
       if (pathsOfParent != null) {
         for (PathSegment choice : pathsOfParent) {
@@ -1126,15 +1151,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       } else {
         // path would not have been recycled at a lower level.
         pathMgr.recyclePathNode(path);
-      }
-    }
-
-    if ((choices != null) && (startOfPath != startNode)) {
-      /* If we moved down to the children, we need to
-       * prepend the path with the original start node.
-       */
-      for (PathSegment choice : choices) {
-        choice.prepend(startOfPath, 0);
       }
     }
 
