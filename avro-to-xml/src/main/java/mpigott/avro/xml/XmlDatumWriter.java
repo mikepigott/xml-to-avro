@@ -28,6 +28,7 @@ import javax.xml.transform.stream.StreamSource;
 import org.apache.avro.Schema;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
+import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.w3c.dom.Document;
@@ -122,8 +123,15 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         final HashMap<String, XmlSchemaTypeInfo> attrTypes =
             new HashMap<String, XmlSchemaTypeInfo>();
 
+        final HashMap<String, XmlSchemaAttribute> schemaAttrs =
+            new HashMap<String, XmlSchemaAttribute>();
+
         for (XmlSchemaStateMachineNode.Attribute attribute : attributes) {
           attrTypes.put(attribute.getAttribute().getName(), attribute.getType());
+
+          schemaAttrs.put(
+              attribute.getAttribute().getName(),
+              attribute.getAttribute());
         }
 
 
@@ -150,7 +158,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
           final XmlSchemaTypeInfo typeInfo = attrTypes.get( field.name() );
 
-              /* Attributes in XML Schema each have their own namespace, which
+          /* Attributes in XML Schema each have their own namespace, which
            * is not supported in Avro.  So, we will see if we can find the
            * attribute using the existing namespace, and if not, we will
            * walk all of them to see which one has the same name.
@@ -166,6 +174,17 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 value = atts.getValue(attrIndex);
                 break;
               }
+            }
+          }
+
+          if (value == null) {
+            // See if there is a default or fixed value instead.
+            final XmlSchemaAttribute schemaAttr =
+                schemaAttrs.get( field.name() );
+
+            value = schemaAttr.getDefaultValue();
+            if (value == null) {
+              value = schemaAttr.getFixedValue();
             }
           }
 
@@ -340,7 +359,32 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       final XmlSchemaDocumentNode<AvroRecordInfo> docNode = entry.docNode;
 
       if (!entry.receivedContent) {
-        // Look for the default value and apply it, if any.
+
+        /* Look for either the default value
+         * or fixed value and apply it, if any.
+         */
+        String value =
+            docNode.getStateMachineNode().getElement().getDefaultValue();
+
+        if (value == null) {
+          value = docNode.getStateMachineNode().getElement().getFixedValue();
+        }
+
+        final XmlSchemaBaseSimpleType baseType =
+            docNode.getStateMachineNode().getElementType().getBaseType();
+
+        final Schema avroSchema =
+            docNode
+              .getUserDefinedContent()
+              .getAvroSchema()
+              .getField(localName)
+              .schema();
+
+        try {
+          write(baseType, avroSchema, value);
+        } catch (IOException e) {
+          throw new RuntimeException("Attempted to write a default value of \"" + value + "\" for " + elemName + " and failed.", e);
+        }
       }
 
       final QName stackElemName =
