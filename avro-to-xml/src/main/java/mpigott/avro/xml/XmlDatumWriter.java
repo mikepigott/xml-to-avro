@@ -50,12 +50,22 @@ public class XmlDatumWriter implements DatumWriter<Document> {
   private static final QName NIL_ATTR =
       new QName("http://www.w3.org/2001/XMLSchema-instance", "nil");
 
+  private static class StackEntry {
+    StackEntry(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
+      this.docNode = docNode;
+      this.receivedContent = false;
+    }
+
+    XmlSchemaDocumentNode<AvroRecordInfo> docNode;
+    boolean receivedContent;
+  }
+
   private static class Writer extends DefaultHandler {
     Writer(XmlSchemaPathNode path, Encoder out) {
       this.path = path;
       this.out = out;
 
-      stack = new ArrayList<XmlSchemaDocumentNode<AvroRecordInfo>>();
+      stack = new ArrayList<StackEntry>();
       currLocation = null;
       content = null;
       currAnyElem = null;
@@ -167,7 +177,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         }
 
         // If there are children, we want to start an array and end it later.
-        
+        final StackEntry entry =
+            new StackEntry(currLocation.getDocumentNode());
+
         if (recordInfo
               .getAvroSchema() // TODO: Handle MAPs.
               .getField( elemName.getLocalPart() )
@@ -181,11 +193,19 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           } else {
             out.setItemCount(0);
           }
+
+          /* We expect to receive child elements; no need to look
+           * for a default or fixed value once this element exits.
+           */
+          entry.receivedContent = true;
+
         } else if (avroSchema
                      .getField( elemName.getLocalPart() )
                      .schema()
                      .getType().equals(Schema.Type.NULL) ) {
           out.writeNull();
+          entry.receivedContent = true;
+
         } else {
           final int nilIndex =
               atts.getIndex(
@@ -198,10 +218,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             write(doc.getStateMachineNode().getElementType().getBaseType(),
                   avroSchema.getField( elemName.getLocalPart() ).schema(),
                   null);
+            entry.receivedContent = true;
           }
         }
 
-        stack.add(currLocation.getDocumentNode());
+        stack.add(entry);
 
       } catch (Exception e) {
         throw new RuntimeException("Unable to write " + elemName + " to the output stream.", e);
@@ -229,11 +250,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           currLocation = currLocation.getPrevious();
           return;
         } else {
-          throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).getStateMachineNode().getElement().getQName() + " but the current direction is " + currLocation.getDirection() + ", not CONTENT.");
+          throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).docNode.getStateMachineNode().getElement().getQName() + " but the current direction is " + currLocation.getDirection() + ", not CONTENT.");
         }
 
       } else if (currLocation.getNext() == null) {
-        throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).getStateMachineNode().getElement().getQName() + " but somehow the path ends here!");
+        throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).docNode.getStateMachineNode().getElement().getQName() + " but somehow the path ends here!");
       }
 
       /* If characters() will be called multiple times, we want to collect
@@ -268,8 +289,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
 
       if (result != null) {
-        final XmlSchemaDocumentNode<AvroRecordInfo> docNode =
-            stack.get(stack.size() - 1);
+        final StackEntry entry = stack.get(stack.size() - 1);
+        final XmlSchemaDocumentNode<AvroRecordInfo> docNode = entry.docNode;
 
         final XmlSchemaBaseSimpleType baseType =
             docNode.getStateMachineNode().getElementType().getBaseType();
@@ -288,10 +309,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
         try {
           write(baseType, avroSchema, result);
+          entry.receivedContent = true;
         } catch (Exception ioe) {
           final QName elemQName =
-              stack
-                .get(stack.size() - 1)
+              docNode
                 .getStateMachineNode()
                 .getElement()
                 .getQName();
@@ -315,8 +336,12 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         return;
       }
 
-      final XmlSchemaDocumentNode<AvroRecordInfo> docNode =
-          stack.remove(stack.size() - 1);
+      final StackEntry entry = stack.remove(stack.size() - 1);
+      final XmlSchemaDocumentNode<AvroRecordInfo> docNode = entry.docNode;
+
+      if (!entry.receivedContent) {
+        // Look for the default value and apply it, if any.
+      }
 
       final QName stackElemName =
           docNode
@@ -325,7 +350,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             .getQName();
 
       if (!stackElemName.equals(elemName)) {
-        throw new SAXException("We are leaving " + elemName + " but the element on the stack is " + stackElemName + ".");
+        throw new IllegalStateException("We are leaving " + elemName + " but the element on the stack is " + stackElemName + ".");
       }
 
       if (docNode
@@ -637,7 +662,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     private XmlSchemaPathNode currLocation;
     private StringBuilder content;
     private QName currAnyElem;
-    private ArrayList<XmlSchemaDocumentNode<AvroRecordInfo>> stack;
+    private ArrayList<StackEntry> stack;
 
     private final XmlSchemaPathNode path;
     private final Encoder out;
