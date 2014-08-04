@@ -18,8 +18,10 @@ package mpigott.avro.xml;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
 import javax.xml.transform.stream.StreamSource;
 
@@ -104,6 +106,17 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         final AvroRecordInfo recordInfo = doc.getUserDefinedContent();
         final Schema avroSchema = recordInfo.getAvroSchema();
 
+        final List<XmlSchemaStateMachineNode.Attribute> attributes =
+            doc.getStateMachineNode().getAttributes();
+
+        final HashMap<String, XmlSchemaTypeInfo> attrTypes =
+            new HashMap<String, XmlSchemaTypeInfo>();
+
+        for (XmlSchemaStateMachineNode.Attribute attribute : attributes) {
+          attrTypes.put(attribute.getAttribute().getName(), attribute.getType());
+        }
+
+
         if ( !stack.isEmpty() ) {
           out.startItem();
         }
@@ -125,7 +138,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             throw new IllegalStateException("The children field is indexed at " + fieldIndex + " when it was expected to be the last element, or " + (avroSchema.getFields().size() - 1) + ".");
           }
 
-          /* Attributes in XML Schema each have their own namespace, which
+          final XmlSchemaTypeInfo typeInfo = attrTypes.get( field.name() );
+
+              /* Attributes in XML Schema each have their own namespace, which
            * is not supported in Avro.  So, we will see if we can find the
            * attribute using the existing namespace, and if not, we will
            * walk all of them to see which one has the same name.
@@ -145,7 +160,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
 
           try {
-            write(field.schema(), value);
+            write(typeInfo.getBaseType(), field.schema(), value);
           } catch (Exception ioe) {
             throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemName, ioe);
           }
@@ -179,9 +194,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
           if ((nilIndex >= 0)
               && Boolean.parseBoolean(atts.getValue(nilIndex))) {
-            write(avroSchema
-                    .getField( elemName.getLocalPart() )
-                    .schema(),
+
+            write(doc.getStateMachineNode().getElementType().getBaseType(),
+                  avroSchema.getField( elemName.getLocalPart() ).schema(),
                   null);
           }
         }
@@ -256,6 +271,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         final XmlSchemaDocumentNode<AvroRecordInfo> docNode =
             stack.get(stack.size() - 1);
 
+        final XmlSchemaBaseSimpleType baseType =
+            docNode.getStateMachineNode().getElementType().getBaseType();
+
         final Schema avroSchema =
            docNode
              .getUserDefinedContent()
@@ -269,7 +287,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
              .schema();
 
         try {
-          write(avroSchema, result);
+          write(baseType, avroSchema, result);
         } catch (Exception ioe) {
           final QName elemQName =
               stack
@@ -386,11 +404,19 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
     }
 
-    private void write(Schema schema, String data) throws IOException {
-      write(schema, data, -1);
+    private void write(
+        XmlSchemaBaseSimpleType baseType,
+        Schema schema,
+        String data) throws IOException {
+
+      write(baseType, schema, data, -1);
     }
 
-    private void write(Schema schema, String data, int unionIndex)
+    private void write(
+        XmlSchemaBaseSimpleType baseType,
+        Schema schema,
+        String data,
+        int unionIndex)
         throws IOException {
 
       /* If the data is empty or null, write
@@ -465,7 +491,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             }
 
             try {
-              write(subType, data, subTypeIndex);
+              write(baseType, subType, data, subTypeIndex);
               written = true;
               break;
             } catch (IOException ioe) {
@@ -478,7 +504,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           if (!written) {
             if (bytesIndex >= 0) {
               try {
-                write(bytesType, data, bytesIndex);
+                write(baseType, bytesType, data, bytesIndex);
                 written = true;
               } catch (IOException ioe) {
                 // Cannot write the data as bytes either.
@@ -496,7 +522,19 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         }
       case BYTES:
         {
-          throw new UnsupportedOperationException("Byte types are not supported yet!");
+          byte[] bytes = null;
+          switch (baseType) {
+          case BIN_BASE64:
+            bytes = DatatypeConverter.parseBase64Binary(data);
+            break;
+          case BIN_HEX:
+            bytes = DatatypeConverter.parseHexBinary(data);
+            break;
+          default:
+            throw new IllegalArgumentException("Cannot generate bytes for data of a base type of " + baseType);
+          }
+          out.writeBytes(bytes);
+          break;
         }
       case STRING:
         {

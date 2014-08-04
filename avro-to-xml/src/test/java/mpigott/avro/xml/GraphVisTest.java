@@ -23,8 +23,10 @@ import junit.framework.TestCase;
 
 public class GraphVisTest extends TestCase {
 
-  @Test @Ignore
-  public void test() throws IOException {
+  public void test() {
+  }
+
+  public void real() throws IOException {
     GraphGenerationVisitor visitor = new GraphGenerationVisitor();
 
     NullVisitor nullVisitor = new NullVisitor();
