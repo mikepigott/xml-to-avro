@@ -16,7 +16,9 @@
 
 package mpigott.avro.xml;
 
+import java.io.File;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,7 +66,15 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     final boolean isSubstitutionGroup;
   }
 
-  AvroSchemaGenerator() {
+  AvroSchemaGenerator(
+      String baseUri,
+      List<URL> schemaUrls,
+      List<File> schemaFiles) {
+
+    this.baseUri = baseUri;
+    this.schemaUrls = schemaUrls;
+    this.schemaFiles = schemaFiles;
+
     root = null;
     stack = new ArrayList<StackEntry>();
     schemasByElement = new HashMap<QName, Schema>();
@@ -135,13 +145,16 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       return;
     }
 
-    // If this element is abstract, it is not a member of the substitution group.
+    /* If this element is abstract, it is not
+     * a member of the substitution group.
+     */
     if ((substGrp != null) && element.isAbstract()) {
       return;
     }
 
     // If documentation is available, makes it the record's documentation.
-    final String documentation = getDocumentationFor( element.getAnnotation() );
+    final String documentation =
+        getDocumentationFor( element.getAnnotation() );
 
     // Create the record.
     Schema record = null;
@@ -174,6 +187,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     } else if ( stack.isEmpty() ) {
       // This is the root element!
       root = record;
+      addXmlSchemasListToRoot();
 
     } else {
       /* This is not part of a substitution group,
@@ -291,11 +305,6 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     }
 
     record.setFields(fields);
-
-    if ((typeInfo != null)
-        && !typeInfo.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX)) {
-      record.addProp("xmlSchema", getXmlSchemaAsJson(typeInfo));
-    }
   }
 
   /**
@@ -355,8 +364,6 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
             documentation,
             Utils.createJsonNodeFor(defaultValue, attrSchema));
 
-    attr.addProp("xmlSchema", getXmlSchemaAsJson(attributeType));
-
     List<Schema.Field> attrs = attributesByElement.get(entry.elementQName);
     if (attrs == null) {
       attrs = new ArrayList<Schema.Field>();
@@ -395,6 +402,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     if ( stack.isEmpty() ) {
       // The root node in the stack is part of a substitution group.
       root = Schema.createUnion(substitutes);
+      addXmlSchemasListToRoot();
 
     } else {
       // The substitution group is part of a higher group.
@@ -566,83 +574,44 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     return null;
   }
 
-  private static JsonNode getXmlSchemaAsJson(XmlSchemaTypeInfo typeInfo) {
-    ObjectNode type = JsonNodeFactory.instance.objectNode();
-
-    JsonNode xmlSchemaType = null;
-    switch (typeInfo.getType()) {
-    case ATOMIC:
-      xmlSchemaType = createJsonNodeFor( typeInfo.getBaseType().getQName() );
-      break;
-    case LIST:
-      {
-        JsonNode childNode =
-            getXmlSchemaAsJson( typeInfo.getChildTypes().get(0) );
-        xmlSchemaType = createJsonNodeForList(childNode);
-        break;
-      }
-    case UNION:
-      {
-        List<JsonNode> jsonNodes =
-            new ArrayList<JsonNode>( typeInfo.getChildTypes().size() );
-        for (XmlSchemaTypeInfo childType : typeInfo.getChildTypes()) {
-          jsonNodes.add( getXmlSchemaAsJson(childType) );
-        }
-        xmlSchemaType = createJsonNodeForUnion(jsonNodes);
-        break;
-      }
-    default:
-      throw new IllegalArgumentException("Cannot create a JSON node of a " + typeInfo.getType() + " type.");
+  private void addXmlSchemasListToRoot() {
+    if (((schemaUrls == null) || schemaUrls.isEmpty())
+        && ((schemaFiles == null) || schemaFiles.isEmpty())
+        && ((baseUri == null) || !baseUri.isEmpty())) {
+      return;
     }
 
-    type.put("baseType", xmlSchemaType);
+    final ObjectNode schemasNode = JsonNodeFactory.instance.objectNode();
 
-    final Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets =
-        typeInfo.getFacets();
-
-    if ((facets != null) && !facets.isEmpty()) {
-      ArrayNode facetsArray = JsonNodeFactory.instance.arrayNode();
-
-      for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facetsForType : facets.entrySet()) {
-        for (XmlSchemaRestriction facet : facetsForType.getValue()) {
-          ObjectNode facetNode = JsonNodeFactory.instance.objectNode();
-          facetNode.put("type", facet.getType().name());
-          facetNode.put("value", facet.getValue().toString());
-          facetNode.put("fixed", facet.isFixed());
-          facetsArray.add(facetNode);
-        }
+    if ((schemaUrls != null) && !schemaUrls.isEmpty()) {
+      final ArrayNode urlArrayNode = JsonNodeFactory.instance.arrayNode();
+      for (URL schemaUrl : schemaUrls) {
+        urlArrayNode.add( schemaUrl.toString() );
       }
-    
-      type.put("facets", facetsArray);
+      schemasNode.put("urls", urlArrayNode);
     }
 
-    return type;
-  }
+    if ((schemaFiles != null) && !schemaFiles.isEmpty()) {
+      final ArrayNode fileArrayNode = JsonNodeFactory.instance.arrayNode();
+      for (File schemaFile : schemaFiles) {
+        fileArrayNode.add( schemaFile.getAbsolutePath() );
+      }
+      schemasNode.put("files", fileArrayNode);
+    }
 
-  private static JsonNode createJsonNodeFor(QName baseType) {
-    ObjectNode object = JsonNodeFactory.instance.objectNode();
-    object.put("namespace", baseType.getNamespaceURI());
-    object.put("localPart", baseType.getLocalPart());
-    return object;
-  }
+    if ((baseUri != null) && !baseUri.isEmpty()) {
+      schemasNode.put("baseUri", baseUri);
+    }
 
-  private static JsonNode createJsonNodeForList(JsonNode child) {
-    ObjectNode object = JsonNodeFactory.instance.objectNode();
-    object.put("type", "list");
-    object.put("value", child);
-    return object;
-  }
-
-  private static JsonNode createJsonNodeForUnion(List<JsonNode> unionTypes) {
-    ObjectNode object = JsonNodeFactory.instance.objectNode();
-    object.put("type", "union");
-    ArrayNode arrayNode = JsonNodeFactory.instance.arrayNode();
-    arrayNode.addAll(unionTypes);
-    object.put("value", arrayNode);
-    return object;
+    root.addProp("xmlSchemas", schemasNode);
   }
 
   private Schema root;
+
+  private final List<URL> schemaUrls;
+  private final List<File> schemaFiles;
+  private final String baseUri;
+
   private final ArrayList<StackEntry> stack;
   private final Map<QName, Schema> schemasByElement;
   private final Map<QName, List<Schema>> substitutionGroups;

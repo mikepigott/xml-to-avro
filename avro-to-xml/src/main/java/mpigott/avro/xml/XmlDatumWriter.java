@@ -666,7 +666,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     AvroSchemaGenerator avroSchemaGen = null;
     if (avroSchema == null) {
-      avroSchemaGen = new AvroSchemaGenerator();
+      avroSchemaGen =
+          new AvroSchemaGenerator(
+              config.getBaseUri(),
+              config.getSchemaUrls(),
+              config.getSchemaFiles());
       walker.addVisitor(avroSchemaGen);
     }
 

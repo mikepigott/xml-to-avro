@@ -262,18 +262,6 @@ class Utils {
 	  return namespace.toString();
   }
 
-  static InputSource getSchema(String docBaseUri, String schemaLocation) throws java.io.IOException {
-	  URL schemaUrl = null;
-	  if (schemaLocation.contains("://")) {
-	    schemaUrl = new URL(schemaLocation);
-	  } else if (docBaseUri.endsWith("/")) {
-	    schemaUrl = new URL(docBaseUri + schemaLocation);
-	  } else {
-	    schemaUrl = new URL(docBaseUri + "/" + schemaLocation);
-	  }
-	  return new InputSource( schemaUrl.openStream() );
-  }
-
   static JsonNode createJsonNodeFor(String value, Schema type) {
     if ((value == null) || value.isEmpty()) {
       return null;

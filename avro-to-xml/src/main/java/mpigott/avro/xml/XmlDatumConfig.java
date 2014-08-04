@@ -55,19 +55,12 @@ public class XmlDatumConfig {
 		return baseUri;
 	}
 
-	public List<String> getSchemaPaths() {
-	  final ArrayList<String> paths = new ArrayList<String>( getArraySize() );
-		if (schemaUrls != null) {
-			for (URL schemaUrl : schemaUrls) {
-			  paths.add( schemaUrl.toString() );
-			}
-		}
-		if (schemaFiles != null) {
-		  for (File schemaFile : schemaFiles) {
-		    paths.add( schemaFile.getAbsolutePath() );
-		  }
-		}
-		return paths;
+	public List<URL> getSchemaUrls() {
+	  return schemaUrls;
+	}
+
+	public List<File> getSchemaFiles() {
+	  return schemaFiles;
 	}
 
 	public QName getRootTagName() {

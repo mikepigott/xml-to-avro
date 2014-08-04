@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,11 +45,15 @@ public class TestAvroSchemaGenerator {
 
   @Test
   public void test() throws Exception {
+    File file = new File("src\\test\\resources\\test_schema.xsd");
+    ArrayList<File> schemaFiles = new ArrayList<File>(1);
+    schemaFiles.add(file);
+
     XmlSchemaCollection collection = null;
     FileReader fileReader = null;
-    AvroSchemaGenerator visitor = new AvroSchemaGenerator();
+    AvroSchemaGenerator visitor =
+        new AvroSchemaGenerator(null, null, schemaFiles);
     try {
-      File file = new File("src\\test\\resources\\test_schema.xsd");
       fileReader = new FileReader(file);
 
       collection = new XmlSchemaCollection();

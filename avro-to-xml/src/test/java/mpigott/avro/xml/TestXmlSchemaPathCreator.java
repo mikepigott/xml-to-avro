@@ -53,12 +53,16 @@ public class TestXmlSchemaPathCreator {
 
   @BeforeClass
   public static void createStateMachine() throws FileNotFoundException {
+    File file = new File("src\\test\\resources\\test_schema.xsd");
+    ArrayList<File> schemaFiles = new ArrayList<File>(1);
+    schemaFiles.add(file);
+
     // 1. Construct the Avro Schema
     XmlSchemaCollection collection = null;
     FileReader fileReader = null;
-    AvroSchemaGenerator visitor = new AvroSchemaGenerator();
+    AvroSchemaGenerator visitor =
+        new AvroSchemaGenerator(null, null, schemaFiles);
     try {
-      File file = new File("src\\test\\resources\\test_schema.xsd");
       fileReader = new FileReader(file);
 
       collection = new XmlSchemaCollection();

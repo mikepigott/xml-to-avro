@@ -96,7 +96,8 @@ public class Main {
 
     //GraphGenerationVisitor visitor = new GraphGenerationVisitor();
     //NullVisitor nullVisitor = new NullVisitor();
-    AvroSchemaGenerator avroVisitor = new AvroSchemaGenerator();
+    ArrayList<URL> schemaUrls = new ArrayList<URL>(3);
+    final String baseUri = "http://xbrl.fasb.org/us-gaap/2013/elts/";
 
     long startResolve = System.currentTimeMillis();
     long endResolve = 0;
@@ -112,9 +113,13 @@ public class Main {
       URL fdsUrl = new URL("http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd");
       URL deiUrl = new URL("http://xbrl.sec.gov/dei/2012/dei-2012-01-31.xsd");
 
+      schemaUrls.add(url);
+      schemaUrls.add(fdsUrl);
+      schemaUrls.add(deiUrl);
+
       collection = new XmlSchemaCollection();
       collection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
-      collection.setBaseUri("http://xbrl.fasb.org/us-gaap/2013/elts/");
+      collection.setBaseUri(baseUri);
       collection.read(new StreamSource(url.openStream(), url.toString()));
       collection.read(new StreamSource(fdsUrl.openStream(), fdsUrl.toString()));
       collection.read(new StreamSource(deiUrl.openStream(), deiUrl.toString()));
@@ -127,6 +132,9 @@ public class Main {
 
       System.out.println("Schema resolution required " + (endResolve - startResolve) + " milliseconds.");
     }
+
+    AvroSchemaGenerator avroVisitor =
+        new AvroSchemaGenerator(baseUri, schemaUrls, null);
 
     XmlSchemaWalker walker = new XmlSchemaWalker(collection, avroVisitor);
     walker.setUserRecognizedTypes( Utils.getAvroRecognizedTypes() );

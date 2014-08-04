@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -51,12 +52,16 @@ public class TestAvroSchemaApplier {
 
   @BeforeClass
   public static void createStateMachine() throws FileNotFoundException {
+    File file = new File("src\\test\\resources\\test_schema.xsd");
+    ArrayList<File> schemaFiles = new ArrayList<File>(1);
+    schemaFiles.add(file);
+
     // 1. Construct the Avro Schema
     XmlSchemaCollection collection = null;
     FileReader fileReader = null;
-    AvroSchemaGenerator visitor = new AvroSchemaGenerator();
+    AvroSchemaGenerator visitor =
+        new AvroSchemaGenerator(null, null, schemaFiles);
     try {
-      File file = new File("src\\test\\resources\\test_schema.xsd");
       fileReader = new FileReader(file);
 
       collection = new XmlSchemaCollection();
@@ -106,7 +111,8 @@ public class TestAvroSchemaApplier {
   @Test
   public void test() throws Exception {
     // 1. Build the XML Document Path.
-    final File xsdFile = new File("src\\test\\resources\\test3_grandchildren.xml");
+    final File xsdFile =
+        new File("src\\test\\resources\\test3_grandchildren.xml");
 
     try {
       saxParser.parse(xsdFile, pathCreator);
