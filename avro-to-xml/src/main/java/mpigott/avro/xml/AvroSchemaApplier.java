@@ -96,7 +96,15 @@ final class AvroSchemaApplier {
     }
   }
 
-  void apply(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
+  void apply(XmlSchemaPathNode<AvroRecordInfo> pathStart) {
+    // Add schema information to the document tree.
+    apply(pathStart.getDocumentNode());
+
+    // Count maps.
+    findMaps(pathStart);
+  }
+
+  private void apply(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
     switch (docNode.getStateMachineNode().getNodeType()) {
     case ELEMENT:
       processElement(docNode);
@@ -536,6 +544,75 @@ final class AvroSchemaApplier {
       }
 
       return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Avro maps are tricky because they must be defined all at once, but
+   * depending on the schema, their elements may be scattered all across
+   * the document.
+   *
+   * This implementation looks for map nodes that are clustered together,
+   * and counts them for when {@link XmlDatumWriter} takes over.  A cluster
+   * starts the first time we reach a path node whose underlying Avro schema
+   * is of type {@link Schema.Type#MAP}.  A cluster ends when the next
+   * traversal out of a map node is to its parent element.  (Intermediary
+   * groups do not count as the end of the cluster.)
+   *
+   * @param path The path to check if is a map node.
+   */
+  private void findMaps(XmlSchemaPathNode<AvroRecordInfo> path) {
+    if (path == null) {
+      return;
+    }
+
+    final AvroRecordInfo record =
+        path.getDocumentNode().getUserDefinedContent();
+
+    final boolean isMapNode =
+        (record != null)
+        && record.getAvroSchema().getType().equals(Schema.Type.MAP);
+
+    if (isMapNode) {
+      final boolean isNodeEntry =
+          path.getDirection().equals(XmlSchemaPathNode.Direction.CHILD)
+          || path.getDirection().equals(XmlSchemaPathNode.Direction.SIBLING);
+
+      final boolean isNodeExit = isElementExit(path);
+
+      if (isNodeEntry) {
+        if (record.getNumMapInstances() == 0) {
+          record.startNewMapInstance();
+        }
+        record.incrementMapCount();
+      }
+
+      if (isNodeExit) {
+        record.startNewMapInstance();
+      }
+    }
+
+    findMaps(path.getNext());
+  }
+
+  /**
+   * Checks if the path leaves the current element.  This requires the path
+   * to next traverse upward through all intermediary groups and into the
+   * parent element.
+   *
+   * @param path The path to traverse to determine the next element it finds.
+   *
+   * @return Whether the path traverses to its parent
+   *         next, or to a sibling or child instead.
+   */
+  private boolean isElementExit(XmlSchemaPathNode path) {
+
+    XmlSchemaPathNode next = path.getNext();
+    while ((next != null)
+        && next.getDirection().equals(XmlSchemaPathNode.Direction.CONTENT)) {
+      next = next.getNext();
     }
 
     return false;

@@ -809,7 +809,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     // 2. Apply Avro schema metadata on top of the document. 
     final AvroSchemaApplier applier = new AvroSchemaApplier(schema, false);
-    applier.apply(path.getDocumentNode());
+    applier.apply(path);
 
     // 3. Encode the document.
     walker.removeContentHandler(pathCreator);

@@ -132,7 +132,7 @@ public class TestAvroSchemaApplier {
     // 2. Confirm the Avro Schema conforms to the XML Schema
     AvroSchemaApplier applier = new AvroSchemaApplier(avroSchema, true);
 
-    applier.apply(rootDoc);
+    applier.apply(rootPath);
 
     final int numElemsProcessed = checkDoc(rootDoc);
     assertEquals(7, numElemsProcessed);
