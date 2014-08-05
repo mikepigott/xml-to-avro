@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
@@ -67,8 +68,12 @@ public class XmlDatumWriter implements DatumWriter<Document> {
   }
 
   private static class Writer extends DefaultHandler {
-    Writer(XmlSchemaPathNode path, Encoder out) {
+    Writer(
+        XmlSchemaPathNode path,
+        HashMap<QName, List<AtomicInteger>> mapOccurrencesByName,
+        Encoder out) {
       this.path = path;
+      this.mapOccurrencesByName = mapOccurrencesByName;
       this.out = out;
 
       stack = new ArrayList<StackEntry>();
@@ -149,7 +154,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         entry.mapCount = 0;
         entry.mapInstance = -1;
 
-        if (avroSchema.getType().equals(Schema.Type.MAP)) {
+        if (avroSchema.getType().equals(Schema.Type.MAP)
+            && (mapOccurrencesByName != null)) {
           if (mapInstanceByName == null) {
             mapInstanceByName = new HashMap<QName, Integer>();
           }
@@ -167,12 +173,15 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             // This is the start of a new map.
             mapInstanceByName.put(elemName, ++mapInstance);
 
+            out.startItem();
             if (recordInfo.getUnionIndex() >= 0) {
               out.writeIndex( recordInfo.getUnionIndex() );
             }
             out.writeMapStart();
-            out.setItemCount(
-                recordInfo.getMapCountForInstance(entry.mapInstance));
+
+            final AtomicInteger numOccurrences =
+                mapOccurrencesByName.get(elemName).get(mapInstance);
+            out.setItemCount( numOccurrences.intValue() );
           }
           out.startItem();
 
@@ -262,8 +271,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
         }
 
-        if (recordInfo
-              .getAvroSchema() // TODO: Handle MAPs.
+        if (avroSchema
               .getField( elemName.getLocalPart() )
               .schema()
               .getType()
@@ -463,33 +471,20 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       if (docNode
           .getUserDefinedContent()
           .getAvroSchema()
-          .getField( elemName.getLocalPart() )
-          .schema()
           .getType()
-          .equals(Schema.Type.ARRAY)) {
-        try {
-         out.writeArrayEnd();
-        } catch (IOException ioe) {
-         throw new RuntimeException("Unable to end the array for " + elemName, ioe);
-        }
-      }
-
-      if (docNode
-            .getUserDefinedContent()
-            .getAvroSchema()
-            .getType()
-            .equals(Schema.Type.MAP)) {
+          .equals(Schema.Type.MAP)) {
 
         priorMapCount = entry.mapCount + 1;
+
+        final int instance = mapInstanceByName.get(elemName);
+        final AtomicInteger numOccurrences =
+            mapOccurrencesByName.get(elemName).get(instance);
 
         /* This is the last map in the cluster;
          * time to write out its ending.
          */
-        if (priorMapCount ==
-            docNode
-              .getUserDefinedContent()
-              .getMapCountForInstance(entry.mapInstance)) {
-
+        if (priorMapCount == numOccurrences.intValue()) {
+          mapInstanceByName.put(elemName, instance + 1);
           try {
             out.writeMapEnd();
           } catch (IOException e) {
@@ -501,6 +496,19 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
       } else {
         priorMapCount = 0;
+        if (docNode
+            .getUserDefinedContent()
+            .getAvroSchema()
+            .getField( elemName.getLocalPart() )
+            .schema()
+            .getType()
+            .equals(Schema.Type.ARRAY)) {
+          try {
+           out.writeArrayEnd();
+          } catch (IOException ioe) {
+           throw new RuntimeException("Unable to end the array for " + elemName, ioe);
+          }
+        }
       }
     }
 
@@ -827,6 +835,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     private final XmlSchemaPathNode path;
     private final Encoder out;
+    private final HashMap<QName, List<AtomicInteger>> mapOccurrencesByName;
   }
 
   public XmlDatumWriter(XmlDatumConfig config, Schema avroSchema)
@@ -926,11 +935,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     // 2. Apply Avro schema metadata on top of the document. 
     final AvroSchemaApplier applier = new AvroSchemaApplier(schema, false);
-    applier.apply(path);
+    applier.apply(path, null); // TODO: Handle MAPs.
 
     // 3. Encode the document.
     walker.removeContentHandler(pathCreator);
-    walker.addContentHandler( new Writer(path, out) );
+    walker.addContentHandler( new Writer(path, null, out) );
 
     try {
       walker.walk(doc);

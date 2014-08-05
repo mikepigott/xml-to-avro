@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.namespace.QName;
 
@@ -39,6 +40,16 @@ import org.apache.ws.commons.schema.XmlSchemaUse;
  * @author  Mike Pigott
  */
 final class AvroSchemaApplier {
+
+  private static class StackEntry {
+    StackEntry(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
+      this.docNode = docNode;
+      this.parentNode = docNode.getParent();
+    }
+
+    final XmlSchemaDocumentNode<AvroRecordInfo> docNode;
+    final XmlSchemaDocumentNode<AvroRecordInfo> parentNode;
+  }
 
   /**
    * Creates a new <code>AvroSchemaApplier</code>
@@ -96,12 +107,17 @@ final class AvroSchemaApplier {
     }
   }
 
-  void apply(XmlSchemaPathNode<AvroRecordInfo> pathStart) {
+  void apply(
+      XmlSchemaPathNode<AvroRecordInfo> pathStart,
+      Map<QName, AtomicInteger> mapOccurrencesByName) {
+
     // Add schema information to the document tree.
     apply(pathStart.getDocumentNode());
 
     // Count maps.
-    findMaps(pathStart);
+    if (mapOccurrencesByName != null) {
+      findMaps(pathStart, null);
+    }
   }
 
   private void apply(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
@@ -563,14 +579,23 @@ final class AvroSchemaApplier {
    *
    * @param path The path to check if is a map node.
    */
-  private void findMaps(XmlSchemaPathNode<AvroRecordInfo> path) {
+  private void findMaps(
+      XmlSchemaPathNode<AvroRecordInfo> path,
+      Map<QName, List<AtomicInteger>> occurrencesByName) {
 
-    final ArrayList<XmlSchemaDocumentNode<AvroRecordInfo>> docNodeStack =
-        new ArrayList<XmlSchemaDocumentNode<AvroRecordInfo>>();
+    final ArrayList<StackEntry> docNodeStack =
+        new ArrayList<StackEntry>();
 
-    XmlSchemaDocumentNode<AvroRecordInfo> mostRecentlyLeftMap = null;
+    QName mostRecentlyLeftMap = null;
 
     while(path != null) {
+
+      final boolean isElement =
+          path
+            .getStateMachineNode()
+            .getNodeType()
+            .equals(XmlSchemaStateMachineNode.Type.ELEMENT);
+
       final AvroRecordInfo record =
           path.getDocumentNode().getUserDefinedContent();
 
@@ -582,49 +607,55 @@ final class AvroSchemaApplier {
 
       switch (path.getDirection()) {
       case SIBLING:
-        {
-          final XmlSchemaDocumentNode<AvroRecordInfo> element =
-              docNodeStack.remove(docNodeStack.size() - 1);
-
-          final boolean priorElemIsMapNode =
-              (element.getUserDefinedContent() != null)
-              && element
-                   .getUserDefinedContent()
-                   .getAvroSchema()
-                   .getType()
-                   .equals(Schema.Type.MAP);
-
-          if (priorElemIsMapNode) {
-            mostRecentlyLeftMap = element;
-          } else if (element.getUserDefinedContent() != null) {
-            mostRecentlyLeftMap = null;
-          }
-        }
       case CHILD:
         {
-          docNodeStack.add( path.getDocumentNode() );
-          if (isMapNode) { 
-            if (path.getDocumentNode() != mostRecentlyLeftMap) {
-              record.startNewMapInstance();
+          if (isElement) {
+            docNodeStack.add( new StackEntry(path.getDocumentNode()) );
+          }
+          if (isMapNode) {
+            final QName currQName =
+                path
+                  .getStateMachineNode()
+                  .getElement()
+                  .getQName();
+
+            List<AtomicInteger> occurrences = null;
+            if (!currQName.equals(mostRecentlyLeftMap)) {
+              if (!occurrencesByName.containsKey(currQName)) {
+                occurrences = new ArrayList<AtomicInteger>(4);
+                occurrencesByName.put(currQName, occurrences);
+              } else {
+                occurrences = occurrencesByName.get(currQName);
+              }
+              occurrences.add(new AtomicInteger(1));
+            } else {
+              occurrences = occurrencesByName.get(currQName);
+              occurrences.get(occurrences.size() - 1).incrementAndGet();
             }
-            record.incrementMapCount();
           }
           break;
         }
       case PARENT:
         {
-          final XmlSchemaDocumentNode<AvroRecordInfo> element =
-              docNodeStack.remove(docNodeStack.size() - 1);
+          final StackEntry stackEntry =
+              docNodeStack.get(docNodeStack.size() - 1);
 
-          if (docNodeStack.get(docNodeStack.size() - 1)
-              != path.getDocumentNode()) {
-            throw new IllegalStateException("Popped " + element.getStateMachineNode() + " off of the stack, but the parent element was " + docNodeStack.get(docNodeStack.size() - 1).getStateMachineNode() + " not " + path.getStateMachineNode());
-          }
-
-          if (isMapNode) {
-            mostRecentlyLeftMap = element;
-          } else if (record != null) {
+          if (stackEntry.parentNode == path.getDocumentNode()) {
+            docNodeStack.remove(docNodeStack.size() - 1);
             mostRecentlyLeftMap = null;
+            if (stackEntry
+                  .docNode
+                  .getUserDefinedContent()
+                  .getAvroSchema()
+                  .getType().equals(Schema.Type.MAP) ) {
+
+              mostRecentlyLeftMap =
+                  stackEntry
+                    .docNode
+                    .getStateMachineNode()
+                    .getElement()
+                    .getQName();
+            }
           }
 
           break;

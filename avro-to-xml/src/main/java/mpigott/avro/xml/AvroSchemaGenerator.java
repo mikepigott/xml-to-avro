@@ -247,6 +247,22 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     final List<Schema> children = fieldsByElement.get(entry.elementQName);
 
+    // If there are multiple maps in the children, remove one.
+    if ((children != null) && !children.isEmpty()) {
+      boolean foundMap = false;
+      for (int i = 0; i < children.size(); ++i) {
+        Schema currSchema = children.get(i);
+        if (currSchema.getType().equals(Schema.Type.MAP)) {
+          if (!foundMap) {
+            foundMap = true;
+          } else {
+            currSchema = currSchema.getValueType();
+            children.set(i, currSchema);
+          }
+        }
+      }
+    }
+
     if ((children != null)
           && !children.isEmpty()
           && (typeInfo != null)
@@ -388,6 +404,10 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     final QName elemQName = element.getQName();
     final StackEntry substGrp = getSubstitutionGroup();
+
+    if ((substGrp != null) && element.isAbstract()) {
+      return;
+    }
 
     final List<AttributeEntry> fields =
         attributesByElement.get(elemQName);

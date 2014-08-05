@@ -6,10 +6,13 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.xml.namespace.QName;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.stream.StreamSource;
@@ -132,13 +135,17 @@ public class TestAvroSchemaApplier {
     // 2. Confirm the Avro Schema conforms to the XML Schema
     AvroSchemaApplier applier = new AvroSchemaApplier(avroSchema, true);
 
-    applier.apply(rootPath);
+    // TODO: Handle maps.
+    applier.apply(rootPath, null);
 
-    final int numElemsProcessed = checkDoc(rootDoc);
-    assertEquals(7, numElemsProcessed);
+    final int numElemsProcessed =
+        checkDoc(rootDoc, null);
+    assertEquals(14, numElemsProcessed);
   }
 
-  private int checkDoc(XmlSchemaDocumentNode<AvroRecordInfo> doc) {
+  private int checkDoc(
+      XmlSchemaDocumentNode<AvroRecordInfo> doc,
+      Map<QName, List<AtomicInteger>> mapOccurrencesByName) {
     int numElemsProcessed = 0;
     if (doc
           .getStateMachineNode()
@@ -156,6 +163,22 @@ public class TestAvroSchemaApplier {
           doc.getStateMachineNode().getElement().getName(),
           schema.getName());
 
+      if (schema.getType().equals(Schema.Type.MAP) && (mapOccurrencesByName != null)) {
+        final QName elemQName =
+            doc.getStateMachineNode().getElement().getQName();
+        if (!mapOccurrencesByName.containsKey(elemQName)) {
+          fail("No map occurrences for " + elemQName);
+        }
+
+        final List<AtomicInteger> occurrences =
+            mapOccurrencesByName.get(elemQName);
+
+        System.err.println(elemQName + " is a map with " + occurrences.size() + " occurrences");
+        for (int index = 0; index < occurrences.size(); ++index) {
+          System.err.println("\tOccurrence " + index + " has " + occurrences.get(index) + " instances.");
+        }
+      }
+
       ++numElemsProcessed;
     } else {
       assertNull( doc.getUserDefinedContent() );
@@ -168,7 +191,8 @@ public class TestAvroSchemaApplier {
       if (children != null) {
         for (Map.Entry<Integer, XmlSchemaDocumentNode<AvroRecordInfo>> child :
               children.entrySet()) {
-          numElemsProcessed += checkDoc( child.getValue() );
+          numElemsProcessed +=
+              checkDoc(child.getValue(), mapOccurrencesByName);
         }
       }
     }

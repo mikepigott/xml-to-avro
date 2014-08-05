@@ -20,9 +20,19 @@
 
 	<avro:primitive>decimal</avro:primitive>
 	<avro:nonNullPrimitive>int</avro:nonNullPrimitive>
-	<avro:map avro:id="id">
+	<avro:map avro:id="id1">
 		<avro:primitive>double</avro:primitive>
 		<avro:nonNullPrimitive>float</avro:nonNullPrimitive>
 	</avro:map>
+	<avro:map avro:id="id2">
+		<avro:primitive>null</avro:primitive>
+	</avro:map>
+	<avro:record>
+		<avro:nonNullPrimitive>decimal</avro:nonNullPrimitive>
+	</avro:record>
+	<avro:map avro:id="id3">
+		<avro:primitive>string</avro:primitive>
+	</avro:map>
 	<avro:nonNullPrimitive>long</avro:nonNullPrimitive>
+	<avro:nonNullPrimitive>boolean</avro:nonNullPrimitive>
 </avro:root>
