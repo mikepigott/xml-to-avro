@@ -610,8 +610,25 @@ final class AvroSchemaApplier {
   private boolean isElementExit(XmlSchemaPathNode path) {
 
     XmlSchemaPathNode next = path.getNext();
+
     while ((next != null)
-        && next.getDirection().equals(XmlSchemaPathNode.Direction.CONTENT)) {
+        && (next.getDirection().equals(XmlSchemaPathNode.Direction.CONTENT)
+            || next
+                 .getDirection()
+                 .equals(XmlSchemaPathNode.Direction.PARENT))) {
+
+      if (next
+            .getStateMachineNode()
+            .getNodeType()
+            .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
+
+        /* We walked through the path, either processing content or upward to
+         * an ancestor node, until we reached another element.  This element
+         * must be the parent element, meaning we left the current map cluster.
+         */
+        return true;
+      }
+
       next = next.getNext();
     }
 
