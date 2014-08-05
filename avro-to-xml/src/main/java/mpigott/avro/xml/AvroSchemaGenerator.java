@@ -421,7 +421,6 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
      * ID attribute, it is better served as a MAP.
      */
     if (!stack.isEmpty() && isMap(element, elemTypeInfo, fields)) {
-      System.err.println("Element " + element.getName() + " is a map.");
       record = Schema.createMap(record);
       schemasByElement.put(elemQName, record);
     }

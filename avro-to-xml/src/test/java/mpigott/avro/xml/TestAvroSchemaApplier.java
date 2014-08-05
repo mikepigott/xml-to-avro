@@ -135,17 +135,18 @@ public class TestAvroSchemaApplier {
     // 2. Confirm the Avro Schema conforms to the XML Schema
     AvroSchemaApplier applier = new AvroSchemaApplier(avroSchema, true);
 
-    // TODO: Handle maps.
-    applier.apply(rootPath, null);
+    final HashMap<QName, List<List<Integer>>> occurrencesByName =
+        new HashMap<QName, List<List<Integer>>>();
+    applier.apply(rootPath, occurrencesByName);
 
     final int numElemsProcessed =
-        checkDoc(rootDoc, null);
-    assertEquals(14, numElemsProcessed);
+        checkDoc(rootDoc, occurrencesByName);
+    assertEquals(18, numElemsProcessed);
   }
 
   private int checkDoc(
       XmlSchemaDocumentNode<AvroRecordInfo> doc,
-      Map<QName, List<AtomicInteger>> mapOccurrencesByName) {
+      Map<QName, List<List<Integer>>> mapOccurrencesByName) {
     int numElemsProcessed = 0;
     if (doc
           .getStateMachineNode()
@@ -163,19 +164,24 @@ public class TestAvroSchemaApplier {
           doc.getStateMachineNode().getElement().getName(),
           schema.getName());
 
-      if (schema.getType().equals(Schema.Type.MAP) && (mapOccurrencesByName != null)) {
+      if ( schema.getType().equals(Schema.Type.MAP) ) {
         final QName elemQName =
             doc.getStateMachineNode().getElement().getQName();
         if (!mapOccurrencesByName.containsKey(elemQName)) {
           fail("No map occurrences for " + elemQName);
         }
 
-        final List<AtomicInteger> occurrences =
+        final List<List<Integer>> occurrences =
             mapOccurrencesByName.get(elemQName);
 
         System.err.println(elemQName + " is a map with " + occurrences.size() + " occurrences");
         for (int index = 0; index < occurrences.size(); ++index) {
-          System.err.println("\tOccurrence " + index + " has " + occurrences.get(index) + " instances.");
+          System.err.print("\tOccurrence " + index + " has the following path nodes: ");
+          List<Integer> pathIndices = occurrences.get(index);
+          for (int pathIndex = 0; pathIndex < (pathIndices.size() - 1); ++pathIndex) {
+            System.err.print(pathIndices.get(pathIndex) + ", ");
+          }
+          System.err.println( pathIndices.get(pathIndices.size() - 1) );
         }
       }
 

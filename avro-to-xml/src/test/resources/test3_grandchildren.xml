@@ -32,6 +32,12 @@
 	</avro:record>
 	<avro:map avro:id="id3">
 		<avro:primitive>string</avro:primitive>
+		<avro:map avro:id="id4">
+			<avro:nonNullPrimitive>string</avro:nonNullPrimitive>
+		</avro:map>
+		<avro:map avro:id="id5">
+			<avro:primitive>long</avro:primitive>
+		</avro:map>
 	</avro:map>
 	<avro:nonNullPrimitive>long</avro:nonNullPrimitive>
 	<avro:nonNullPrimitive>boolean</avro:nonNullPrimitive>

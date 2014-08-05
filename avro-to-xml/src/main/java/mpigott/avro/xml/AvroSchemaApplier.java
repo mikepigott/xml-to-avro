@@ -109,14 +109,14 @@ final class AvroSchemaApplier {
 
   void apply(
       XmlSchemaPathNode<AvroRecordInfo> pathStart,
-      Map<QName, AtomicInteger> mapOccurrencesByName) {
+      Map<QName, List<List<Integer>>> mapOccurrencesByName) {
 
     // Add schema information to the document tree.
     apply(pathStart.getDocumentNode());
 
     // Count maps.
     if (mapOccurrencesByName != null) {
-      findMaps(pathStart, null);
+      findMaps(pathStart, mapOccurrencesByName);
     }
   }
 
@@ -581,13 +581,14 @@ final class AvroSchemaApplier {
    */
   private void findMaps(
       XmlSchemaPathNode<AvroRecordInfo> path,
-      Map<QName, List<AtomicInteger>> occurrencesByName) {
+      Map<QName, List<List<Integer>>> occurrencesByName) {
 
     final ArrayList<StackEntry> docNodeStack =
         new ArrayList<StackEntry>();
 
     QName mostRecentlyLeftMap = null;
 
+    int pathIndex = 0;
     while(path != null) {
 
       final boolean isElement =
@@ -619,18 +620,21 @@ final class AvroSchemaApplier {
                   .getElement()
                   .getQName();
 
-            List<AtomicInteger> occurrences = null;
+            List<List<Integer>> occurrences = null;
             if (!currQName.equals(mostRecentlyLeftMap)) {
+              final ArrayList<Integer> pathIndices = new ArrayList<Integer>();
+              pathIndices.add(pathIndex);
+
               if (!occurrencesByName.containsKey(currQName)) {
-                occurrences = new ArrayList<AtomicInteger>(4);
+                occurrences = new ArrayList<List<Integer>>();
                 occurrencesByName.put(currQName, occurrences);
               } else {
                 occurrences = occurrencesByName.get(currQName);
               }
-              occurrences.add(new AtomicInteger(1));
+              occurrences.add(pathIndices);
             } else {
               occurrences = occurrencesByName.get(currQName);
-              occurrences.get(occurrences.size() - 1).incrementAndGet();
+              occurrences.get(occurrences.size() - 1).add(pathIndex);
             }
           }
           break;
@@ -667,6 +671,7 @@ final class AvroSchemaApplier {
       }
 
       path = path.getNext();
+      ++pathIndex;
     }
 
     if (docNodeStack.size() != 1) {
