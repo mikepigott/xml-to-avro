@@ -210,6 +210,10 @@ final class XmlSchemaWalker {
             visitor.onVisitAttribute(element, attr, attrTypeInfo);
           }
         }
+
+        for (XmlSchemaVisitor visitor : visitors) {
+          visitor.onEndAttributes(element, typeInfo);
+        }
       }
   
       // 4. Visit the anyAttribute, if any.

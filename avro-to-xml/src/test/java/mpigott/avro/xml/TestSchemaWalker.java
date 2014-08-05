@@ -318,6 +318,13 @@ public class TestSchemaWalker {
     }
 
     @Override
+    public void onEndAttributes(
+        XmlSchemaElement element,
+        XmlSchemaTypeInfo elemTypeInfo) {
+      
+    }
+
+    @Override
     public void onEnterSubstitutionGroup(XmlSchemaElement base) {
       StackEntry next = pop();
 

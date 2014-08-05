@@ -416,6 +416,13 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     attrs.add( new AttributeEntry(attr, isIdField && !isOptional) );
   }
 
+  @Override
+  public void onEndAttributes(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo elemTypeInfo) {
+    
+  }
+
   /**
    * Adds a new stack entry for this substitution group.
    *

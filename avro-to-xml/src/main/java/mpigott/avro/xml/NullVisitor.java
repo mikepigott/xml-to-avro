@@ -37,6 +37,13 @@ public class NullVisitor implements XmlSchemaVisitor {
   }
 
   @Override
+  public void onEndAttributes(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo elemTypeInfo) {
+    
+  }
+
+  @Override
   public void onEnterSubstitutionGroup(XmlSchemaElement base) {
     // TODO Auto-generated method stub
 

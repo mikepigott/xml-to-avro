@@ -157,6 +157,13 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     elemInfo.addAttribute(attribute, attributeType);
   }
 
+  @Override
+  public void onEndAttributes(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo elemTypeInfo) {
+    
+  }
+
   /**
    * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterSubstitutionGroup(org.apache.ws.commons.schema.XmlSchemaElement)
    */

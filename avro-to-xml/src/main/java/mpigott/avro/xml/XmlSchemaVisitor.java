@@ -47,6 +47,10 @@ interface XmlSchemaVisitor {
       XmlSchemaAttribute attribute,
       XmlSchemaTypeInfo attributeType);
 
+  void onEndAttributes(
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo typeInfo);
+
   void onEnterSubstitutionGroup(XmlSchemaElement base);
   void onExitSubstitutionGroup(XmlSchemaElement base);
 
