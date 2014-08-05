@@ -158,16 +158,23 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     // Create the record.
     Schema record = null;
-    try {
-      record =
-          Schema.createRecord(
-              elemQName.getLocalPart(),
-              documentation,
-              Utils.getAvroNamespaceFor( elemQName.getNamespaceURI() ),
-              false);
+    String avroNamespace = null;
 
+    try {
+      avroNamespace = Utils.getAvroNamespaceFor( elemQName.getNamespaceURI() );
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException("Element \"" + elemQName + "\" has an invalid namespace of \"" + elemQName.getNamespaceURI() + "\"", e);
+    }
+
+    record =
+        Schema.createRecord(
+            elemQName.getLocalPart(),
+            documentation,
+            avroNamespace,
+            false);
+
+    if (isMap(element, typeInfo)) {
+      record = Schema.createMap(record);
     }
 
     schemasByElement.put(elemQName, record);
@@ -604,6 +611,13 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     }
 
     root.addProp("xmlSchemas", schemasNode);
+  }
+
+  private boolean isMap(
+      final XmlSchemaElement element,
+      final XmlSchemaTypeInfo typeInfo) {
+
+    return false;
   }
 
   private Schema root;
