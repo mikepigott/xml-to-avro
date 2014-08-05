@@ -67,21 +67,21 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
   }
 
   private static class AttributeEntry {
-    AttributeEntry(Schema.Field field, boolean isNonNullIdField) {
+    AttributeEntry(Schema.Field field, boolean isNonOptionalIdField) {
       this.schemaField = field;
-      this.isNonNullIdField = isNonNullIdField;
+      this.isNonOptionalIdField = isNonOptionalIdField;
     }
 
     Schema.Field getField() {
       return schemaField;
     }
 
-    boolean isNonNullIdField() {
-      return isNonNullIdField;
+    boolean isNonOptionalIdField() {
+      return isNonOptionalIdField;
     }
 
     private final Schema.Field schemaField;
-    private final boolean isNonNullIdField;
+    private final boolean isNonOptionalIdField;
   }
 
   AvroSchemaGenerator(
@@ -254,12 +254,21 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       throw new IllegalStateException("No schema found for element \"" + entry.elementQName + "\".");
     }
 
-    List<AttributeEntry> fields = attributesByElement.get(entry.elementQName);
+    final List<AttributeEntry> fields =
+        attributesByElement.get(entry.elementQName);
+
+    ArrayList<Schema.Field> schemaFields = null; 
+
     if (fields == null) {
-      fields = new ArrayList<AttributeEntry>(1);
+      schemaFields = new ArrayList<Schema.Field>(1);
+    } else {
+      schemaFields = new ArrayList<Schema.Field>( fields.size() );
+      for (AttributeEntry attrEntry : fields) {
+        schemaFields.add( attrEntry.getField() );
+      }
     }
 
-    List<Schema> children = fieldsByElement.get(entry.elementQName);
+    final List<Schema> children = fieldsByElement.get(entry.elementQName);
 
     if ((children != null)
           && !children.isEmpty()
@@ -293,7 +302,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
               schema,
               "Children of " + entry.elementQName,
               null);
-      fields.add( new AttributeEntry(field, false) );
+      schemaFields.add(field);
 
     } else if ((typeInfo != null)
                 && (typeInfo.getType().equals(XmlSchemaTypeInfo.Type.LIST)
@@ -309,7 +318,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
                   element.isNillable()),
               "Simple type " + typeInfo.getUserRecognizedType(),
               null);
-      fields.add( new AttributeEntry(field, false) );
+      schemaFields.add(field);
 
     } else if (((children == null) || children.isEmpty())
                && ((typeInfo == null)
@@ -322,14 +331,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
               Schema.create(Type.NULL),
               "This element contains no attributes and no children.",
               null);
-      fields.add( new AttributeEntry(field, false) );
-    }
-
-    final ArrayList<Schema.Field> schemaFields =
-        new ArrayList<Schema.Field>( fields.size() ); 
-
-    for (AttributeEntry attrEntry : fields) {
-      schemaFields.add( attrEntry.getField() );
+      schemaFields.add(field);
     }
 
     record.setFields(schemaFields);
@@ -337,7 +339,8 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     /* If this RECORD contains exactly one non-optional
      * ID attribute, it is better served as a MAP.
      */
-    if (isMap(element, typeInfo)) {
+    if (isMap(element, typeInfo, fields)) {
+      System.err.println("Element " + element.getName() + " is a map.");
       schemasByElement.put(entry.elementQName, Schema.createMap(record));
     }
   }
@@ -649,11 +652,20 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
   private boolean isMap(
       final XmlSchemaElement element,
-      final XmlSchemaTypeInfo typeInfo) {
+      final XmlSchemaTypeInfo typeInfo,
+      final List<AttributeEntry> attributes) {
 
-    
+    int nonOptionalIdFieldCount = 0;
 
-    return false;
+    if (attributes != null) {
+      for (AttributeEntry attribute : attributes) {
+        if ( attribute.isNonOptionalIdField() ) {
+          ++nonOptionalIdFieldCount;
+        }
+      }
+    }
+
+    return (nonOptionalIdFieldCount == 1);
   }
 
   private Schema root;
