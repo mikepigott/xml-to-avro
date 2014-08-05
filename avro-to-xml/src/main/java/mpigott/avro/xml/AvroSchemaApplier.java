@@ -564,75 +564,79 @@ final class AvroSchemaApplier {
    * @param path The path to check if is a map node.
    */
   private void findMaps(XmlSchemaPathNode<AvroRecordInfo> path) {
-    if (path == null) {
-      return;
-    }
 
-    final AvroRecordInfo record =
-        path.getDocumentNode().getUserDefinedContent();
+    final ArrayList<XmlSchemaDocumentNode<AvroRecordInfo>> docNodeStack =
+        new ArrayList<XmlSchemaDocumentNode<AvroRecordInfo>>();
 
-    final boolean isMapNode =
-        (record != null)
-        && record.getAvroSchema().getType().equals(Schema.Type.MAP);
+    XmlSchemaDocumentNode<AvroRecordInfo> mostRecentlyLeftMap = null;
 
-    if (isMapNode) {
-      final boolean isNodeEntry =
-          path.getDirection().equals(XmlSchemaPathNode.Direction.CHILD)
-          || path.getDirection().equals(XmlSchemaPathNode.Direction.SIBLING);
+    while(path != null) {
+      final AvroRecordInfo record =
+          path.getDocumentNode().getUserDefinedContent();
 
-      final boolean isNodeExit = isElementExit(path);
+      System.out.println("findMaps: " + path.getDirection() + " -> " + path.getStateMachineNode());
 
-      if (isNodeEntry) {
-        if (record.getNumMapInstances() == 0) {
-          record.startNewMapInstance();
+      final boolean isMapNode =
+          (record != null)
+          && record.getAvroSchema().getType().equals(Schema.Type.MAP);
+
+      switch (path.getDirection()) {
+      case SIBLING:
+        {
+          final XmlSchemaDocumentNode<AvroRecordInfo> element =
+              docNodeStack.remove(docNodeStack.size() - 1);
+
+          final boolean priorElemIsMapNode =
+              (element.getUserDefinedContent() != null)
+              && element
+                   .getUserDefinedContent()
+                   .getAvroSchema()
+                   .getType()
+                   .equals(Schema.Type.MAP);
+
+          if (priorElemIsMapNode) {
+            mostRecentlyLeftMap = element;
+          } else if (element.getUserDefinedContent() != null) {
+            mostRecentlyLeftMap = null;
+          }
         }
-        record.incrementMapCount();
+      case CHILD:
+        {
+          docNodeStack.add( path.getDocumentNode() );
+          if (isMapNode) { 
+            if (path.getDocumentNode() != mostRecentlyLeftMap) {
+              record.startNewMapInstance();
+            }
+            record.incrementMapCount();
+          }
+          break;
+        }
+      case PARENT:
+        {
+          final XmlSchemaDocumentNode<AvroRecordInfo> element =
+              docNodeStack.remove(docNodeStack.size() - 1);
+
+          if (docNodeStack.get(docNodeStack.size() - 1)
+              != path.getDocumentNode()) {
+            throw new IllegalStateException("Popped " + element.getStateMachineNode() + " off of the stack, but the parent element was " + docNodeStack.get(docNodeStack.size() - 1).getStateMachineNode() + " not " + path.getStateMachineNode());
+          }
+
+          if (isMapNode) {
+            mostRecentlyLeftMap = element;
+          } else if (record != null) {
+            mostRecentlyLeftMap = null;
+          }
+
+          break;
+        }
+      case CONTENT:
+        break;
+      default:
+        throw new IllegalStateException("Path of " + path.getStateMachineNode() + " has an unrecognized direction of " + path.getDirection() + ".");
       }
 
-      if (isNodeExit) {
-        record.startNewMapInstance();
-      }
+      path = path.getNext();
     }
-
-    findMaps(path.getNext());
-  }
-
-  /**
-   * Checks if the path leaves the current element.  This requires the path
-   * to next traverse upward through all intermediary groups and into the
-   * parent element.
-   *
-   * @param path The path to traverse to determine the next element it finds.
-   *
-   * @return Whether the path traverses to its parent
-   *         next, or to a sibling or child instead.
-   */
-  private boolean isElementExit(XmlSchemaPathNode path) {
-
-    XmlSchemaPathNode next = path.getNext();
-
-    while ((next != null)
-        && (next.getDirection().equals(XmlSchemaPathNode.Direction.CONTENT)
-            || next
-                 .getDirection()
-                 .equals(XmlSchemaPathNode.Direction.PARENT))) {
-
-      if (next
-            .getStateMachineNode()
-            .getNodeType()
-            .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
-
-        /* We walked through the path, either processing content or upward to
-         * an ancestor node, until we reached another element.  This element
-         * must be the parent element, meaning we left the current map cluster.
-         */
-        return true;
-      }
-
-      next = next.getNext();
-    }
-
-    return false;
   }
 
   private List<Schema> unionOfValidElementsStack;
