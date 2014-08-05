@@ -16,6 +16,8 @@
 
 package mpigott.avro.xml;
 
+import java.util.ArrayList;
+
 import org.apache.avro.Schema;
 
 /**
@@ -38,12 +40,14 @@ final class AvroRecordInfo {
     this.avroSchema = avroSchema;
     this.unionIndex = -1;
     this.numChildren = 0;
+    this.mapSizes = null;
   }
 
   public AvroRecordInfo(Schema avroSchema, int unionIndex) {
     this.avroSchema = avroSchema;
     this.unionIndex = unionIndex;
     this.numChildren = 0;
+    this.mapSizes = null;
   }
 
   Schema getAvroSchema() {
@@ -62,7 +66,37 @@ final class AvroRecordInfo {
     ++numChildren;
   }
 
+  void startNewMapInstance() {
+    if (mapSizes == null) {
+      mapSizes = new ArrayList<Integer>(4);
+    }
+    mapSizes.add(0);
+  }
+
+  void incrementMapCount() {
+    if (mapSizes == null) {
+      throw new IllegalStateException("Must call startNewMapInstance() first");
+    }
+
+    final int count = mapSizes.get(mapSizes.size() - 1);
+    mapSizes.set(mapSizes.size() - 1, count + 1);
+  }
+
+  int getNumMapInstances() {
+    return (mapSizes == null) ? 0 : mapSizes.size();
+  }
+
+  int getMapCountForInstance(int index) {
+    if ((index < 0) || (mapSizes == null) || (mapSizes.size() <= index)) {
+      throw new IllegalArgumentException("Requested map count for invalid index of " + index + "; map size is " + ((mapSizes == null) ? -1 : mapSizes.size()) + ".");
+    }
+    return mapSizes.get(index);
+  }
+
   private final Schema avroSchema;
   private final int unionIndex;
+
   private int numChildren;
+
+  private ArrayList<Integer> mapSizes;
 }
