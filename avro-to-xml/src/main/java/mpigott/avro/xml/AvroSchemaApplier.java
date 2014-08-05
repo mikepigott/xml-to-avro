@@ -637,6 +637,10 @@ final class AvroSchemaApplier {
 
       path = path.getNext();
     }
+
+    if (docNodeStack.size() != 1) {
+      throw new IllegalStateException("Expected the stack to have one element in it at the end, but found " + docNodeStack.size() + ".");
+    }
   }
 
   private List<Schema> unionOfValidElementsStack;
