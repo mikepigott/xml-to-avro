@@ -140,19 +140,21 @@ public class TestAvroSchemaGenerator {
       recordSchemasByName.put(recordSchema.getName(), recordSchema);
     }
 
-    checkPrimitiveField(rootSchemasByName.get("map").getField("id"),    Type.STRING, null);
+    assertTrue( rootSchemasByName.get("map").getType().equals(Schema.Type.MAP) );
+
+    checkPrimitiveField(rootSchemasByName.get("map").getValueType().getField("id"), Type.STRING, null);
     checkPrimitiveField(rootSchemasByName.get("list").getField("size"), Type.DOUBLE, null);
 
     assertNotNull( rootSchemasByName.get("record").getField("record") );
     assertNotNull( rootSchemasByName.get("list").getField("list") );
     assertNotNull( rootSchemasByName.get("tuple").getField("tuple") );
-    assertNotNull( rootSchemasByName.get("map").getField("map") );
+    assertNotNull( rootSchemasByName.get("map").getValueType().getField("map") );
 
     assertEquals(rootSchemasByName.get("primitive").getField("primitive"),               recordSchemasByName.get("primitive").getField("primitive"));
     assertEquals(rootSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"), recordSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"));
     assertEquals(rootSchemasByName.get("record").getField("record"),                     recordSchemasByName.get("record").getField("record"));
-    assertEquals(rootSchemasByName.get("map").getField("map"),                           recordSchemasByName.get("map").getField("map"));
-    assertEquals(rootSchemasByName.get("map").getField("id"),                            recordSchemasByName.get("map").getField("id"));
+    assertEquals(rootSchemasByName.get("map").getValueType().getField("map"),            recordSchemasByName.get("map").getValueType().getField("map"));
+    assertEquals(rootSchemasByName.get("map").getValueType().getField("id"),             recordSchemasByName.get("map").getValueType().getField("id"));
     assertEquals(rootSchemasByName.get("list").getField("list"),                         recordSchemasByName.get("list").getField("list"));
     assertEquals(rootSchemasByName.get("list").getField("size"),                         recordSchemasByName.get("list").getField("size"));
     assertEquals(rootSchemasByName.get("tuple").getField("tuple"),                       recordSchemasByName.get("tuple").getField("tuple"));
@@ -163,12 +165,12 @@ public class TestAvroSchemaGenerator {
       listSchemasByName.put(listSchema.getName(), listSchema);
     }
 
-    assertEquals(rootSchemasByName.get("primitive").getField("primitive"), listSchemasByName.get("primitive").getField("primitive"));
-    assertEquals(rootSchemasByName.get("record").getField("record"),       listSchemasByName.get("record").getField("record"));
-    assertEquals(rootSchemasByName.get("map").getField("map"),             listSchemasByName.get("map").getField("map"));
-    assertEquals(rootSchemasByName.get("map").getField("id"),              listSchemasByName.get("map").getField("id"));
+    assertEquals(rootSchemasByName.get("primitive").getField("primitive"),    listSchemasByName.get("primitive").getField("primitive"));
+    assertEquals(rootSchemasByName.get("record").getField("record"),          listSchemasByName.get("record").getField("record"));
+    assertEquals(rootSchemasByName.get("map").getValueType().getField("map"), listSchemasByName.get("map").getValueType().getField("map"));
+    assertEquals(rootSchemasByName.get("map").getValueType().getField("id"),  listSchemasByName.get("map").getValueType().getField("id"));
 
-    List<Schema> mapSchemas = rootSchemasByName.get("map").getField("map").schema().getElementType().getTypes();
+    List<Schema> mapSchemas = rootSchemasByName.get("map").getValueType().getField("map").schema().getElementType().getTypes();
     Map<String, Schema> mapSchemasByName = new HashMap<String, Schema>();
     for (Schema mapSchema : mapSchemas) {
       mapSchemasByName.put(mapSchema.getName(), mapSchema);
@@ -177,8 +179,8 @@ public class TestAvroSchemaGenerator {
     assertEquals(rootSchemasByName.get("primitive").getField("primitive"),               mapSchemasByName.get("primitive").getField("primitive"));
     assertEquals(rootSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"), mapSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"));
     assertEquals(rootSchemasByName.get("record").getField("record"),                     mapSchemasByName.get("record").getField("record"));
-    assertEquals(rootSchemasByName.get("map").getField("map"),                           mapSchemasByName.get("map").getField("map"));
-    assertEquals(rootSchemasByName.get("map").getField("id"),                            mapSchemasByName.get("map").getField("id"));
+    assertEquals(rootSchemasByName.get("map").getValueType().getField("map"),            mapSchemasByName.get("map").getValueType().getField("map"));
+    assertEquals(rootSchemasByName.get("map").getValueType().getField("id"),             mapSchemasByName.get("map").getValueType().getField("id"));
     assertEquals(rootSchemasByName.get("list").getField("list"),                         mapSchemasByName.get("list").getField("list"));
     assertEquals(rootSchemasByName.get("list").getField("size"),                         mapSchemasByName.get("list").getField("size"));
     assertEquals(rootSchemasByName.get("tuple").getField("tuple"),                       mapSchemasByName.get("tuple").getField("tuple"));
@@ -192,8 +194,8 @@ public class TestAvroSchemaGenerator {
     assertEquals(rootSchemasByName.get("primitive").getField("primitive"),               tupleSchemasByName.get("primitive").getField("primitive"));
     assertEquals(rootSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"), tupleSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"));
     assertEquals(rootSchemasByName.get("record").getField("record"),                     tupleSchemasByName.get("record").getField("record"));
-    assertEquals(rootSchemasByName.get("map").getField("map"),                           tupleSchemasByName.get("map").getField("map"));
-    assertEquals(rootSchemasByName.get("map").getField("id"),                            tupleSchemasByName.get("map").getField("id"));
+    assertEquals(rootSchemasByName.get("map").getValueType().getField("map"),            tupleSchemasByName.get("map").getValueType().getField("map"));
+    assertEquals(rootSchemasByName.get("map").getValueType().getField("id"),             tupleSchemasByName.get("map").getValueType().getField("id"));
     assertEquals(rootSchemasByName.get("list").getField("list"),                         tupleSchemasByName.get("list").getField("list"));
     assertEquals(rootSchemasByName.get("list").getField("size"),                         tupleSchemasByName.get("list").getField("size"));
 

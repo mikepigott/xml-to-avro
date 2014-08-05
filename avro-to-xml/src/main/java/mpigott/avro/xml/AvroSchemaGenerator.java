@@ -192,32 +192,6 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
             false);
 
     schemasByElement.put(elemQName, record);
-
-    if (substGrp != null) {
-      /* This element is part of a substitution group.
-       * It will be added to its parent(s) later.
-       */
-      List<Schema> substitutionSchemas =
-          substitutionGroups.get(substGrp.elementQName);
-      if (substitutionSchemas == null) {
-        substitutionSchemas = new ArrayList<Schema>();
-        substitutionGroups.put(substGrp.elementQName, substitutionSchemas);
-      }
-      substitutionSchemas.add(record);
-
-    } else if ( stack.isEmpty() ) {
-      // This is the root element!
-      root = record;
-      addXmlSchemasListToRoot();
-
-    } else {
-      /* This is not part of a substitution group,
-       * and not the root.  Add it to its parent.
-       */
-      addSchemaToParent(record);
-    }
-
-    stack.add( new StackEntry(elemQName, false) );
   }
 
   /**
@@ -249,9 +223,12 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     final StackEntry entry = pop(element.getQName(), false);
 
-    final Schema record = schemasByElement.get(entry.elementQName);
+    Schema record = schemasByElement.get(entry.elementQName);
     if (record == null) {
       throw new IllegalStateException("No schema found for element \"" + entry.elementQName + "\".");
+
+    } else if (record.getType().equals(Schema.Type.MAP)) {
+      record = record.getValueType();
     }
 
     final List<AttributeEntry> fields =
@@ -335,14 +312,6 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     }
 
     record.setFields(schemaFields);
-
-    /* If this RECORD contains exactly one non-optional
-     * ID attribute, it is better served as a MAP.
-     */
-    if (isMap(element, typeInfo, fields)) {
-      System.err.println("Element " + element.getName() + " is a map.");
-      schemasByElement.put(entry.elementQName, Schema.createMap(record));
-    }
   }
 
   /**
@@ -367,12 +336,8 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       return;
     }
 
+    final QName elemQName = element.getQName();
     final QName attrQName = attribute.getQName();
-    final StackEntry entry = getParentElement();
-
-    if (!entry.elementQName.equals(element.getQName())) {
-      throw new IllegalStateException("Attribute \"" + attrQName + "\" belongs to element \"" + element.getQName() + "\", but parent element \"" + entry.elementQName + "\" was found on the stack instead.");
-    }
 
     final String documentation =
         getDocumentationFor( attribute.getAnnotation() );
@@ -408,10 +373,10 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
             documentation,
             Utils.createJsonNodeFor(defaultValue, attrSchema));
 
-    List<AttributeEntry> attrs = attributesByElement.get(entry.elementQName);
+    List<AttributeEntry> attrs = attributesByElement.get(elemQName);
     if (attrs == null) {
       attrs = new ArrayList<AttributeEntry>();
-      attributesByElement.put(entry.elementQName, attrs);
+      attributesByElement.put(elemQName, attrs);
     }
     attrs.add( new AttributeEntry(attr, isIdField && !isOptional) );
   }
@@ -420,7 +385,52 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
   public void onEndAttributes(
       XmlSchemaElement element,
       XmlSchemaTypeInfo elemTypeInfo) {
-    
+
+    final QName elemQName = element.getQName();
+    final StackEntry substGrp = getSubstitutionGroup();
+
+    final List<AttributeEntry> fields =
+        attributesByElement.get(elemQName);
+
+    Schema record = schemasByElement.get(elemQName);
+    if (record == null) {
+      throw new IllegalStateException("No schema found for element \"" + elemQName + "\".");
+    }
+
+    /* If this RECORD contains exactly one non-optional
+     * ID attribute, it is better served as a MAP.
+     */
+    if (!stack.isEmpty() && isMap(element, elemTypeInfo, fields)) {
+      System.err.println("Element " + element.getName() + " is a map.");
+      record = Schema.createMap(record);
+      schemasByElement.put(elemQName, record);
+    }
+
+    if (substGrp != null) {
+      /* This element is part of a substitution group.
+       * It will be added to its parent(s) later.
+       */
+      List<Schema> substitutionSchemas =
+          substitutionGroups.get(substGrp.elementQName);
+      if (substitutionSchemas == null) {
+        substitutionSchemas = new ArrayList<Schema>();
+        substitutionGroups.put(substGrp.elementQName, substitutionSchemas);
+      }
+      substitutionSchemas.add(record);
+
+    } else if ( stack.isEmpty() ) {
+      // This is the root element!
+      root = record;
+      addXmlSchemasListToRoot();
+
+    } else {
+      /* This is not part of a substitution group,
+       * and not the root.  Add it to its parent.
+       */
+      addSchemaToParent(record);
+    }
+
+    stack.add( new StackEntry(elemQName, false) );
   }
 
   /**
