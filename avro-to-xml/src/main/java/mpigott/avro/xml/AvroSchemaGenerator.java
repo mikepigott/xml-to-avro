@@ -66,6 +66,24 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     final boolean isSubstitutionGroup;
   }
 
+  private static class AttributeEntry {
+    AttributeEntry(Schema.Field field, boolean isNonNullIdField) {
+      this.schemaField = field;
+      this.isNonNullIdField = isNonNullIdField;
+    }
+
+    Schema.Field getField() {
+      return schemaField;
+    }
+
+    boolean isNonNullIdField() {
+      return isNonNullIdField;
+    }
+
+    private final Schema.Field schemaField;
+    private final boolean isNonNullIdField;
+  }
+
   AvroSchemaGenerator(
       String baseUri,
       List<URL> schemaUrls,
@@ -80,7 +98,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     schemasByElement = new HashMap<QName, Schema>();
     substitutionGroups = new HashMap<QName, List<Schema>>();
     fieldsByElement = new HashMap<QName, List<Schema>>();
-    attributesByElement = new HashMap<QName, List<Schema.Field>>();
+    attributesByElement = new HashMap<QName, List<AttributeEntry>>();
   }
 
   /**
@@ -173,10 +191,6 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
             avroNamespace,
             false);
 
-    if (isMap(element, typeInfo)) {
-      record = Schema.createMap(record);
-    }
-
     schemasByElement.put(elemQName, record);
 
     if (substGrp != null) {
@@ -240,9 +254,9 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       throw new IllegalStateException("No schema found for element \"" + entry.elementQName + "\".");
     }
 
-    List<Schema.Field> fields = attributesByElement.get(entry.elementQName);
+    List<AttributeEntry> fields = attributesByElement.get(entry.elementQName);
     if (fields == null) {
-      fields = new ArrayList<Schema.Field>(1);
+      fields = new ArrayList<AttributeEntry>(1);
     }
 
     List<Schema> children = fieldsByElement.get(entry.elementQName);
@@ -279,7 +293,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
               schema,
               "Children of " + entry.elementQName,
               null);
-      fields.add(field);
+      fields.add( new AttributeEntry(field, false) );
 
     } else if ((typeInfo != null)
                 && (typeInfo.getType().equals(XmlSchemaTypeInfo.Type.LIST)
@@ -295,7 +309,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
                   element.isNillable()),
               "Simple type " + typeInfo.getUserRecognizedType(),
               null);
-      fields.add(field);
+      fields.add( new AttributeEntry(field, false) );
 
     } else if (((children == null) || children.isEmpty())
                && ((typeInfo == null)
@@ -308,10 +322,24 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
               Schema.create(Type.NULL),
               "This element contains no attributes and no children.",
               null);
-      fields.add(field);
+      fields.add( new AttributeEntry(field, false) );
     }
 
-    record.setFields(fields);
+    final ArrayList<Schema.Field> schemaFields =
+        new ArrayList<Schema.Field>( fields.size() ); 
+
+    for (AttributeEntry attrEntry : fields) {
+      schemaFields.add( attrEntry.getField() );
+    }
+
+    record.setFields(schemaFields);
+
+    /* If this RECORD contains exactly one non-optional
+     * ID attribute, it is better served as a MAP.
+     */
+    if (isMap(element, typeInfo)) {
+      schemasByElement.put(entry.elementQName, Schema.createMap(record));
+    }
   }
 
   /**
@@ -358,6 +386,12 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       isOptional = true;
     }
 
+    boolean isIdField = false;
+    if ((attributeType.getUserRecognizedType() != null)
+        && attributeType.getUserRecognizedType().equals(Constants.XSD_ID)) {
+      isIdField = true;
+    }
+
     Schema attrSchema =
         Utils.getAvroSchemaFor(
             attributeType,
@@ -371,12 +405,12 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
             documentation,
             Utils.createJsonNodeFor(defaultValue, attrSchema));
 
-    List<Schema.Field> attrs = attributesByElement.get(entry.elementQName);
+    List<AttributeEntry> attrs = attributesByElement.get(entry.elementQName);
     if (attrs == null) {
-      attrs = new ArrayList<Schema.Field>();
+      attrs = new ArrayList<AttributeEntry>();
       attributesByElement.put(entry.elementQName, attrs);
     }
-    attrs.add(attr);
+    attrs.add( new AttributeEntry(attr, isIdField && !isOptional) );
   }
 
   /**
@@ -617,6 +651,8 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       final XmlSchemaElement element,
       final XmlSchemaTypeInfo typeInfo) {
 
+    
+
     return false;
   }
 
@@ -630,5 +666,5 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
   private final Map<QName, Schema> schemasByElement;
   private final Map<QName, List<Schema>> substitutionGroups;
   private final Map<QName, List<Schema>> fieldsByElement;
-  private final Map<QName, List<Schema.Field>> attributesByElement; 
+  private final Map<QName, List<AttributeEntry>> attributesByElement; 
 }
