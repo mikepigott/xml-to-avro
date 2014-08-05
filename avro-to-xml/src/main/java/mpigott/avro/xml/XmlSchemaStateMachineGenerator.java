@@ -64,8 +64,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   public XmlSchemaStateMachineGenerator() {
     stack = new ArrayList<XmlSchemaStateMachineNode>();
     elementInfoByQName = new HashMap<QName, ElementInfo>();
-
-    parentElemName = null;
     startNode = null;
   }
 
@@ -85,14 +83,12 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     if (!previouslyVisited) {
       /* This is our first encounter of the element.  We do not have the
        * attributes yet, so we cannot create a state machine node for it.
-       * However, all of the attributes will be received before we enter
-       * the element's children, so we can create an ElementInfo entry
-       * for it, and wait until later to create the state machine and add
-       * it to the stack.
+       * However, we will have all of the attributes once onEndAttributes()
+       * is called, so we can create an ElementInfo entry for it, and wait
+       * until later to create the state machine and add it to the stack.
        */
-      parentElemName = element.getQName();
       final ElementInfo info = new ElementInfo(element, typeInfo);
-      elementInfoByQName.put(parentElemName, info);
+      elementInfoByQName.put(element.getQName(), info);
 
     } else {
       /* We have previously encountered this element, which means we have
@@ -123,8 +119,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
       XmlSchemaTypeInfo typeInfo,
       boolean previouslyVisited) {
 
-    addParentElementIfAny();
-
     if ( stack.isEmpty() ) {
       throw new IllegalStateException("Exiting " + element.getQName() + ", but the stack is empty.");
     }
@@ -144,11 +138,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   public void onVisitAttribute(XmlSchemaElement element,
       XmlSchemaAttribute attribute, XmlSchemaTypeInfo attributeType) {
 
-    if ((parentElemName == null)
-          || !element.getQName().equals(parentElemName)) {
-      throw new IllegalStateException("Visiting an attribute for " + element.getQName() + ", but the parent element name is " + parentElemName);
-    }
-
     final ElementInfo elemInfo = elementInfoByQName.get(element.getQName());
     if (elemInfo == null) {
       throw new IllegalStateException("No record exists for element " + element.getQName());
@@ -161,7 +150,32 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   public void onEndAttributes(
       XmlSchemaElement element,
       XmlSchemaTypeInfo elemTypeInfo) {
-    
+
+    /* The parent of this group is an element
+     * that needs to be added to the stack.
+     */
+    final ElementInfo elemInfo = elementInfoByQName.get(element.getQName());
+
+    if (elemInfo.stateMachineNode != null) {
+      throw new IllegalStateException("Parent element " + element.getQName() + " is supposedly undefined, but that entry already has a state machine of " + elemInfo.stateMachineNode);
+    }
+
+    elemInfo.stateMachineNode =
+        new XmlSchemaStateMachineNode(
+            elemInfo.element,
+            elemInfo.attributes,
+            elemInfo.typeInfo);
+
+    if ( !stack.isEmpty() ) {
+      stack.get(stack.size() - 1)
+           .addPossibleNextState(elemInfo.stateMachineNode);
+    } else {
+      // This is the root node.
+      startNode = elemInfo.stateMachineNode;
+    }
+
+    stack.add(elemInfo.stateMachineNode);
+
   }
 
   /**
@@ -258,8 +272,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     final XmlSchemaStateMachineNode node =
         new XmlSchemaStateMachineNode(any);
 
-    addParentElementIfAny();
-
     if ( stack.isEmpty() ) {
       throw new IllegalStateException("Reached an wildcard with no parent!  The stack is empty.");
     }
@@ -281,8 +293,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
       XmlSchemaStateMachineNode.Type groupType,
       long minOccurs,
       long maxOccurs) {
-
-    addParentElementIfAny();
 
     if ( stack.isEmpty() ) {
       throw new IllegalStateException("Attempted to create a(n) " + groupType + " group with no parent - the stack is empty!");
@@ -315,38 +325,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     }
   }
 
-  private void addParentElementIfAny() {
-    if (parentElemName != null) {
-      /* The parent of this group is an element
-       * that needs to be added to the stack.
-       */
-      final ElementInfo elemInfo = elementInfoByQName.get(parentElemName);
-
-      if (elemInfo.stateMachineNode != null) {
-        throw new IllegalStateException("Parent element " + parentElemName + " is supposedly undefined, but that entry already has a state machine of " + elemInfo.stateMachineNode);
-      }
-
-      elemInfo.stateMachineNode =
-          new XmlSchemaStateMachineNode(
-              elemInfo.element,
-              elemInfo.attributes,
-              elemInfo.typeInfo);
-
-      if ( !stack.isEmpty() ) {
-        stack.get(stack.size() - 1)
-             .addPossibleNextState(elemInfo.stateMachineNode);
-      } else {
-        // This is the root node.
-        startNode = elemInfo.stateMachineNode;
-      }
-
-      stack.add(elemInfo.stateMachineNode);
-
-      parentElemName = null;
-    }
-  }
-
-  private QName parentElemName;
   private List<XmlSchemaStateMachineNode> stack;
   private XmlSchemaStateMachineNode startNode;
   private Map<QName, ElementInfo> elementInfoByQName;

@@ -210,10 +210,6 @@ final class XmlSchemaWalker {
             visitor.onVisitAttribute(element, attr, attrTypeInfo);
           }
         }
-
-        for (XmlSchemaVisitor visitor : visitors) {
-          visitor.onEndAttributes(element, typeInfo);
-        }
       }
   
       // 4. Visit the anyAttribute, if any.
@@ -222,20 +218,27 @@ final class XmlSchemaWalker {
           visitor.onVisitAnyAttribute(element, scope.getAnyAttribute());
         }
       }
-  
-      // 5. Walk the child groups and elements (if any), depth-first.
+
+      /* 5. Notify that we visited all of the
+       *    attributes (even if there weren't any).
+       */
+      for (XmlSchemaVisitor visitor : visitors) {
+        visitor.onEndAttributes(element, typeInfo);
+      }
+
+      // 6. Walk the child groups and elements (if any), depth-first.
       final XmlSchemaParticle child = scope.getParticle();
       if (child != null) {
         walk(child);
       }
     }
 
-    // 6. On the way back up, call visitor.endElement(element, type, attributes);
+    // 7. On the way back up, call visitor.endElement(element, type, attributes);
     for (XmlSchemaVisitor visitor : visitors) {
       visitor.onExitElement(element, typeInfo, previouslyVisited);
     }
 
-    // 7. Now handle substitute elements, if any.
+    // 8. Now handle substitute elements, if any.
     if (substitutes != null) {
       for (XmlSchemaElement substitute : substitutes) {
         walk(substitute);
