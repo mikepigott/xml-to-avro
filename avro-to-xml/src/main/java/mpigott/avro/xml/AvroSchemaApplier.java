@@ -139,12 +139,12 @@ final class AvroSchemaApplier {
         if ( possibleSchema.getType().equals(Schema.Type.MAP) ) {
           valueType = possibleSchema.getValueType();
         }
-  
+
         if (!valueType.getType().equals(Schema.Type.RECORD)) {
           // The map must have a value type of record, or it is invalid.
           throw new IllegalStateException("MAPs in Avro Schemas for XML documents must have a value type of RECORD, not " + valueType.getType());
         }
-  
+
         if (valueType.getName().equals( element.getName() )) {
           // Confirm the namespaces match.
           String ns = element.getQName().getNamespaceURI();
@@ -160,7 +160,7 @@ final class AvroSchemaApplier {
               throw new IllegalStateException("Element \"" + element.getQName() + "\" has a namespace that is not a valid URI", e);
             }
           }
-  
+
           // We found the schema!
           elemSchema = possibleSchema;
           break;
