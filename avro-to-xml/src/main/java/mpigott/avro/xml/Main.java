@@ -44,7 +44,7 @@ public class Main {
      for(int i=0; i < urls.length; i++) {
          classpath.append(urls[i].getFile()).append("\r\n");
      }    
-    
+
      return classpath.toString();
   }
 
