@@ -574,7 +574,7 @@ final class AvroSchemaApplier {
       final AvroRecordInfo record =
           path.getDocumentNode().getUserDefinedContent();
 
-      System.out.println("findMaps: " + path.getDirection() + " -> " + path.getStateMachineNode());
+      //System.out.println("findMaps: " + path.getDirection() + " -> " + path.getStateMachineNode());
 
       final boolean isMapNode =
           (record != null)

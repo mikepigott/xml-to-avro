@@ -31,6 +31,7 @@ import org.apache.avro.io.Encoder;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.constants.Constants;
 import org.w3c.dom.Document;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -55,10 +56,14 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     StackEntry(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
       this.docNode = docNode;
       this.receivedContent = false;
+      this.mapCount = 0;
+      this.mapInstance = -1;
     }
 
     XmlSchemaDocumentNode<AvroRecordInfo> docNode;
     boolean receivedContent;
+    int mapCount;
+    int mapInstance;
   }
 
   private static class Writer extends DefaultHandler {
@@ -70,6 +75,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       currLocation = null;
       content = null;
       currAnyElem = null;
+      priorMapCount = 0;
+      mapInstanceByName = null;
     }
 
     @Override
@@ -115,7 +122,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         final XmlSchemaDocumentNode<AvroRecordInfo> doc =
             currLocation.getDocumentNode();
         final AvroRecordInfo recordInfo = doc.getUserDefinedContent();
-        final Schema avroSchema = recordInfo.getAvroSchema();
+
+        Schema avroSchema = recordInfo.getAvroSchema();
 
         final List<XmlSchemaStateMachineNode.Attribute> attributes =
             doc.getStateMachineNode().getAttributes();
@@ -134,12 +142,84 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               attribute.getAttribute());
         }
 
+        // If there are children, we want to start an array and end it later.
+        final StackEntry entry =
+            new StackEntry(currLocation.getDocumentNode());
 
-        if ( !stack.isEmpty() ) {
+        entry.mapCount = 0;
+        entry.mapInstance = -1;
+
+        if (avroSchema.getType().equals(Schema.Type.MAP)) {
+          if (mapInstanceByName == null) {
+            mapInstanceByName = new HashMap<QName, Integer>();
+          }
+
+          if (priorMapCount > 0) {
+            entry.mapCount = priorMapCount + 1;
+          }
+
+          int mapInstance = -1;
+          if ( mapInstanceByName.containsKey(elemName) ) {
+            mapInstance = mapInstanceByName.get(elemName);
+          }
+
+          if (priorMapCount == 0) {
+            // This is the start of a new map.
+            mapInstanceByName.put(elemName, ++mapInstance);
+
+            if (recordInfo.getUnionIndex() >= 0) {
+              out.writeIndex( recordInfo.getUnionIndex() );
+            }
+            out.writeMapStart();
+            out.setItemCount(
+                recordInfo.getMapCountForInstance(entry.mapInstance));
+          }
           out.startItem();
-        }
-        if (recordInfo.getUnionIndex() >= 0) {
-          out.writeIndex( recordInfo.getUnionIndex() );
+
+          entry.mapInstance = mapInstance;
+          entry.mapCount = priorMapCount;
+
+          avroSchema = avroSchema.getValueType();
+          if ( !avroSchema.getType().equals(Schema.Type.RECORD) ) {
+            throw new IllegalStateException("Value of MAP representing " + elemName + " is a " + avroSchema.getType() + ", not a RECORD.");
+          }
+
+          // Find the attribute with the ID type and write its value.
+          for (int fieldIndex = 0;
+              fieldIndex < avroSchema.getFields().size() - 1;
+              ++fieldIndex) {
+
+            final Schema.Field field =
+                avroSchema.getFields().get(fieldIndex);
+
+            final XmlSchemaTypeInfo typeInfo = attrTypes.get( field.name() );
+
+            if ( typeInfo.getUserRecognizedType().equals(Constants.XSD_ID) ) {
+              final String value =
+                  getAttrValue(
+                      atts,
+                      schemaAttrs.get(field.name()).getQName().getNamespaceURI(),
+                      field.name());
+              if (value == null) {
+                throw new IllegalStateException("Cannot find ID attribute " + field.name() + " for element " + elemName);
+              }
+
+              System.err.println("Writing key of \"" + value + "\" for element " + elemName);
+              write(typeInfo.getBaseType(), field.schema(), value);              
+              break;
+            }
+          }
+
+        } else if (avroSchema.getType().equals(Schema.Type.RECORD)) {
+          if ( !stack.isEmpty() ) {
+            out.startItem();
+          }
+          if (recordInfo.getUnionIndex() >= 0) {
+            out.writeIndex( recordInfo.getUnionIndex() );
+          }
+
+        } else {
+          throw new IllegalStateException("Elements are either MAPs or RECORDs, not " + avroSchema.getType() + "s.");
         }
 
         /* The last element in the set of fields is the children.  We want
@@ -158,24 +238,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
           final XmlSchemaTypeInfo typeInfo = attrTypes.get( field.name() );
 
-          /* Attributes in XML Schema each have their own namespace, which
-           * is not supported in Avro.  So, we will see if we can find the
-           * attribute using the existing namespace, and if not, we will
-           * walk all of them to see which one has the same name.
-           */
           String value =
-              atts.getValue(elemName.getNamespaceURI(), field.name());
-
-          if (value == null) {
-            for (int attrIndex = 0;
-                attrIndex < atts.getLength();
-                ++attrIndex) {
-              if (atts.getLocalName(attrIndex).equals( field.name() )) {
-                value = atts.getValue(attrIndex);
-                break;
-              }
-            }
-          }
+              getAttrValue(
+                  atts,
+                  schemaAttrs.get( field.name() ).getQName().getNamespaceURI(),
+                  field.name());
 
           if (value == null) {
             // See if there is a default or fixed value instead.
@@ -194,10 +261,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemName, ioe);
           }
         }
-
-        // If there are children, we want to start an array and end it later.
-        final StackEntry entry =
-            new StackEntry(currLocation.getDocumentNode());
 
         if (recordInfo
               .getAvroSchema() // TODO: Handle MAPs.
@@ -398,17 +461,46 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
 
       if (docNode
-            .getUserDefinedContent()
-            .getAvroSchema() // TODO: Handle MAPs.
-            .getField( elemName.getLocalPart() )
-            .schema()
-            .getType()
-            .equals(Schema.Type.ARRAY)) {
+          .getUserDefinedContent()
+          .getAvroSchema()
+          .getField( elemName.getLocalPart() )
+          .schema()
+          .getType()
+          .equals(Schema.Type.ARRAY)) {
         try {
-          out.writeArrayEnd();
+         out.writeArrayEnd();
         } catch (IOException ioe) {
-          throw new RuntimeException("Unable to end the array for " + elemName, ioe);
+         throw new RuntimeException("Unable to end the array for " + elemName, ioe);
         }
+      }
+
+      if (docNode
+            .getUserDefinedContent()
+            .getAvroSchema()
+            .getType()
+            .equals(Schema.Type.MAP)) {
+
+        priorMapCount = entry.mapCount + 1;
+
+        /* This is the last map in the cluster;
+         * time to write out its ending.
+         */
+        if (priorMapCount ==
+            docNode
+              .getUserDefinedContent()
+              .getMapCountForInstance(entry.mapInstance)) {
+
+          try {
+            out.writeMapEnd();
+          } catch (IOException e) {
+            throw new RuntimeException("Unable to write the map end for " + elemName, e);
+          }
+
+          priorMapCount = 0;
+        }
+
+      } else {
+        priorMapCount = 0;
       }
     }
 
@@ -471,6 +563,29 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 .equals(elemName)) {
         throw new IllegalStateException("The next element in the path is " + currLocation.getStateMachineNode().getElement().getQName() + " (" + currLocation.getDirection() + "), not " + elemName + ".");
       }
+    }
+
+    private String getAttrValue(Attributes atts, String namespaceUri, String name) {
+      /* Attributes in XML Schema each have their own namespace, which
+       * is not supported in Avro.  So, we will see if we can find the
+       * attribute using the existing namespace, and if not, we will
+       * walk all of them to see which one has the same name.
+       */
+      String value =
+          atts.getValue(namespaceUri, name);
+
+      if (value == null) {
+        for (int attrIndex = 0;
+            attrIndex < atts.getLength();
+            ++attrIndex) {
+          if (atts.getLocalName(attrIndex).equals(name)) {
+            value = atts.getValue(attrIndex);
+            break;
+          }
+        }
+      }
+
+      return value;
     }
 
     private void write(
@@ -707,6 +822,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     private StringBuilder content;
     private QName currAnyElem;
     private ArrayList<StackEntry> stack;
+    private int priorMapCount;
+    private HashMap<QName, Integer> mapInstanceByName;
 
     private final XmlSchemaPathNode path;
     private final Encoder out;
