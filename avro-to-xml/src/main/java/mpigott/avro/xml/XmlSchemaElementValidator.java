@@ -63,6 +63,10 @@ public final class XmlSchemaElementValidator {
         value = attrs.getValue("", attrQName.getLocalPart());
       }
 
+      if (value != null) {
+        value = value.trim();
+      }
+
       // Confirm the attribute is used correctly.
       switch (use) {
       case OPTIONAL:
@@ -82,7 +86,7 @@ public final class XmlSchemaElementValidator {
          * was already taken care of by XmlSchemaWalker.
          */
       default:
-        throw new IllegalArgumentException("Attribute " + attrQName + " has an unrecognized usage of " + use + ".");
+        throw new IllegalArgumentException("Attribute " + attrQName + " of element " + elemQName + " has an unrecognized usage of " + use + ".");
       }
 
       /* If the value is null or empty there is no
@@ -92,9 +96,15 @@ public final class XmlSchemaElementValidator {
         continue;
       }
 
-      validateType(elemQName + " / " + attrQName, value, attribute.getType());
-    }
+      if ( attribute.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX) ) {
+        throw new IllegalArgumentException("Attribute " + attrQName + " of element " + elemQName + " cannot have a COMPLEX type.");
+      }
 
+      validateType(
+          "Attribute " + attrQName + " of " + elemQName,
+          value,
+          attribute.getType());
+    }
   }
 
   static void validateContent(
@@ -103,18 +113,79 @@ public final class XmlSchemaElementValidator {
     
   }
 
-  private static void validateType(String name, String value, XmlSchemaTypeInfo typeInfo) {
+  private static void validateType(
+      String name,
+      String value,
+      XmlSchemaTypeInfo typeInfo) {
+
+    if ((value == null) || value.isEmpty()) {
+      throw new IllegalArgumentException(name + " cannot have a null or empty value!");
+    }
+
     final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
       facets = typeInfo.getFacets();
 
     switch ( typeInfo.getType() ) {
     case ATOMIC:
+      validateAtomicType(name, value, typeInfo);
+      break;
     case LIST:
+      {
+        /* A list is a whitespace-separated series of elements.
+         * Split the list and perform a type-check on the items.
+         */
+        final String[] values = value.split(" ");
+        for (String item : values) {
+          validateType(
+              name + " item value \"" + item + "\"",
+              item,
+              typeInfo.getChildTypes().get(0));
+        }
+        break;
+      }
     case UNION:
+      {
+        /* We just want to confirm that the value we are given
+         * validates against at least one of the types; we do
+         * not care which one.
+         */
+        boolean foundValidType = false;
+        for (XmlSchemaTypeInfo unionType : typeInfo.getChildTypes()) {
+          try {
+            validateType(name, value, unionType);
+            foundValidType = true;
+            break;
+          } catch (Exception e) {
+            // The type did not validate; try another.
+          }
+        }
+        if (!foundValidType) {
+          throw new IllegalArgumentException(name + " does not validate against any of its union of types.");
+        }
+        break;
+      }
     case COMPLEX:
+      // This only validates if the type is mixed.
+      if ( !typeInfo.isMixed() ) {
+        throw new IllegalArgumentException(name + " has a value of \"" + value + "\" but it represents a non-mixed complex type.");
+      }
       break;
     default:
       throw new IllegalArgumentException(name + " has an unrecognized type of " + typeInfo.getType());
+    }
+  }
+
+  private static void validateAtomicType(
+      String name,
+      String value,
+      XmlSchemaTypeInfo typeInfo) {
+
+    if ( !typeInfo.getType().equals(XmlSchemaTypeInfo.Type.ATOMIC) ) {
+      throw new IllegalArgumentException(name + " must have a type of ATOMIC, not " + typeInfo.getType());
+    }
+
+    switch( typeInfo.getBaseType() ) {
+      
     }
   }
 }
