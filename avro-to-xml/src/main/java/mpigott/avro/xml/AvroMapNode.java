@@ -31,15 +31,26 @@ final class AvroMapNode {
     MAP_END
   }
 
-  AvroMapNode(XmlSchemaPathNode pathNode, int pathIndex, Type type, QName qName, int occurrence) {
+  AvroMapNode(
+      XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> pathNode,
+      int pathIndex,
+      Type type,
+      QName qName,
+      int occurrence) {
+
     this.pathNode = pathNode;
     this.pathIndex = pathIndex;
     this.qName = qName;
     this.type = type;
     this.occurrence = occurrence;
+    this.mapSize = -1;
   }
 
-  AvroMapNode(XmlSchemaPathNode pathNode, int pathIndex, Type type) {
+  AvroMapNode(
+      XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> pathNode,
+      int pathIndex,
+      Type type) {
+
     this(pathNode, pathIndex, type, null, 0);
   }
 
@@ -56,7 +67,7 @@ final class AvroMapNode {
     }
   }
 
-  XmlSchemaPathNode getPathNode() {
+  XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> getPathNode() {
     return pathNode;
   }
 
@@ -72,6 +83,14 @@ final class AvroMapNode {
     return type;
   }
 
+  int getMapSize() {
+    return mapSize;
+  }
+
+  void setMapSize(int mapSize) {
+    this.mapSize = mapSize;
+  }
+
   @Override
   public String toString() {
     StringBuilder str = new StringBuilder("[");
@@ -82,9 +101,11 @@ final class AvroMapNode {
     return str.toString();
   }
 
-  private final XmlSchemaPathNode pathNode;
+  private final XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> pathNode;
   private final int pathIndex;
   private final QName qName;
   private final int occurrence;
   private final Type type;
+
+  private int mapSize;
 }

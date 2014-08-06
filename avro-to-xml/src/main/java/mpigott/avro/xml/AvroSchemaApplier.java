@@ -751,10 +751,12 @@ final class AvroSchemaApplier {
       for (int index = 0; index < entry.getValue().size(); ++index) {
         System.err.print("\tOccurrence: " + index + " has the following path nodes: ");
         final List<AvroMapNode> pathIndices = entry.getValue().get(index);
-        for (pathIndex = 0; pathIndex < (pathIndices.size() - 1); ++pathIndex) {
-          System.err.print(pathIndices.get(pathIndex) + ", ");
+        pathIndices.get(0).setMapSize(pathIndices.size() - 1);
+        for (pathIndex = 0; pathIndex < pathIndices.size(); ++pathIndex) {
+          final AvroMapNode amn = pathIndices.get(pathIndex);
+          amn.getPathNode().setUserDefinedContent(amn);
+          System.err.println("\t\t" + pathIndices.get(pathIndex));
         }
-        System.err.println( pathIndices.get(pathIndices.size() - 1) );
       }
     }
   }

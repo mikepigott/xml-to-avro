@@ -69,11 +69,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
   private static class Writer extends DefaultHandler {
     Writer(
-        XmlSchemaPathNode path,
-        HashMap<QName, List<AtomicInteger>> mapOccurrencesByName,
+        XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path,
         Encoder out) {
+
       this.path = path;
-      this.mapOccurrencesByName = mapOccurrencesByName;
       this.out = out;
 
       stack = new ArrayList<StackEntry>();
@@ -81,7 +80,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       content = null;
       currAnyElem = null;
       priorMapCount = 0;
-      mapInstanceByName = null;
     }
 
     @Override
@@ -104,6 +102,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       final QName elemName = new QName(uri, localName);
       walkToElement(elemName);
 
+      System.err.println("Processing " + elemName + " record.");
+
       if (!currLocation
             .getDirection()
             .equals(XmlSchemaPathNode.Direction.CHILD)
@@ -121,6 +121,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         // This is an any element; we are not processing it.
         currAnyElem = elemName;
         return;
+      }
+
+      if (currLocation.getUserDefinedContent() != null) {
+        System.err.println("Found a " + currLocation.getUserDefinedContent().getType() + " in startElement(" + elemName + ").");
       }
 
       try {
@@ -154,77 +158,77 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         entry.mapCount = 0;
         entry.mapInstance = -1;
 
-        if (avroSchema.getType().equals(Schema.Type.MAP)
-            && (mapOccurrencesByName != null)) {
-          if (mapInstanceByName == null) {
-            mapInstanceByName = new HashMap<QName, Integer>();
-          }
-
-          if (priorMapCount > 0) {
-            entry.mapCount = priorMapCount + 1;
-          }
-
-          int mapInstance = -1;
-          if ( mapInstanceByName.containsKey(elemName) ) {
-            mapInstance = mapInstanceByName.get(elemName);
-          }
-
-          if (priorMapCount == 0) {
-            // This is the start of a new map.
-            mapInstanceByName.put(elemName, ++mapInstance);
-
-            out.startItem();
-            if (recordInfo.getUnionIndex() >= 0) {
-              out.writeIndex( recordInfo.getUnionIndex() );
-            }
-            out.writeMapStart();
-
-            final AtomicInteger numOccurrences =
-                mapOccurrencesByName.get(elemName).get(mapInstance);
-            out.setItemCount( numOccurrences.intValue() );
-          }
-          out.startItem();
-
-          entry.mapInstance = mapInstance;
-          entry.mapCount = priorMapCount;
-
-          avroSchema = avroSchema.getValueType();
-          if ( !avroSchema.getType().equals(Schema.Type.RECORD) ) {
-            throw new IllegalStateException("Value of MAP representing " + elemName + " is a " + avroSchema.getType() + ", not a RECORD.");
-          }
-
-          // Find the attribute with the ID type and write its value.
-          for (int fieldIndex = 0;
-              fieldIndex < avroSchema.getFields().size() - 1;
-              ++fieldIndex) {
-
-            final Schema.Field field =
-                avroSchema.getFields().get(fieldIndex);
-
-            final XmlSchemaTypeInfo typeInfo = attrTypes.get( field.name() );
-
-            if ( typeInfo.getUserRecognizedType().equals(Constants.XSD_ID) ) {
-              final String value =
-                  getAttrValue(
-                      atts,
-                      schemaAttrs.get(field.name()).getQName().getNamespaceURI(),
-                      field.name());
-              if (value == null) {
-                throw new IllegalStateException("Cannot find ID attribute " + field.name() + " for element " + elemName);
-              }
-
-              System.err.println("Writing key of \"" + value + "\" for element " + elemName);
-              write(typeInfo.getBaseType(), field.schema(), value);              
-              break;
-            }
-          }
-
-        } else if (avroSchema.getType().equals(Schema.Type.RECORD)) {
+        if (avroSchema.getType().equals(Schema.Type.RECORD)) {
           if ( !stack.isEmpty() ) {
             out.startItem();
           }
           if (recordInfo.getUnionIndex() >= 0) {
             out.writeIndex( recordInfo.getUnionIndex() );
+          }
+
+        } else if ( avroSchema.getType().equals(Schema.Type.MAP) ) {
+          final AvroMapNode mapNode = currLocation.getUserDefinedContent();
+          if (mapNode == null) {
+            throw new IllegalStateException("Reached " + elemName + ", a MAP node, but there is no map information here.");
+          }
+
+          switch ( mapNode.getType() ) {
+          case MAP_START:
+            {
+              if ( !stack.isEmpty() ) {
+                out.startItem();
+              }
+              if (recordInfo.getUnionIndex() >= 0) {
+                out.writeIndex( recordInfo.getUnionIndex() );
+              }
+              out.writeMapStart();
+              out.setItemCount( mapNode.getMapSize() );
+            }
+          case ITEM_START:
+            {
+              avroSchema = avroSchema.getValueType();
+              String key = null;
+
+              for (int fieldIndex = 0;
+                  fieldIndex < avroSchema.getFields().size() - 1;
+                  ++fieldIndex) {
+
+                final Schema.Field field =
+                    avroSchema.getFields().get(fieldIndex);
+
+                final XmlSchemaTypeInfo attrType = attrTypes.get(field.name());
+
+                final XmlSchemaAttribute xsa = schemaAttrs.get(field.name());
+
+                if ((attrType.getUserRecognizedType() != null)
+                    && attrType
+                         .getUserRecognizedType()
+                         .equals(Constants.XSD_ID)) {
+                  key =
+                      getAttrValue(
+                          atts,
+                          xsa.getQName().getNamespaceURI(),
+                          field.name());
+
+                  if (key == null) {
+                    throw new IllegalStateException("Attribute value for " + xsa.getQName() + " of element " + elemName + " is null.");
+                  }
+                  break;
+                }
+              }
+
+              if (key == null) {
+                throw new IllegalStateException("Unable to find key for element " + elemName);
+              }
+
+              System.err.println("Writing key \"" + key + "\" for " + elemName);
+              out.startItem();
+              out.writeString(key);
+              break;
+            }
+          case MAP_END:
+          default:
+            throw new IllegalStateException("Did not expect to find a map node of type " + mapNode.getType() + " when starting " + elemName + ".");
           }
 
         } else {
@@ -266,8 +270,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
           try {
             write(typeInfo.getBaseType(), field.schema(), value);
-          } catch (Exception ioe) {
-            throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemName, ioe);
+          } catch (Exception e) {
+            throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemName, e);
           }
         }
 
@@ -292,7 +296,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         } else if (avroSchema
                      .getField( elemName.getLocalPart() )
                      .schema()
-                     .getType().equals(Schema.Type.NULL) ) {
+                     .getType()
+                     .equals(Schema.Type.NULL) ) {
           out.writeNull();
           entry.receivedContent = true;
 
@@ -330,7 +335,16 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         throw new SAXException("We are processing content, but the element stack is empty!");
       }
 
+      if (currLocation.getUserDefinedContent() != null) {
+        System.err.println("Found a " + currLocation.getUserDefinedContent().getType() + " in characters() 1.");
+      }
+
       currLocation = currLocation.getNext();
+
+      if (currLocation.getUserDefinedContent() != null) {
+        System.err.println("Found a " + currLocation.getUserDefinedContent().getType() + " in characters() 2.");
+      }
+
       if ((currLocation == null)
           || !currLocation
                 .getDirection()
@@ -467,49 +481,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       if (!stackElemName.equals(elemName)) {
         throw new IllegalStateException("We are leaving " + elemName + " but the element on the stack is " + stackElemName + ".");
       }
-
-      if (docNode
-          .getUserDefinedContent()
-          .getAvroSchema()
-          .getType()
-          .equals(Schema.Type.MAP)) {
-
-        priorMapCount = entry.mapCount + 1;
-
-        final int instance = mapInstanceByName.get(elemName);
-        final AtomicInteger numOccurrences =
-            mapOccurrencesByName.get(elemName).get(instance);
-
-        /* This is the last map in the cluster;
-         * time to write out its ending.
-         */
-        if (priorMapCount == numOccurrences.intValue()) {
-          mapInstanceByName.put(elemName, instance + 1);
-          try {
-            out.writeMapEnd();
-          } catch (IOException e) {
-            throw new RuntimeException("Unable to write the map end for " + elemName, e);
-          }
-
-          priorMapCount = 0;
-        }
-
-      } else {
-        priorMapCount = 0;
-        if (docNode
-            .getUserDefinedContent()
-            .getAvroSchema()
-            .getField( elemName.getLocalPart() )
-            .schema()
-            .getType()
-            .equals(Schema.Type.ARRAY)) {
-          try {
-           out.writeArrayEnd();
-          } catch (IOException ioe) {
-           throw new RuntimeException("Unable to end the array for " + elemName, ioe);
-          }
-        }
-      }
     }
 
     @Override
@@ -542,6 +513,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
 
       do {
+        if (currLocation.getUserDefinedContent() != null) {
+          System.err.println("Found a " + currLocation.getUserDefinedContent().getType() + " in walkToElement(" + elemName + ").");
+        }
         currLocation = currLocation.getNext();
       } while ((currLocation != null)
                   && (currLocation
@@ -826,16 +800,14 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
     }
 
-    private XmlSchemaPathNode currLocation;
+    private XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> currLocation;
     private StringBuilder content;
     private QName currAnyElem;
     private ArrayList<StackEntry> stack;
     private int priorMapCount;
-    private HashMap<QName, Integer> mapInstanceByName;
 
     private final XmlSchemaPathNode path;
     private final Encoder out;
-    private final HashMap<QName, List<AtomicInteger>> mapOccurrencesByName;
   }
 
   public XmlDatumWriter(XmlDatumConfig config, Schema avroSchema)
@@ -924,22 +896,23 @@ public class XmlDatumWriter implements DatumWriter<Document> {
   @Override
   public void write(Document doc, Encoder out) throws IOException {
     // 1. Build the path through the schema that describes the document.
-    XmlSchemaPathFinder pathCreator = new XmlSchemaPathFinder(stateMachine);
-    SaxWalkerOverDom walker = new SaxWalkerOverDom(pathCreator);
+    XmlSchemaPathFinder pathFinder = new XmlSchemaPathFinder(stateMachine);
+    SaxWalkerOverDom walker = new SaxWalkerOverDom(pathFinder);
     try {
       walker.walk(doc);
     } catch (Exception se) {
       throw new IOException("Unable to parse the document.", se);
     }
-    final XmlSchemaPathNode path = pathCreator.getXmlSchemaDocumentPath();
+    final XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path =
+        pathFinder.getXmlSchemaDocumentPath();
 
     // 2. Apply Avro schema metadata on top of the document. 
     final AvroSchemaApplier applier = new AvroSchemaApplier(schema, false);
-    applier.apply(path); // TODO: Handle MAPs.
+    applier.apply(path);
 
     // 3. Encode the document.
-    walker.removeContentHandler(pathCreator);
-    walker.addContentHandler( new Writer(path, null, out) );
+    walker.removeContentHandler(pathFinder);
+    walker.addContentHandler( new Writer(path, out) );
 
     try {
       walker.walk(doc);
