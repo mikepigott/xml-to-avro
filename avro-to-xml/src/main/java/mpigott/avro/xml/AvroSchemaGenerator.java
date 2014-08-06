@@ -247,18 +247,49 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     final List<Schema> children = fieldsByElement.get(entry.elementQName);
 
-    // If there are multiple maps in the children, remove one.
+    /* If there are multiple maps in the children, merge
+     * them together under one MAP of UNION of children.
+     */
     if ((children != null) && !children.isEmpty()) {
-      boolean foundMap = false;
+      int mapIndex = -1;
+      ArrayList<Schema> mapUnion = null;
+      ArrayList<Integer> indicesToRemove = null;
       for (int i = 0; i < children.size(); ++i) {
         Schema currSchema = children.get(i);
         if (currSchema.getType().equals(Schema.Type.MAP)) {
-          if (!foundMap) {
-            foundMap = true;
+          if (mapIndex < 0) {
+            // This is the first map.
+            mapIndex = i;
+          } else if (mapUnion == null) {
+            // This is the second map.
+            mapUnion = new ArrayList<Schema>();
+            final Schema mapSchema = children.get(mapIndex);
+            mapUnion.add( mapSchema.getValueType() );
+            mapUnion.add( currSchema.getValueType() );
+
+            indicesToRemove = new ArrayList<Integer>();
+            indicesToRemove.add(i);
+
           } else {
-            currSchema = currSchema.getValueType();
-            children.set(i, currSchema);
+            // These are maps 3+.
+            mapUnion.add( currSchema.getValueType() );
+            indicesToRemove.add(i);
           }
+        }
+      }
+
+      if (mapUnion != null) {
+        // 1. Create a union of all MAP children.
+        children.set(
+            mapIndex,
+            Schema.createMap( Schema.createUnion(mapUnion) ));
+
+        // 2. Remove all other indices with MAPs in them.
+        ListIterator<Integer> iter =
+            indicesToRemove.listIterator(indicesToRemove.size());
+
+        while ( iter.hasPrevious() ) {
+          children.remove( iter.previous().intValue() );
         }
       }
     }
@@ -622,36 +653,12 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     final StackEntry entry = stack.remove(stack.size() - 1);
 
-    if (!entry.elementQName.equals(entryQName) || (entry.isSubstitutionGroup != isSubstGroup)) {
+    if (!entry.elementQName.equals(entryQName)
+        || (entry.isSubstitutionGroup != isSubstGroup)) {
       throw new IllegalStateException("Attempted to pop " + getStackEntryInfo(entryQName, isSubstGroup) + " but found " + getStackEntryInfo(entry.elementQName, entry.isSubstitutionGroup));
     }
 
     return entry;
-  }
-
-  private static String getStackEntryInfo(QName entryQName, boolean isSubstGroup) {
-    return "\"" + entryQName + "\" (Substitution Group? " + isSubstGroup + ")";
-  }
-
-  private static String getDocumentationFor(XmlSchemaAnnotation annotation) {
-    if ((annotation != null)
-        && (annotation.getItems() != null)
-        && !annotation.getItems().isEmpty()) {
-
-      StringBuilder docs = new StringBuilder();
-      for (XmlSchemaAnnotationItem item : annotation.getItems()) {
-        if (item instanceof XmlSchemaDocumentation) {
-          final NodeList docNodes = ((XmlSchemaDocumentation) item).getMarkup();
-          for (int nodeIndex = 0; nodeIndex < docNodes.getLength(); ++nodeIndex) {
-            docs.append( docNodes.item(nodeIndex).getTextContent().replaceAll("\\s+", " ") );
-          }
-          break;
-        }
-      }
-      return docs.toString();
-    }
-
-    return null;
   }
 
   private void addXmlSchemasListToRoot() {
@@ -702,6 +709,31 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     }
 
     return (nonOptionalIdFieldCount == 1);
+  }
+
+  private static String getStackEntryInfo(QName entryQName, boolean isSubstGroup) {
+    return "\"" + entryQName + "\" (Substitution Group? " + isSubstGroup + ")";
+  }
+
+  private static String getDocumentationFor(XmlSchemaAnnotation annotation) {
+    if ((annotation != null)
+        && (annotation.getItems() != null)
+        && !annotation.getItems().isEmpty()) {
+
+      StringBuilder docs = new StringBuilder();
+      for (XmlSchemaAnnotationItem item : annotation.getItems()) {
+        if (item instanceof XmlSchemaDocumentation) {
+          final NodeList docNodes = ((XmlSchemaDocumentation) item).getMarkup();
+          for (int nodeIndex = 0; nodeIndex < docNodes.getLength(); ++nodeIndex) {
+            docs.append( docNodes.item(nodeIndex).getTextContent().replaceAll("\\s+", " ") );
+          }
+          break;
+        }
+      }
+      return docs.toString();
+    }
+
+    return null;
   }
 
   private Schema root;

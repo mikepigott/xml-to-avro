@@ -189,7 +189,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                */
               final int mapUnionIndex = recordInfo.getMapUnionIndex();
               if (mapUnionIndex >= 0) {
-                out.writeIndex(mapUnionIndex);
                 avroSchema = avroSchema.getTypes().get(mapUnionIndex);
               }
 
@@ -228,6 +227,13 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               }
 
               out.writeString(key);
+
+              /* If the MAP value is another UNION, write
+               * the union index before continuing.
+               */
+              if (mapUnionIndex >= 0) {
+                out.writeIndex(mapUnionIndex);
+              }
               break;
             }
           case MAP_END:
@@ -485,6 +491,12 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
       if (avroSchema.getType().equals(Schema.Type.MAP)) {
         avroSchema = avroSchema.getValueType();
+
+        final int mapUnionIndex =
+            docNode.getUserDefinedContent().getMapUnionIndex();
+        if (mapUnionIndex >= 0) {
+          avroSchema = avroSchema.getTypes().get(mapUnionIndex);
+        }
       }
 
       if (avroSchema

@@ -236,7 +236,8 @@ final class AvroSchemaApplier {
             element.getQName(),
             elemSchema,
             attribute.getAttribute(),
-            attribute.getType());
+            attribute.getType(),
+            mapSchemaIndex);
       }
 
       /* Child elements are in a field under the same name as the element.
@@ -247,6 +248,9 @@ final class AvroSchemaApplier {
       Schema valueType = elemSchema;
       if (elemSchema.getType().equals(Schema.Type.MAP)) {
         valueType = elemSchema.getValueType();
+        if (mapSchemaIndex >= 0) {
+          valueType = valueType.getTypes().get(mapSchemaIndex);
+        }
       }
 
       Schema.Field childrenField = valueType.getField( element.getName() );
@@ -362,11 +366,15 @@ final class AvroSchemaApplier {
       QName elementName,
       Schema elementSchema,
       XmlSchemaAttribute attribute,
-      XmlSchemaTypeInfo attributeType) {
+      XmlSchemaTypeInfo attributeType,
+      int mapUnionIndex) {
 
     Schema valueType = elementSchema;
     if ( valueType.getType().equals(Schema.Type.MAP) ) {
       valueType = valueType.getValueType();
+      if (mapUnionIndex >= 0) {
+        valueType = valueType.getTypes().get(mapUnionIndex);
+      }
     }
 
     final Schema.Field attrField = valueType.getField( attribute.getName() );
@@ -448,9 +456,16 @@ final class AvroSchemaApplier {
       if (!unionType.getType().equals(Schema.Type.RECORD)
           && !unionType.getType().equals(Schema.Type.MAP)) {
         throw new IllegalArgumentException("The Avro Schema may either be a UNION or an ARRAY of UNION, but only if all of the elements in the UNION are of either type RECORD or MAP, not " + unionType.getType());
-      } else if ( unionType.getType().equals(Schema.Type.MAP)
-          && !unionType.getValueType().getType().equals(Schema.Type.RECORD) ) {
-        throw new IllegalArgumentException("If the Avro Schema is a UNION of MAPs or an ARRAY of UNION of MAPs, all MAP value types must be RECORD, not " + unionType.getValueType().getType());
+      } else if (unionType.getType().equals(Schema.Type.MAP)) {
+        if ( unionType.getValueType().getType().equals(Schema.Type.UNION) ) {
+          for (Schema mapUnionType : unionType.getValueType().getTypes()) {
+            if ( !mapUnionType.getType().equals(Schema.Type.RECORD) ) {
+              throw new IllegalArgumentException("If using a UNION of MAP of UNION, all of the UNION types must be RECORD, not " + mapUnionType.getType());
+            }
+          }
+        } else if ( !unionType.getValueType().getType().equals(Schema.Type.RECORD) ) {
+          throw new IllegalArgumentException("If the Avro Schema is a UNION of MAPs or an ARRAY of UNION of MAPs, all MAP value types must be RECORD or UNION of RECORD, not " + unionType.getValueType().getType());
+        }
       }
     }
   }
