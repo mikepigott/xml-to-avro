@@ -292,7 +292,7 @@ final class AvroSchemaApplier {
         avroRecordStack.add(recordInfo);
       } else {
         recordInfo = new AvroRecordInfo(elemSchema, schemaIndex);
-        if ( !elemSchema.getType().equals(Schema.Type.MAP) ) {
+        if ( elemSchema.getType().equals(Schema.Type.MAP) ) {
           /* TODO: This does not handle when there are multiple maps.
            *       When we start a map later, we need to increment
            *       the count of the document node parent.
