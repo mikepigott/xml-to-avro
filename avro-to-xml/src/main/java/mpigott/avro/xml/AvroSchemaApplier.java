@@ -292,7 +292,15 @@ final class AvroSchemaApplier {
         avroRecordStack.add(recordInfo);
       } else {
         recordInfo = new AvroRecordInfo(elemSchema, schemaIndex);
-        avroRecordStack.get(avroRecordStack.size() - 1).incrementChildCount();
+        if ( !elemSchema.getType().equals(Schema.Type.MAP) ) {
+          /* TODO: This does not handle when there are multiple maps.
+           *       When we start a map later, we need to increment
+           *       the count of the document node parent.
+           */
+          avroRecordStack.get(avroRecordStack.size() - 1).setHasMapChild();
+        } else {
+          avroRecordStack.get(avroRecordStack.size() - 1).incrementChildCount();
+        }
         avroRecordStack.add(recordInfo);
       }
       doc.setUserDefinedContent(recordInfo);
@@ -600,8 +608,6 @@ final class AvroSchemaApplier {
       final AvroRecordInfo record =
           path.getDocumentNode().getUserDefinedContent();
 
-      //System.out.println("findMaps: " + path.getDirection() + " -> " + path.getStateMachineNode());
-
       final boolean isMapNode =
           (record != null)
           && record.getAvroSchema().getType().equals(Schema.Type.MAP);
@@ -746,16 +752,13 @@ final class AvroSchemaApplier {
       throw new IllegalStateException("Expected the stack to have one element in it at the end, but found " + docNodeStack.size() + ".");
     }
 
-    for (Map.Entry<QName, List<List<AvroMapNode>>> entry : occurrencesByName.entrySet()) {
-      System.err.println( entry.getKey() );
-      for (int index = 0; index < entry.getValue().size(); ++index) {
-        System.err.print("\tOccurrence: " + index + " has the following path nodes: ");
-        final List<AvroMapNode> pathIndices = entry.getValue().get(index);
-        pathIndices.get(0).setMapSize(pathIndices.size() - 1);
-        for (pathIndex = 0; pathIndex < pathIndices.size(); ++pathIndex) {
-          final AvroMapNode amn = pathIndices.get(pathIndex);
-          amn.getPathNode().setUserDefinedContent(amn);
-          System.err.println("\t\t" + pathIndices.get(pathIndex));
+    for (Map.Entry<QName, List<List<AvroMapNode>>> entry :
+           occurrencesByName.entrySet()) {
+      for (List<AvroMapNode> avroMapNodes : entry.getValue()) {
+        // The MAP_END node doesn't count as a child.
+        avroMapNodes.get(0).setMapSize(avroMapNodes.size() - 1);
+        for (AvroMapNode avroMapNode : avroMapNodes) {
+          avroMapNode.getPathNode().setUserDefinedContent(avroMapNode);
         }
       }
     }

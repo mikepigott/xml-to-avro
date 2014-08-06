@@ -102,8 +102,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       final QName elemName = new QName(uri, localName);
       walkToElement(elemName);
 
-      System.err.println("Processing " + elemName + " record.");
-
       if (!currLocation
             .getDirection()
             .equals(XmlSchemaPathNode.Direction.CHILD)
@@ -121,10 +119,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         // This is an any element; we are not processing it.
         currAnyElem = elemName;
         return;
-      }
-
-      if (currLocation.getUserDefinedContent() != null) {
-        System.err.println("Found a " + currLocation.getUserDefinedContent().getType() + " in startElement(" + elemName + ").");
       }
 
       try {
@@ -221,7 +215,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 throw new IllegalStateException("Unable to find key for element " + elemName);
               }
 
-              System.err.println("Writing key \"" + key + "\" for " + elemName);
               out.startItem();
               out.writeString(key);
               break;
@@ -335,15 +328,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         throw new SAXException("We are processing content, but the element stack is empty!");
       }
 
-      if (currLocation.getUserDefinedContent() != null) {
-        System.err.println("Found a " + currLocation.getUserDefinedContent().getType() + " in characters() 1.");
-      }
-
       currLocation = currLocation.getNext();
-
-      if (currLocation.getUserDefinedContent() != null) {
-        System.err.println("Found a " + currLocation.getUserDefinedContent().getType() + " in characters() 2.");
-      }
 
       if ((currLocation == null)
           || !currLocation
@@ -481,6 +466,27 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       if (!stackElemName.equals(elemName)) {
         throw new IllegalStateException("We are leaving " + elemName + " but the element on the stack is " + stackElemName + ".");
       }
+
+      Schema avroSchema =
+          docNode
+            .getUserDefinedContent()
+            .getAvroSchema();
+
+      if (avroSchema.getType().equals(Schema.Type.MAP)) {
+        avroSchema = avroSchema.getValueType();
+      }
+
+      if (avroSchema
+            .getField( elemName.getLocalPart() )
+            .schema()
+            .getType()
+            .equals(Schema.Type.ARRAY)) {
+        try {
+          out.writeArrayEnd();
+        } catch (IOException ioe) {
+          throw new RuntimeException("Unable to end the array for " + elemName, ioe);
+        }
+      }
     }
 
     @Override
@@ -514,7 +520,17 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
       do {
         if (currLocation.getUserDefinedContent() != null) {
-          System.err.println("Found a " + currLocation.getUserDefinedContent().getType() + " in walkToElement(" + elemName + ").");
+          // TODO: Find a better home.
+          if (currLocation
+                .getUserDefinedContent()
+                .getType()
+                .equals(AvroMapNode.Type.MAP_END)) {
+            try {
+              out.writeMapEnd();
+            } catch (IOException e) {
+              throw new RuntimeException("Unable to process a MAP_END.", e);
+            }
+          }
         }
         currLocation = currLocation.getNext();
       } while ((currLocation != null)
