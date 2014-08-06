@@ -65,7 +65,6 @@ public final class XmlSchemaElementValidator {
 
       // Confirm the attribute is used correctly.
       switch (use) {
-      case NONE:
       case OPTIONAL:
         break;
       case PROHIBITED:
@@ -78,6 +77,10 @@ public final class XmlSchemaElementValidator {
           throw new IllegalArgumentException("Attribute " + attrName + " was declared 'required' by " + elemQName + " and must have a value.");
         }
         break;
+      case NONE:
+        /* An attribute with no usage is optional, which
+         * was already taken care of by XmlSchemaWalker.
+         */
       default:
         throw new IllegalArgumentException("Attribute " + attrName + " has an unrecognized usage of " + use + ".");
       }
