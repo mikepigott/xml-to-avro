@@ -41,6 +41,13 @@ import org.apache.ws.commons.schema.XmlSchemaUse;
  */
 final class AvroSchemaApplier {
 
+  /**
+   * {@link XmlSchemaPathNode} contain their destination
+   * {@link XmlSchemaDocumentNode}, but not their originating
+   * one.  Since we do not "leave" a {@link XmlSchemaDocumentNode}
+   * until we traverse to its parent, we need to track the parent
+   * node in addition to the current one.
+   */
   private static class StackEntry {
     StackEntry(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
       this.docNode = docNode;
@@ -292,14 +299,14 @@ final class AvroSchemaApplier {
         avroRecordStack.add(recordInfo);
       } else {
         recordInfo = new AvroRecordInfo(elemSchema, schemaIndex);
-        if ( elemSchema.getType().equals(Schema.Type.MAP) ) {
-          /* TODO: This does not handle when there are multiple maps.
-           *       When we start a map later, we need to increment
-           *       the count of the document node parent.
-           */
-          avroRecordStack.get(avroRecordStack.size() - 1).setHasMapChild();
-        } else {
-          avroRecordStack.get(avroRecordStack.size() - 1).incrementChildCount();
+
+        /* Maps will be counted separately, as their
+         * children are not part of this array.
+         */
+        if ( !elemSchema.getType().equals(Schema.Type.MAP) ) {
+          avroRecordStack
+            .get(avroRecordStack.size() - 1)
+            .incrementChildCount();
         }
         avroRecordStack.add(recordInfo);
       }
@@ -676,6 +683,7 @@ final class AvroSchemaApplier {
                         path,
                         pathIndex,
                         AvroMapNode.Type.MAP_START));
+                incrementMapParentChildCount(path);
 
                 if (!occurrencesByName.containsKey(currQName)) {
                   occurrences = new ArrayList<List<AvroMapNode>>();
@@ -773,6 +781,34 @@ final class AvroSchemaApplier {
     final List<AvroMapNode> nodes =
         occurrences.get(mostRecentlyLeftMap.getOccurrence());
     nodes.add(mostRecentlyLeftMap);
+  }
+
+  /* All of the elements in a map are grouped together, and likewise cannot be
+   * counted as part of the MAP's parent's children.  Likewise, each time we
+   * find a new MAP, we only increment the parent's child count by one.
+   */
+  private void incrementMapParentChildCount(
+      XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path) {
+
+    if (!path.getStateMachineNode()
+                .getNodeType()
+                .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
+      throw new IllegalArgumentException("Starting node should be at an element, not a " + path.getStateMachineNode().getNodeType());
+    }
+
+    XmlSchemaDocumentNode<AvroRecordInfo> docNode = path.getDocumentNode();
+    do {
+      docNode = docNode.getParent();
+    } while (!docNode
+                .getStateMachineNode()
+                .getNodeType()
+                .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
+
+    if (docNode.getUserDefinedContent() == null) {
+      throw new IllegalStateException("Reached a node representing " + docNode.getStateMachineNode() + ", but it contains no Avro record information.");
+    }
+
+    docNode.getUserDefinedContent().incrementChildCount();
   }
 
   private List<Schema> unionOfValidElementsStack;
