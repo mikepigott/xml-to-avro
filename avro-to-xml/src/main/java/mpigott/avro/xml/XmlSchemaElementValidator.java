@@ -16,13 +16,23 @@
 
 package mpigott.avro.xml;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+import javax.xml.bind.DatatypeConverter;
+import javax.xml.bind.ValidationException;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.namespace.NamespaceContext;
 import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaUse;
+import org.apache.xerces.util.URI;
+import org.apache.xerces.util.URI.MalformedURIException;
 import org.xml.sax.Attributes;
 
 /**
@@ -33,16 +43,69 @@ import org.xml.sax.Attributes;
  */
 public final class XmlSchemaElementValidator {
 
+  private static DatatypeFactory datatypeFactory = null;
+
+  private static DatatypeFactory getDatatypeFactory() {
+    if (datatypeFactory == null) {
+      try {
+        datatypeFactory = DatatypeFactory.newInstance();
+      } catch (DatatypeConfigurationException e) {
+        throw new IllegalStateException("Unable to create the DatatypeFactory for validating XML Schema durations.", e);
+      }
+    }
+    return datatypeFactory;
+  }
+
+  private static class QNameNamespaceContext implements NamespaceContext {
+
+    private static String NAMESPACE = "http://ws.apache.org/xmlschema/";
+    private static String PREFIX = "pfx";
+
+    QNameNamespaceContext() {
+      /* We don't actually care *what* the namespace returns,
+       * only that it returns *something*.
+       */
+      prefixes = new ArrayList<String>(1);
+      prefixes.add(PREFIX);
+    }
+
+    @Override
+    public String getNamespaceURI(String prefix) {
+      return NAMESPACE;
+    }
+
+    @Override
+    public String getPrefix(String namespaceURI) {
+      return PREFIX;
+    }
+
+    @Override
+    public Iterator getPrefixes(String namespaceURI) {
+      return prefixes.iterator();
+    }
+
+    private List<String> prefixes;
+  }
+
+  private static QNameNamespaceContext namespaceContext = null;
+
+  private static NamespaceContext getNamespaceContext() {
+    if (namespaceContext == null) {
+      namespaceContext = new QNameNamespaceContext();
+    }
+    return namespaceContext;
+  }
+
   static void validateAttributes(
       XmlSchemaStateMachineNode state,
-      Attributes attrs) {
+      Attributes attrs) throws ValidationException {
 
     if ((state == null)
         || (attrs == null)
         || !state
               .getNodeType()
               .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
-      throw new IllegalArgumentException("Niether state nor attrs can be null, and state must be of an SchemaStateMachineNode.Type.ELEMENT node, not " + ((state == null) ? null : state.getNodeType()));
+      throw new ValidationException("Niether state nor attrs can be null, and state must be of an SchemaStateMachineNode.Type.ELEMENT node, not " + ((state == null) ? null : state.getNodeType()));
     }
 
     final QName elemQName = state.getElement().getQName();
@@ -73,12 +136,12 @@ public final class XmlSchemaElementValidator {
         break;
       case PROHIBITED:
         if ((value != null) && !value.isEmpty()) {
-          throw new IllegalArgumentException("Attribute " + attrQName + " was declared 'prohibited' by " + elemQName + " and cannot have a value.");
+          throw new ValidationException("Attribute " + attrQName + " was declared 'prohibited' by " + elemQName + " and cannot have a value.");
         }
         break;
       case REQUIRED:
         if ((value == null) || value.isEmpty()) {
-          throw new IllegalArgumentException("Attribute " + attrQName + " was declared 'required' by " + elemQName + " and must have a value.");
+          throw new ValidationException("Attribute " + attrQName + " was declared 'required' by " + elemQName + " and must have a value.");
         }
         break;
       case NONE:
@@ -86,7 +149,7 @@ public final class XmlSchemaElementValidator {
          * was already taken care of by XmlSchemaWalker.
          */
       default:
-        throw new IllegalArgumentException("Attribute " + attrQName + " of element " + elemQName + " has an unrecognized usage of " + use + ".");
+        throw new ValidationException("Attribute " + attrQName + " of element " + elemQName + " has an unrecognized usage of " + use + ".");
       }
 
       /* If the value is null or empty there is no
@@ -97,7 +160,7 @@ public final class XmlSchemaElementValidator {
       }
 
       if ( attribute.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX) ) {
-        throw new IllegalArgumentException("Attribute " + attrQName + " of element " + elemQName + " cannot have a COMPLEX type.");
+        throw new ValidationException("Attribute " + attrQName + " of element " + elemQName + " cannot have a COMPLEX type.");
       }
 
       validateType(
@@ -109,17 +172,17 @@ public final class XmlSchemaElementValidator {
 
   static void validateContent(
       XmlSchemaStateMachineNode state,
-      String elementContent) {
+      String elementContent) throws ValidationException {
     
   }
 
   private static void validateType(
       String name,
       String value,
-      XmlSchemaTypeInfo typeInfo) {
+      XmlSchemaTypeInfo typeInfo) throws ValidationException {
 
     if ((value == null) || value.isEmpty()) {
-      throw new IllegalArgumentException(name + " cannot have a null or empty value!");
+      throw new ValidationException(name + " cannot have a null or empty value!");
     }
 
     final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
@@ -155,37 +218,193 @@ public final class XmlSchemaElementValidator {
             validateType(name, value, unionType);
             foundValidType = true;
             break;
-          } catch (Exception e) {
+          } catch (ValidationException e) {
             // The type did not validate; try another.
           }
         }
         if (!foundValidType) {
-          throw new IllegalArgumentException(name + " does not validate against any of its union of types.");
+          throw new ValidationException(name + " does not validate against any of its union of types.");
         }
         break;
       }
     case COMPLEX:
       // This only validates if the type is mixed.
       if ( !typeInfo.isMixed() ) {
-        throw new IllegalArgumentException(name + " has a value of \"" + value + "\" but it represents a non-mixed complex type.");
+        throw new ValidationException(name + " has a value of \"" + value + "\" but it represents a non-mixed complex type.");
       }
       break;
     default:
-      throw new IllegalArgumentException(name + " has an unrecognized type of " + typeInfo.getType());
+      throw new ValidationException(name + " has an unrecognized type of " + typeInfo.getType());
     }
   }
 
   private static void validateAtomicType(
       String name,
       String value,
-      XmlSchemaTypeInfo typeInfo) {
+      XmlSchemaTypeInfo typeInfo) throws ValidationException {
 
     if ( !typeInfo.getType().equals(XmlSchemaTypeInfo.Type.ATOMIC) ) {
-      throw new IllegalArgumentException(name + " must have a type of ATOMIC, not " + typeInfo.getType());
+      throw new ValidationException(name + " must have a type of ATOMIC, not " + typeInfo.getType());
+
+    } else if ((value == null) || value.isEmpty()) {
+      throw new ValidationException(name + " cannot have a null or empty value when validating.");
     }
 
     switch( typeInfo.getBaseType() ) {
+    case ANYTYPE:
+    case ANYSIMPLETYPE:
+    case ANYURI:
+    case STRING:
+      // Text plus facets.
+      DatatypeConverter.parseString(value);
+      break;
+
+    case DURATION:
+      try {
+        getDatatypeFactory().newDuration(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid duration.", iae);
+      }
+      break;
+
+    case DATETIME:
+      try {
+        DatatypeConverter.parseDateTime(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid date-time.", iae);
+      }
+      break;
+
+    case TIME:
+      try {
+        DatatypeConverter.parseTime(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid time.", iae);
+      }
+      break;
       
+    case DATE:
+      try {
+        DatatypeConverter.parseDate(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid date.", iae);
+      }
+      break;
+
+    case YEARMONTH:
+      try {
+        getDatatypeFactory().newXMLGregorianCalendar(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid Year-Month.", iae);
+      }
+      break;
+
+    case YEAR:
+      try {
+        getDatatypeFactory().newXMLGregorianCalendar(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid year.", iae);
+      }
+      break;
+
+    case MONTHDAY:
+      try {
+        getDatatypeFactory().newXMLGregorianCalendar(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid month-day.", iae);
+      }
+      break;
+
+    case DAY:
+      try {
+        getDatatypeFactory().newXMLGregorianCalendar(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid day.", iae);
+      }
+      break;
+
+    case MONTH:
+      try {
+        getDatatypeFactory().newXMLGregorianCalendar(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid month.", iae);
+      }
+      break;
+
+      // Dates
+    case BOOLEAN:
+      try {
+        DatatypeConverter.parseBoolean(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid boolean.", iae);
+      }
+      break;
+
+    case BIN_BASE64:
+      try {
+        DatatypeConverter.parseBase64Binary(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not valid base-64 binary.", iae);
+      }
+      break;
+
+    case BIN_HEX:
+      try {
+        DatatypeConverter.parseHexBinary(value);
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not valid hexadecimal binary.", iae);
+      }
+      break;
+
+    case FLOAT:
+      try {
+        DatatypeConverter.parseFloat(value);
+      } catch (NumberFormatException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid float.", iae);
+      }
+      break;
+
+    case DECIMAL:
+      try {
+        DatatypeConverter.parseDecimal(value);
+      } catch (NumberFormatException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid decimal.", iae);
+      }
+      break;
+
+    case DOUBLE:
+      try {
+        DatatypeConverter.parseDouble(value);
+      } catch (NumberFormatException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid double.", iae);
+      }
+      break;
+
+    case QNAME:
+      try {
+        DatatypeConverter.parseQName(value, getNamespaceContext());
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid .", iae);
+      }
+      break;
+
+    case NOTATION:
+      try {
+        /* The value space of NOTATION is the set of QNames
+         * of notations declared in the current schema.
+         */
+        final String[] qNames = value.split(" ");
+        for (String qName : qNames) {
+          DatatypeConverter.parseQName(qName, getNamespaceContext());
+        }
+
+      } catch (IllegalArgumentException iae) {
+        throw new ValidationException(name + " value of \"" + value + "\" is not a valid series of QNames.", iae);
+      }
+      break;
+
+    default:
+      throw new ValidationException(name + " has an unrecognized base value type of " + typeInfo.getBaseType());
     }
   }
 }

@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.bind.ValidationException;
 import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.XmlSchemaAny;
@@ -1717,9 +1718,13 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       return;
     }
 
-    XmlSchemaElementValidator.validateAttributes(
-        currentPath.getStateMachineNode(),
-        attrs);
+    try {
+      XmlSchemaElementValidator.validateAttributes(
+          currentPath.getStateMachineNode(),
+          attrs);
+    } catch (ValidationException ve) {
+      throw new IllegalStateException("Cannot validate attributes of " + currentPath.getStateMachineNode().getElement().getQName() +".", ve);
+    }
   }
 
   private final XmlSchemaStateMachineNode rootNode;
