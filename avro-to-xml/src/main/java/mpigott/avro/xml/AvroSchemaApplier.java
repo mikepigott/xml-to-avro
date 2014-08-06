@@ -161,36 +161,56 @@ final class AvroSchemaApplier {
 
     Schema elemSchema = null;
     int schemaIndex = 0;
+    int mapSchemaIndex = -1;
+
     if (validNextElements != null) {
       for (; schemaIndex < validNextElements.size(); ++schemaIndex) {
         Schema possibleSchema = validNextElements.get(schemaIndex);
         Schema valueType = possibleSchema;
+
         if ( possibleSchema.getType().equals(Schema.Type.MAP) ) {
           valueType = possibleSchema.getValueType();
-        }
 
-        if (!valueType.getType().equals(Schema.Type.RECORD)) {
-          // The map must have a value type of record, or it is invalid.
-          throw new IllegalStateException("MAPs in Avro Schemas for XML documents must have a value type of RECORD, not " + valueType.getType());
-        }
-
-        if (valueType.getName().equals( element.getName() )) {
-          // Confirm the namespaces match.
-          String ns = element.getQName().getNamespaceURI();
-          if ((ns != null) && !ns.isEmpty()) {
-            try {
-              if (!Utils.getAvroNamespaceFor(ns).equals(
-                    valueType.getNamespace()))
-              {
-                // Namespaces do not mach. Try the next schema.
-                continue;
+          if ( valueType.getType().equals(Schema.Type.UNION) ) {
+            /* This XML document has multiple sibling tags representable as
+             * MAPs.  We need to cycle through them and find the best fit.
+             */
+            for (mapSchemaIndex = 0;
+                mapSchemaIndex < valueType.getTypes().size();
+                ++mapSchemaIndex) {
+              final Schema unionType = valueType.getTypes().get(mapSchemaIndex);
+              if ( !unionType.getType().equals(Schema.Type.RECORD) ) {
+                throw new IllegalStateException("MAPs in Avro Schemas for XML documents must have a value type of either RECORD or UNION of RECORD, not UNION with " + unionType.getType());
               }
-            } catch (URISyntaxException e) {
-              throw new IllegalStateException("Element \"" + element.getQName() + "\" has a namespace that is not a valid URI", e);
+              if (typeMatchesElement(unionType, element)) {
+                elemSchema = possibleSchema;
+                break;
+              }
+            }
+
+            /* If we walked through all of the map elements and did
+             * not find a matching UNION, reset the mapSchemaIndex
+             * and check the next candidate.
+             */
+            if (elemSchema == null) {
+              mapSchemaIndex = -1;
+              continue;
+            } else {
+              // We found the element!  Stop looking.
+              break;
             }
           }
+        }
 
-          // We found the schema!
+        if ( !valueType.getType().equals(Schema.Type.RECORD) ) {
+          throw new IllegalStateException("RECORD, MAP of RECORD, and MAP of UNION of RECORD are allowed.  " + valueType.getType() + " cannot exist in any level of that hierarchy.");
+        }
+
+        /* If we reach here, we have not found the schema, and valueType is of
+         * type RECORD (either the original RECORD or the child of a MAP) and
+         * needs to be checked.
+         */
+        if (typeMatchesElement(valueType, element)) {
           elemSchema = possibleSchema;
           break;
         }
@@ -298,7 +318,8 @@ final class AvroSchemaApplier {
         recordInfo = new AvroRecordInfo(elemSchema);
         avroRecordStack.add(recordInfo);
       } else {
-        recordInfo = new AvroRecordInfo(elemSchema, schemaIndex);
+        recordInfo =
+            new AvroRecordInfo(elemSchema, schemaIndex, mapSchemaIndex);
 
         /* Maps will be counted separately, as their
          * children are not part of this array.
@@ -432,6 +453,32 @@ final class AvroSchemaApplier {
         throw new IllegalArgumentException("If the Avro Schema is a UNION of MAPs or an ARRAY of UNION of MAPs, all MAP value types must be RECORD, not " + unionType.getValueType().getType());
       }
     }
+  }
+
+  private boolean typeMatchesElement(Schema type, XmlSchemaElement element) {
+    boolean match = false;
+
+    if (type.getName().equals( element.getName() )) {
+      // Confirm the namespaces match.
+      String ns = element.getQName().getNamespaceURI();
+      if ((ns != null) && !ns.isEmpty()) {
+        try {
+          if (Utils.getAvroNamespaceFor(ns).equals(
+                type.getNamespace()))
+          {
+            // Namespaces match.
+            match = true;
+          }
+        } catch (URISyntaxException e) {
+          throw new IllegalStateException("Element \"" + element.getQName() + "\" has a namespace that is not a valid URI", e);
+        }
+      } else {
+        // There is no namespace; auto-match.
+        match = true;
+      }
+    }
+
+    return match;
   }
 
   /* Confirms two XML Schema simple types are equivalent.  Supported types are:

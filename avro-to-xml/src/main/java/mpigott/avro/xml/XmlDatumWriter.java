@@ -180,7 +180,19 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             }
           case ITEM_START:
             {
+              out.startItem();
+
               avroSchema = avroSchema.getValueType();
+
+              /* If the MAP value is another UNION, reach
+               * into that one to fetch the schema.
+               */
+              final int mapUnionIndex = recordInfo.getMapUnionIndex();
+              if (mapUnionIndex >= 0) {
+                out.writeIndex(mapUnionIndex);
+                avroSchema = avroSchema.getTypes().get(mapUnionIndex);
+              }
+
               String key = null;
 
               for (int fieldIndex = 0;
@@ -215,7 +227,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 throw new IllegalStateException("Unable to find key for element " + elemName);
               }
 
-              out.startItem();
               out.writeString(key);
               break;
             }

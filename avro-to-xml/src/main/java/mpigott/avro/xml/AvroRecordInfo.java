@@ -39,12 +39,14 @@ final class AvroRecordInfo {
   public AvroRecordInfo(Schema avroSchema) {
     this.avroSchema = avroSchema;
     this.unionIndex = -1;
+    this.mapUnionIndex = -1;
     this.numChildren = 0;
   }
 
-  public AvroRecordInfo(Schema avroSchema, int unionIndex) {
+  public AvroRecordInfo(Schema avroSchema, int unionIndex, int mapUnionIndex) {
     this.avroSchema = avroSchema;
     this.unionIndex = unionIndex;
+    this.mapUnionIndex = mapUnionIndex;
     this.numChildren = 0;
   }
 
@@ -54,6 +56,10 @@ final class AvroRecordInfo {
 
   int getUnionIndex() {
     return unionIndex;
+  }
+
+  int getMapUnionIndex() {
+    return mapUnionIndex;
   }
 
   int getNumChildren() {
@@ -66,6 +72,7 @@ final class AvroRecordInfo {
 
   private final Schema avroSchema;
   private final int unionIndex;
+  private final int mapUnionIndex;
 
   private int numChildren;
 }
