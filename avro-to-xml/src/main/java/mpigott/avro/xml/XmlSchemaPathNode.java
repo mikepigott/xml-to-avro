@@ -24,7 +24,7 @@ import java.util.List;
  *
  * @author  Mike Pigott
  */
-final class XmlSchemaPathNode<U> {
+final class XmlSchemaPathNode<U, V> {
 
   enum Direction {
     PARENT,
@@ -174,7 +174,7 @@ final class XmlSchemaPathNode<U> {
     iterationNum = newIteration;
   }
 
-  void setDocumentNode(XmlSchemaDocumentNode docNode) {
+  void setDocumentNode(XmlSchemaDocumentNode<U> docNode) {
     if (docNode.getStateMachineNode() != stateMachineNode) {
       throw new IllegalArgumentException("The document node's state machine (" + docNode.getStateMachineNode() + ") must use the same state machine node as this path node (" + stateMachineNode + ")");
     }
@@ -227,7 +227,7 @@ final class XmlSchemaPathNode<U> {
    * @return The old previous node.
    */
   XmlSchemaPathNode setPreviousNode(XmlSchemaPathNode newPrevious) {
-    final XmlSchemaPathNode oldPrevious = prevNode;
+    final XmlSchemaPathNode<U, V> oldPrevious = prevNode;
     prevNode = newPrevious;
     return oldPrevious;
   }
@@ -266,6 +266,15 @@ final class XmlSchemaPathNode<U> {
     iterationNum = 0;
     prevNode = newPrevious;
     nextNode = null;
+    userDefinedContent = null;
+  }
+
+  V getUserDefinedContent() {
+    return userDefinedContent;
+  }
+
+  void setUserDefinedContent(V content) {
+    userDefinedContent = content;
   }
 
   private int localHashCode(int prime) {
@@ -312,7 +321,8 @@ final class XmlSchemaPathNode<U> {
   private XmlSchemaStateMachineNode stateMachineNode;
   private int nextNodeStateIndex;
   private int iterationNum;
+  private V userDefinedContent;
 
-  private XmlSchemaPathNode<U> prevNode;
-  private XmlSchemaPathNode<U> nextNode;
+  private XmlSchemaPathNode<U, V> prevNode;
+  private XmlSchemaPathNode<U, V> nextNode;
 }

@@ -28,28 +28,28 @@ import java.util.Map;
  *
  * @author  Mike Pigott
  */
-final class XmlSchemaPathManager<U> {
+final class XmlSchemaPathManager<U, V> {
 
   /**
    * Constructs the document path node factory.
    */
   public XmlSchemaPathManager() {
-    unusedPathNodes = new ArrayList<XmlSchemaPathNode<U>>();
+    unusedPathNodes = new ArrayList<XmlSchemaPathNode<U, V>>();
     unusedDocNodes = new ArrayList<XmlSchemaDocumentNode<U>>();
   }
 
-  XmlSchemaPathNode<U> createStartPathNode(
+  XmlSchemaPathNode<U, V> createStartPathNode(
       XmlSchemaPathNode.Direction direction,
       XmlSchemaStateMachineNode state) {
 
     return createPathNode(direction, null, state);
   }
 
-  XmlSchemaPathNode<U> createStartPathNode(
+  XmlSchemaPathNode<U, V> createStartPathNode(
       XmlSchemaPathNode.Direction direction,
-      XmlSchemaDocumentNode documentNode) {
+      XmlSchemaDocumentNode<U> documentNode) {
 
-    XmlSchemaPathNode<U> node =
+    XmlSchemaPathNode<U, V> node =
         createStartPathNode(direction, documentNode.getStateMachineNode());
     node.setDocumentNode(documentNode);
     node.setIteration(documentNode.getIteration());
@@ -57,8 +57,8 @@ final class XmlSchemaPathManager<U> {
     return node;
   }
 
-  XmlSchemaPathNode<U> addParentSiblingOrContentNodeToPath(
-      XmlSchemaPathNode<U> startNode,
+  XmlSchemaPathNode<U, V> addParentSiblingOrContentNodeToPath(
+      XmlSchemaPathNode<U, V> startNode,
       XmlSchemaPathNode.Direction direction) {
 
     XmlSchemaDocumentNode position = startNode.getDocumentNode();
@@ -78,13 +78,13 @@ final class XmlSchemaPathManager<U> {
       throw new IllegalStateException("This method cannot be called if following a child.  Use addChildNodeToPath(startNode, direction, stateIndex).");
     }
 
-    XmlSchemaPathNode<U> node = null;
+    XmlSchemaPathNode<U, V> node = null;
     if ( !unusedPathNodes.isEmpty() ) {
       node =
           unusedPathNodes.remove(unusedPathNodes.size() - 1);
       node.update(direction, startNode, position);
     } else {
-      node = new XmlSchemaPathNode<U>(direction, startNode, position);
+      node = new XmlSchemaPathNode<U, V>(direction, startNode, position);
     }
 
     if ( direction.equals(XmlSchemaPathNode.Direction.SIBLING) ) {
@@ -96,8 +96,8 @@ final class XmlSchemaPathManager<U> {
     return node;
   }
 
-  XmlSchemaPathNode<U> addChildNodeToPath(
-      XmlSchemaPathNode<U> startNode,
+  XmlSchemaPathNode<U, V> addChildNodeToPath(
+      XmlSchemaPathNode<U, V> startNode,
       int branchIndex) {
 
     final XmlSchemaStateMachineNode stateMachine =
@@ -109,7 +109,7 @@ final class XmlSchemaPathManager<U> {
       throw new IllegalArgumentException("Cannot follow the branch index; branch " + branchIndex + " was requested when there are only " + stateMachine.getPossibleNextStates().size() + " branches to follow.");
     }
 
-    final XmlSchemaPathNode<U> next =
+    final XmlSchemaPathNode<U, V> next =
         createPathNode(
             XmlSchemaPathNode.Direction.CHILD,
             startNode,
@@ -132,7 +132,7 @@ final class XmlSchemaPathManager<U> {
    * Recyles the provided {@link XmlSchemaPathNode} and all of
    * the nodes that follow it.  Unlinks from its previous node.
    */
-  void recyclePathNode(XmlSchemaPathNode<U> toRecycle) {
+  void recyclePathNode(XmlSchemaPathNode<U, V> toRecycle) {
     if (toRecycle.getPrevious() != null) {
       toRecycle.getPrevious().setNextNode(-1, null);
       toRecycle.setPreviousNode(null);
@@ -145,8 +145,8 @@ final class XmlSchemaPathManager<U> {
     unusedPathNodes.add(toRecycle);
   }
 
-  XmlSchemaPathNode<U> clone(XmlSchemaPathNode<U> original) {
-    final XmlSchemaPathNode<U> clone =
+  XmlSchemaPathNode<U, V> clone(XmlSchemaPathNode<U, V> original) {
+    final XmlSchemaPathNode<U, V> clone =
         createPathNode(
             original.getDirection(),
             original.getPrevious(),
@@ -167,7 +167,7 @@ final class XmlSchemaPathManager<U> {
    *
    * @param startNode The node to start building the tree from.
    */
-  void followPath(XmlSchemaPathNode<U> startNode) {
+  void followPath(XmlSchemaPathNode<U, V> startNode) {
     if (startNode.getDocumentNode() == null) {
       if (!startNode
              .getDirection()
@@ -182,8 +182,8 @@ final class XmlSchemaPathManager<U> {
       rootDoc.addVisitor(startNode);
     }
 
-    XmlSchemaPathNode<U> prev = startNode;
-    XmlSchemaPathNode<U> iter = prev.getNext();
+    XmlSchemaPathNode<U, V> prev = startNode;
+    XmlSchemaPathNode<U, V> iter = prev.getNext();
     while (iter != null) {
       if (iter.getDocumentNode() == null) {
         if ( !iter.getDirection().equals(XmlSchemaPathNode.Direction.CHILD) ) {
@@ -224,10 +224,10 @@ final class XmlSchemaPathManager<U> {
     }
   }
 
-  void unfollowPath(XmlSchemaPathNode<U> startNode) {
+  void unfollowPath(XmlSchemaPathNode<U, V> startNode) {
     // Walk to the end and work backwards, recycling as we go.
-    XmlSchemaPathNode<U> iter = startNode;
-    XmlSchemaPathNode<U> prev = null;
+    XmlSchemaPathNode<U, V> iter = startNode;
+    XmlSchemaPathNode<U, V> prev = null;
 
     while (iter != null) {
       prev = iter;
@@ -253,13 +253,13 @@ final class XmlSchemaPathManager<U> {
     unusedDocNodes.clear();
   }
 
-  private XmlSchemaPathNode<U> createPathNode(
+  private XmlSchemaPathNode<U, V> createPathNode(
       XmlSchemaPathNode.Direction direction,
-      XmlSchemaPathNode<U> previous,
+      XmlSchemaPathNode<U, V> previous,
       XmlSchemaStateMachineNode state) {
     
     if ( !unusedPathNodes.isEmpty() ) {
-      XmlSchemaPathNode<U> node =
+      XmlSchemaPathNode<U, V> node =
           unusedPathNodes.remove(unusedPathNodes.size() - 1);
       node.update(direction, previous, state);
       return node;
@@ -306,6 +306,6 @@ final class XmlSchemaPathManager<U> {
     }
   }
 
-  private ArrayList<XmlSchemaPathNode<U>> unusedPathNodes;
+  private ArrayList<XmlSchemaPathNode<U, V>> unusedPathNodes;
   private ArrayList<XmlSchemaDocumentNode<U>> unusedDocNodes;
 }

@@ -135,12 +135,10 @@ public class TestAvroSchemaApplier {
     // 2. Confirm the Avro Schema conforms to the XML Schema
     AvroSchemaApplier applier = new AvroSchemaApplier(avroSchema, true);
 
-    final HashMap<QName, List<List<Integer>>> occurrencesByName =
-        new HashMap<QName, List<List<Integer>>>();
-    applier.apply(rootPath, occurrencesByName);
+    applier.apply(rootPath);
 
     final int numElemsProcessed =
-        checkDoc(rootDoc, occurrencesByName);
+        checkDoc(rootDoc, null);
     assertEquals(18, numElemsProcessed);
   }
 
@@ -164,7 +162,7 @@ public class TestAvroSchemaApplier {
           doc.getStateMachineNode().getElement().getName(),
           schema.getName());
 
-      if ( schema.getType().equals(Schema.Type.MAP) ) {
+      if (schema.getType().equals(Schema.Type.MAP) && (mapOccurrencesByName != null)) {
         final QName elemQName =
             doc.getStateMachineNode().getElement().getQName();
         if (!mapOccurrencesByName.containsKey(elemQName)) {

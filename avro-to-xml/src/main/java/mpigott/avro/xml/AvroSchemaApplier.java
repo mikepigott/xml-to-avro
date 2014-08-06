@@ -108,16 +108,13 @@ final class AvroSchemaApplier {
   }
 
   void apply(
-      XmlSchemaPathNode<AvroRecordInfo> pathStart,
-      Map<QName, List<List<Integer>>> mapOccurrencesByName) {
+      XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> pathStart) {
 
     // Add schema information to the document tree.
     apply(pathStart.getDocumentNode());
 
     // Count maps.
-    if (mapOccurrencesByName != null) {
-      findMaps(pathStart, mapOccurrencesByName);
-    }
+    findMaps(pathStart);
   }
 
   private void apply(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
@@ -580,8 +577,10 @@ final class AvroSchemaApplier {
    * @param path The path to check if is a map node.
    */
   private void findMaps(
-      XmlSchemaPathNode<AvroRecordInfo> path,
-      Map<QName, List<List<Integer>>> occurrencesByName) {
+      XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path) {
+
+    Map<QName, List<List<Integer>>> occurrencesByName =
+        new HashMap<QName, List<List<Integer>>>();
 
     final ArrayList<StackEntry> docNodeStack =
         new ArrayList<StackEntry>();
