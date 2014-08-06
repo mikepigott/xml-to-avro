@@ -52,15 +52,15 @@ public final class XmlSchemaElementValidator {
 
     for (XmlSchemaStateMachineNode.Attribute attribute : attributes) {
       final XmlSchemaAttribute xmlSchemaAttr = attribute.getAttribute();
-      final QName attrName = xmlSchemaAttr.getQName();
+      final QName attrQName = xmlSchemaAttr.getQName();
       final XmlSchemaUse use = xmlSchemaAttr.getUse();
 
       String value =
-          attrs.getValue(attrName.getNamespaceURI(), attrName.getLocalPart());
+          attrs.getValue(attrQName.getNamespaceURI(), attrQName.getLocalPart());
 
       if (value == null) {
         // A namespace is not always available.
-        value = attrs.getValue("", attrName.getLocalPart());
+        value = attrs.getValue("", attrQName.getLocalPart());
       }
 
       // Confirm the attribute is used correctly.
@@ -69,12 +69,12 @@ public final class XmlSchemaElementValidator {
         break;
       case PROHIBITED:
         if ((value != null) && !value.isEmpty()) {
-          throw new IllegalArgumentException("Attribute " + attrName + " was declared 'prohibited' by " + elemQName + " and cannot have a value.");
+          throw new IllegalArgumentException("Attribute " + attrQName + " was declared 'prohibited' by " + elemQName + " and cannot have a value.");
         }
         break;
       case REQUIRED:
         if ((value == null) || value.isEmpty()) {
-          throw new IllegalArgumentException("Attribute " + attrName + " was declared 'required' by " + elemQName + " and must have a value.");
+          throw new IllegalArgumentException("Attribute " + attrQName + " was declared 'required' by " + elemQName + " and must have a value.");
         }
         break;
       case NONE:
@@ -82,7 +82,7 @@ public final class XmlSchemaElementValidator {
          * was already taken care of by XmlSchemaWalker.
          */
       default:
-        throw new IllegalArgumentException("Attribute " + attrName + " has an unrecognized usage of " + use + ".");
+        throw new IllegalArgumentException("Attribute " + attrQName + " has an unrecognized usage of " + use + ".");
       }
 
       /* If the value is null or empty there is no
@@ -92,9 +92,7 @@ public final class XmlSchemaElementValidator {
         continue;
       }
 
-      final XmlSchemaTypeInfo attrTypeInfo = attribute.getType();
-      final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
-        facets = attrTypeInfo.getFacets();
+      validateType(elemQName + " / " + attrQName, value, attribute.getType());
     }
 
   }
@@ -103,5 +101,20 @@ public final class XmlSchemaElementValidator {
       XmlSchemaStateMachineNode state,
       String elementContent) {
     
+  }
+
+  private static void validateType(String name, String value, XmlSchemaTypeInfo typeInfo) {
+    final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
+      facets = typeInfo.getFacets();
+
+    switch ( typeInfo.getType() ) {
+    case ATOMIC:
+    case LIST:
+    case UNION:
+    case COMPLEX:
+      break;
+    default:
+      throw new IllegalArgumentException(name + " has an unrecognized type of " + typeInfo.getType());
+    }
   }
 }
