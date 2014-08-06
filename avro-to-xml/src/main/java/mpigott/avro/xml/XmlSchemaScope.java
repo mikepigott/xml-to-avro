@@ -618,7 +618,6 @@ final class XmlSchemaScope {
 
       if (baseType != null) {
         final XmlSchemaScope parentScope = getScope(baseType);
-        // TODO: Do we need to clone this?
         typeInfo = parentScope.getTypeInfo();
       }
 
@@ -736,6 +735,11 @@ final class XmlSchemaScope {
       id = globalAttr.getId();
     }
 
+    XmlSchemaUse attrUsage = attribute.getUse();
+    if ( attrUsage.equals(XmlSchemaUse.NONE) ) {
+      attrUsage = XmlSchemaUse.OPTIONAL;
+    }
+
     final XmlSchemaAttribute copy = new XmlSchemaAttribute(schema, false);
     copy.setName( globalAttr.getName() );
 
@@ -751,7 +755,7 @@ final class XmlSchemaScope {
     copy.setSchemaTypeName( globalAttr.getSchemaTypeName() );
     copy.setSourceURI( globalAttr.getSourceURI() );
     copy.setUnhandledAttributes( globalAttr.getUnhandledAttributes() );
-    copy.setUse( attribute.getUse() );
+    copy.setUse(attrUsage);
 
     return copy;
   }

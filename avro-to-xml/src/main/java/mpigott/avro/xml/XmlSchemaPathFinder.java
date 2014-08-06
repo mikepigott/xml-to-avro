@@ -23,6 +23,7 @@ import java.util.Map;
 import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.XmlSchemaAny;
+import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -628,32 +629,36 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         }
       }
 
-      if (nextPath != null) {
-        traversedElements.add(
-            new TraversedElement(elemQName, TraversedElement.Traversal.START));
-        elementStack.add(elemQName);
-
-        /* If this is element is of type xsd:any, we do not track it or its
-         * children.  So, we keep a stack of the element and its children,
-         * allowing us to know when we leave and can start tracking elements
-         * again.
-         */
-        if (currentPath
-              .getStateMachineNode()
-              .getNodeType()
-              .equals(XmlSchemaStateMachineNode.Type.ANY)) {
-          if (anyStack == null) {
-            anyStack = new ArrayList<QName>();
-          }
-          anyStack.add(elemQName);
-        }
-
-      } else {
+      if (nextPath == null) {
         /* If we go through all prior decision points and are unable to find
          * one or more paths through the XML Schema that match the document,
          * throw an error.  There is nothing more we can do here.
          */
         throw new IllegalStateException("Walked through XML Schema and could not find a traversal that represented this XML Document.");
+      }
+
+      /* Current path now points to the element we
+       * just started.  Validate its attributes.
+       */
+      validateAttributes(atts);
+
+      traversedElements.add(
+          new TraversedElement(elemQName, TraversedElement.Traversal.START));
+      elementStack.add(elemQName);
+
+      /* If this is element is of type xsd:any, we do not track it or its
+       * children.  So, we keep a stack of the element and its children,
+       * allowing us to know when we leave and can start tracking elements
+       * again.
+       */
+      if (currentPath
+            .getStateMachineNode()
+            .getNodeType()
+            .equals(XmlSchemaStateMachineNode.Type.ANY)) {
+        if (anyStack == null) {
+          anyStack = new ArrayList<QName>();
+        }
+        anyStack.add(elemQName);
       }
 
     } catch (Exception e) {
@@ -1701,6 +1706,20 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     }
 
     return iter.getStateMachineNode();
+  }
+
+  private void validateAttributes(Attributes attrs) {
+    if (currentPath
+          .getStateMachineNode()
+          .getNodeType()
+          .equals(XmlSchemaStateMachineNode.Type.ANY) ) {
+      // No validation is performed on ANY elements.
+      return;
+    }
+
+    XmlSchemaElementValidator.validateAttributes(
+        currentPath.getStateMachineNode(),
+        attrs);
   }
 
   private final XmlSchemaStateMachineNode rootNode;

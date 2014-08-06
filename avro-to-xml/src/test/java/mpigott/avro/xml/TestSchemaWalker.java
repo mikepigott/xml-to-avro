@@ -613,7 +613,7 @@ public class TestSchemaWalker {
     HashSet<XmlSchemaRestriction> listAttrFacets = (HashSet<XmlSchemaRestriction>) nonNegativeIntegerFacets.clone();
     listAttrFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.EXCLUSIVE_MAX, 100, false) );
     ArrayList<Attribute> listAttributes = new ArrayList<Attribute>(1);
-    listAttributes.add( new Attribute("size", null, XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, listAttrFacets) );
+    listAttributes.add( new Attribute("size", null, XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, listAttrFacets) );
     attributes.put("list", listAttributes);
 
     HashSet<XmlSchemaRestriction> mapAttrFacets = (HashSet<XmlSchemaRestriction>) ncNameFacets.clone();

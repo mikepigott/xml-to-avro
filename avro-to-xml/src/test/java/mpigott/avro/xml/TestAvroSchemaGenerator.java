@@ -143,7 +143,7 @@ public class TestAvroSchemaGenerator {
     assertTrue( rootSchemasByName.get("map").getType().equals(Schema.Type.MAP) );
 
     checkPrimitiveField(rootSchemasByName.get("map").getValueType().getField("id"), Type.STRING, null);
-    checkPrimitiveField(rootSchemasByName.get("list").getField("size"), Type.DOUBLE, null);
+    checkOptionalPrimitiveField(rootSchemasByName.get("list").getField("size"), Type.DOUBLE, null);
 
     assertNotNull( rootSchemasByName.get("record").getField("record") );
     assertNotNull( rootSchemasByName.get("list").getField("list") );

@@ -144,7 +144,7 @@
 		<xsd:complexType>
 			<xsd:complexContent>
 				<xsd:extension base="avro:recordType">
-					<xsd:attribute ref="avro:id" />
+					<xsd:attribute ref="avro:id" use="required" />
 				</xsd:extension>
 			</xsd:complexContent>
 		</xsd:complexType>
