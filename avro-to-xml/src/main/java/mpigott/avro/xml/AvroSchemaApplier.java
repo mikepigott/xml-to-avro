@@ -49,6 +49,7 @@ final class AvroSchemaApplier {
 
     final XmlSchemaDocumentNode<AvroRecordInfo> docNode;
     final XmlSchemaDocumentNode<AvroRecordInfo> parentNode;
+    int occurrence;
   }
 
   /**
@@ -579,13 +580,13 @@ final class AvroSchemaApplier {
   private void findMaps(
       XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path) {
 
-    Map<QName, List<List<Integer>>> occurrencesByName =
-        new HashMap<QName, List<List<Integer>>>();
+    Map<QName, List<List<AvroMapNode>>> occurrencesByName =
+        new HashMap<QName, List<List<AvroMapNode>>>();
 
     final ArrayList<StackEntry> docNodeStack =
         new ArrayList<StackEntry>();
 
-    QName mostRecentlyLeftMap = null;
+    AvroMapNode mostRecentlyLeftMap = null;
 
     int pathIndex = 0;
     while(path != null) {
@@ -607,34 +608,92 @@ final class AvroSchemaApplier {
 
       switch (path.getDirection()) {
       case SIBLING:
+        {
+          if (isElement) {
+            /* This is an element increasing its own occurrence.
+             * This means we need to pop the previous element off
+             * of the stack and start a new one.
+             */
+            final StackEntry stackEntry =
+                docNodeStack.remove(docNodeStack.size() - 1);
+
+            if (mostRecentlyLeftMap != null) {
+              addEndNode(occurrencesByName, mostRecentlyLeftMap);
+            }
+
+            mostRecentlyLeftMap = null;
+
+            if (stackEntry
+                  .docNode
+                  .getUserDefinedContent()
+                  .getAvroSchema()
+                  .getType().equals(Schema.Type.MAP) ) {
+
+              mostRecentlyLeftMap =
+                  new AvroMapNode(
+                      path,
+                      pathIndex,
+                      AvroMapNode.Type.MAP_END,
+                      stackEntry
+                        .docNode
+                        .getStateMachineNode()
+                        .getElement()
+                        .getQName(),
+                      stackEntry.occurrence);
+            }
+          }
+        }
       case CHILD:
         {
           if (isElement) {
-            docNodeStack.add( new StackEntry(path.getDocumentNode()) );
-          }
-          if (isMapNode) {
-            final QName currQName =
-                path
-                  .getStateMachineNode()
-                  .getElement()
-                  .getQName();
+            StackEntry entry = new StackEntry(path.getDocumentNode());
 
-            List<List<Integer>> occurrences = null;
-            if (!currQName.equals(mostRecentlyLeftMap)) {
-              final ArrayList<Integer> pathIndices = new ArrayList<Integer>();
-              pathIndices.add(pathIndex);
+            if (isMapNode) {
+              final QName currQName =
+                  path
+                    .getStateMachineNode()
+                    .getElement()
+                    .getQName();
 
-              if (!occurrencesByName.containsKey(currQName)) {
-                occurrences = new ArrayList<List<Integer>>();
-                occurrencesByName.put(currQName, occurrences);
+              List<List<AvroMapNode>> occurrences = null;
+              if ((mostRecentlyLeftMap == null)
+                  || !currQName.equals( mostRecentlyLeftMap.getQName() )) {
+
+                if (mostRecentlyLeftMap != null) {
+                  addEndNode(occurrencesByName, mostRecentlyLeftMap);
+                }
+
+                final ArrayList<AvroMapNode> pathIndices =
+                    new ArrayList<AvroMapNode>();
+                pathIndices.add(
+                    new AvroMapNode(
+                        path,
+                        pathIndex,
+                        AvroMapNode.Type.MAP_START));
+
+                if (!occurrencesByName.containsKey(currQName)) {
+                  occurrences = new ArrayList<List<AvroMapNode>>();
+                  occurrencesByName.put(currQName, occurrences);
+                } else {
+                  occurrences = occurrencesByName.get(currQName);
+                }
+                occurrences.add(pathIndices);
               } else {
                 occurrences = occurrencesByName.get(currQName);
+                occurrences
+                  .get(occurrences.size() - 1)
+                  .add(
+                      new AvroMapNode(
+                          path,
+                          pathIndex,
+                          AvroMapNode.Type.ITEM_START));
               }
-              occurrences.add(pathIndices);
-            } else {
-              occurrences = occurrencesByName.get(currQName);
-              occurrences.get(occurrences.size() - 1).add(pathIndex);
+
+              entry.occurrence = occurrences.size() - 1;
+              mostRecentlyLeftMap = null;
             }
+
+            docNodeStack.add(entry);
           }
           break;
         }
@@ -645,6 +704,11 @@ final class AvroSchemaApplier {
 
           if (stackEntry.parentNode == path.getDocumentNode()) {
             docNodeStack.remove(docNodeStack.size() - 1);
+
+            if (mostRecentlyLeftMap != null) {
+              addEndNode(occurrencesByName, mostRecentlyLeftMap);
+            }
+
             mostRecentlyLeftMap = null;
             if (stackEntry
                   .docNode
@@ -653,11 +717,16 @@ final class AvroSchemaApplier {
                   .getType().equals(Schema.Type.MAP) ) {
 
               mostRecentlyLeftMap =
-                  stackEntry
-                    .docNode
-                    .getStateMachineNode()
-                    .getElement()
-                    .getQName();
+                  new AvroMapNode(
+                      path,
+                      pathIndex,
+                      AvroMapNode.Type.MAP_END,
+                      stackEntry
+                        .docNode
+                        .getStateMachineNode()
+                        .getElement()
+                        .getQName(),
+                      stackEntry.occurrence);
             }
           }
 
@@ -676,6 +745,29 @@ final class AvroSchemaApplier {
     if (docNodeStack.size() != 1) {
       throw new IllegalStateException("Expected the stack to have one element in it at the end, but found " + docNodeStack.size() + ".");
     }
+
+    for (Map.Entry<QName, List<List<AvroMapNode>>> entry : occurrencesByName.entrySet()) {
+      System.err.println( entry.getKey() );
+      for (int index = 0; index < entry.getValue().size(); ++index) {
+        System.err.print("\tOccurrence: " + index + " has the following path nodes: ");
+        final List<AvroMapNode> pathIndices = entry.getValue().get(index);
+        for (pathIndex = 0; pathIndex < (pathIndices.size() - 1); ++pathIndex) {
+          System.err.print(pathIndices.get(pathIndex) + ", ");
+        }
+        System.err.println( pathIndices.get(pathIndices.size() - 1) );
+      }
+    }
+  }
+
+  private void addEndNode(
+      Map<QName, List<List<AvroMapNode>>> occurrencesByName,
+      AvroMapNode mostRecentlyLeftMap) {
+
+    final List<List<AvroMapNode>> occurrences =
+        occurrencesByName.get(mostRecentlyLeftMap.getQName());
+    final List<AvroMapNode> nodes =
+        occurrences.get(mostRecentlyLeftMap.getOccurrence());
+    nodes.add(mostRecentlyLeftMap);
   }
 
   private List<Schema> unionOfValidElementsStack;

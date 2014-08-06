@@ -16,6 +16,8 @@
 
 package mpigott.avro.xml;
 
+import javax.xml.namespace.QName;
+
 /**
  * Information about a {@link XmlSchemaPathNode} representing an Avro MAP.
  *
@@ -24,22 +26,34 @@ package mpigott.avro.xml;
 final class AvroMapNode {
 
   enum Type {
-    START,
-    MIDDLE,
-    END
+    MAP_START,
+    ITEM_START,
+    MAP_END
   }
 
-  /**
-   * Creates a new <code>AvroMapNode</code>.
-   */
-  AvroMapNode(
-      XmlSchemaPathNode pathNode,
-      int pathIndex,
-      Type type) {
-
+  AvroMapNode(XmlSchemaPathNode pathNode, int pathIndex, Type type, QName qName, int occurrence) {
     this.pathNode = pathNode;
     this.pathIndex = pathIndex;
+    this.qName = qName;
     this.type = type;
+    this.occurrence = occurrence;
+  }
+
+  AvroMapNode(XmlSchemaPathNode pathNode, int pathIndex, Type type) {
+    this(pathNode, pathIndex, type, null, 0);
+  }
+
+  QName getQName() {
+    if (qName != null) {
+      return qName;
+    } else if (pathNode
+                 .getStateMachineNode()
+                 .getNodeType()
+                 .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
+      return pathNode.getStateMachineNode().getElement().getQName();
+    } else {
+      return null;
+    }
   }
 
   XmlSchemaPathNode getPathNode() {
@@ -50,11 +64,27 @@ final class AvroMapNode {
     return pathIndex;
   }
 
+  int getOccurrence() {
+    return occurrence;
+  }
+
   Type getType() {
     return type;
   }
 
+  @Override
+  public String toString() {
+    StringBuilder str = new StringBuilder("[");
+    str.append(type).append(": ").append(pathIndex);
+    str.append(" ").append( pathNode.getDirection() );
+    str.append(" ").append( pathNode.getStateMachineNode() );
+    str.append("]");
+    return str.toString();
+  }
+
   private final XmlSchemaPathNode pathNode;
   private final int pathIndex;
+  private final QName qName;
+  private final int occurrence;
   private final Type type;
 }

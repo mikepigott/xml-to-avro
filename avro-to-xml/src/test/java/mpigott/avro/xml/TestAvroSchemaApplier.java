@@ -137,14 +137,11 @@ public class TestAvroSchemaApplier {
 
     applier.apply(rootPath);
 
-    final int numElemsProcessed =
-        checkDoc(rootDoc, null);
+    final int numElemsProcessed = checkDoc(rootDoc);
     assertEquals(18, numElemsProcessed);
   }
 
-  private int checkDoc(
-      XmlSchemaDocumentNode<AvroRecordInfo> doc,
-      Map<QName, List<List<Integer>>> mapOccurrencesByName) {
+  private int checkDoc(XmlSchemaDocumentNode<AvroRecordInfo> doc) {
     int numElemsProcessed = 0;
     if (doc
           .getStateMachineNode()
@@ -162,27 +159,6 @@ public class TestAvroSchemaApplier {
           doc.getStateMachineNode().getElement().getName(),
           schema.getName());
 
-      if (schema.getType().equals(Schema.Type.MAP) && (mapOccurrencesByName != null)) {
-        final QName elemQName =
-            doc.getStateMachineNode().getElement().getQName();
-        if (!mapOccurrencesByName.containsKey(elemQName)) {
-          fail("No map occurrences for " + elemQName);
-        }
-
-        final List<List<Integer>> occurrences =
-            mapOccurrencesByName.get(elemQName);
-
-        System.err.println(elemQName + " is a map with " + occurrences.size() + " occurrences");
-        for (int index = 0; index < occurrences.size(); ++index) {
-          System.err.print("\tOccurrence " + index + " has the following path nodes: ");
-          List<Integer> pathIndices = occurrences.get(index);
-          for (int pathIndex = 0; pathIndex < (pathIndices.size() - 1); ++pathIndex) {
-            System.err.print(pathIndices.get(pathIndex) + ", ");
-          }
-          System.err.println( pathIndices.get(pathIndices.size() - 1) );
-        }
-      }
-
       ++numElemsProcessed;
     } else {
       assertNull( doc.getUserDefinedContent() );
@@ -195,8 +171,7 @@ public class TestAvroSchemaApplier {
       if (children != null) {
         for (Map.Entry<Integer, XmlSchemaDocumentNode<AvroRecordInfo>> child :
               children.entrySet()) {
-          numElemsProcessed +=
-              checkDoc(child.getValue(), mapOccurrencesByName);
+          numElemsProcessed += checkDoc(child.getValue());
         }
       }
     }
