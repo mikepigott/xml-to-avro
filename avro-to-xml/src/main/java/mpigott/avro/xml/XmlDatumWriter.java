@@ -543,7 +543,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
       do {
         if (currLocation.getUserDefinedContent() != null) {
-          // TODO: Find a better home.
+          /* Ideally this would live somewhere else, but in a mixed element,
+           * a child end-element can be followed by content nodes, and not
+           * necessarily the parent.  So the only reliable place to check for
+           * a MAP_END (without duplicating code) is here.
+           */
           if (currLocation
                 .getUserDefinedContent()
                 .getType()
