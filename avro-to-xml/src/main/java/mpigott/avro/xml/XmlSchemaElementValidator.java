@@ -31,6 +31,11 @@ import javax.xml.datatype.DatatypeFactory;
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.namespace.QName;
 
+import jregex.Matcher;
+import jregex.Pattern;
+import jregex.PatternSyntaxException;
+import jregex.REFlags;
+
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaUse;
 import org.apache.xerces.util.URI;
@@ -427,6 +432,7 @@ public final class XmlSchemaElementValidator {
     }
 
     checkEnumerationFacet(name, value, facets);
+    checkPatternFacets(name, value, facets);
   }
 
   private static void rangeChecks(
@@ -709,7 +715,7 @@ public final class XmlSchemaElementValidator {
       return;
     }
 
-    List<XmlSchemaRestriction> enumFacets =
+    final List<XmlSchemaRestriction> enumFacets =
         facets.get(XmlSchemaRestriction.Type.ENUMERATION);
 
     if (enumFacets == null) {
@@ -735,6 +741,36 @@ public final class XmlSchemaElementValidator {
       errMsg.append("\"}.");
 
       throw new ValidationException( errMsg.toString() );
+    }
+  }
+
+  private static void checkPatternFacets(
+      String name,
+      String value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets)
+  throws ValidationException {
+
+    if (facets == null) {
+      return;
+    }
+
+    final List<XmlSchemaRestriction> patternFacets =
+        facets.get(XmlSchemaRestriction.Type.PATTERN);
+
+    if (patternFacets == null) {
+      return;
+    }
+
+    for (XmlSchemaRestriction patternFacet : patternFacets) {
+      final Pattern pattern =
+          new Pattern(patternFacet.getValue().toString(), REFlags.XML_SCHEMA);
+      final Matcher matcher =
+          pattern.matcher(value);
+
+      if ( !matcher.matches() ) {
+        // TODO: Figure out what the pattern "[\i-[:]][\c-[:]]*" is and why it doesn't match anything.
+        //throw new ValidationException(name + " value \"" + value + "\" does not fulfill pattern " + patternFacet.getValue());
+      }
     }
   }
 }
