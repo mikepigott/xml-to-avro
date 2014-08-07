@@ -206,6 +206,7 @@ public final class XmlSchemaElementValidator {
               item,
               typeInfo.getChildTypes().get(0));
         }
+        listLengthChecks(name, values, facets);
         break;
       }
     case UNION:
@@ -264,7 +265,7 @@ public final class XmlSchemaElementValidator {
        */
     case STRING:
       // Text plus facets.
-      DatatypeConverter.parseString(value);
+      stringLengthChecks(name, DatatypeConverter.parseString(value), facets);
       break;
 
     case DURATION:
@@ -429,7 +430,7 @@ public final class XmlSchemaElementValidator {
       String name,
       BigDecimal value,
       Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets)
-          throws ValidationException {
+  throws ValidationException {
 
     if (facets == null) {
       return;
@@ -448,8 +449,7 @@ public final class XmlSchemaElementValidator {
       XmlSchemaRestriction.Type rangeType)
   throws ValidationException {
 
-    List<XmlSchemaRestriction> rangeFacets =
-        facets.get(rangeType);
+    final List<XmlSchemaRestriction> rangeFacets = facets.get(rangeType);
 
     boolean satisfied = true;
     BigDecimal compareTo = null;
@@ -510,5 +510,113 @@ public final class XmlSchemaElementValidator {
     }
 
     return newValue;
+  }
+
+  private static void stringLengthChecks(
+      String name,
+      String value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets)
+  throws ValidationException {
+
+    if (facets == null) {
+      return;
+    }
+
+    stringLengthCheck(name, value, facets, XmlSchemaRestriction.Type.LENGTH);
+    stringLengthCheck(name, value, facets, XmlSchemaRestriction.Type.LENGTH_MIN);
+    stringLengthCheck(name, value, facets, XmlSchemaRestriction.Type.LENGTH_MAX);
+  }
+
+  private static void stringLengthCheck(
+      String name,
+      String value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets,
+      XmlSchemaRestriction.Type facetType)
+  throws ValidationException {
+
+    final List<XmlSchemaRestriction> lengthFacets = facets.get(facetType);
+    int lengthRestriction = -1;
+    boolean satisfied = true;
+
+    if (lengthFacets != null) {
+      for (XmlSchemaRestriction lengthFacet : lengthFacets) {
+        lengthRestriction = Integer.parseInt( lengthFacet.getValue().toString() );
+        switch (facetType) {
+        case LENGTH:
+          satisfied = (value.length() == lengthRestriction);
+          break;
+        case LENGTH_MIN:
+          satisfied = (value.length() >= lengthRestriction);
+          break;
+        case LENGTH_MAX:
+          satisfied = (value.length() <= lengthRestriction);
+          break;
+        default:
+          throw new IllegalArgumentException("Cannot perform a length restriction of type " + facetType);
+        }
+
+        if (!satisfied) {
+          break;
+        }
+      }
+    }
+
+    if (!satisfied) {
+      throw new ValidationException(name + " value \"" + value + "\" does not meet the " + facetType + " restriction of " + lengthRestriction + ".");
+    }
+  }
+
+  private static void listLengthChecks(
+      String name,
+      String[] value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets)
+  throws ValidationException {
+
+    if (facets == null) {
+      return;
+    }
+
+    listLengthCheck(name, value, facets, XmlSchemaRestriction.Type.LENGTH);
+    listLengthCheck(name, value, facets, XmlSchemaRestriction.Type.LENGTH_MIN);
+    listLengthCheck(name, value, facets, XmlSchemaRestriction.Type.LENGTH_MAX);
+  }
+
+  private static void listLengthCheck(
+      String name,
+      String[] value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets,
+      XmlSchemaRestriction.Type facetType)
+  throws ValidationException {
+
+    final List<XmlSchemaRestriction> lengthFacets = facets.get(facetType);
+    int lengthRestriction = -1;
+    boolean satisfied = true;
+
+    if (lengthFacets != null) {
+      for (XmlSchemaRestriction lengthFacet : lengthFacets) {
+        lengthRestriction = Integer.parseInt( lengthFacet.getValue().toString() );
+        switch (facetType) {
+        case LENGTH:
+          satisfied = (value.length == lengthRestriction);
+          break;
+        case LENGTH_MIN:
+          satisfied = (value.length >= lengthRestriction);
+          break;
+        case LENGTH_MAX:
+          satisfied = (value.length <= lengthRestriction);
+          break;
+        default:
+          throw new IllegalArgumentException("Cannot perform a length restriction of type " + facetType);
+        }
+
+        if (!satisfied) {
+          break;
+        }
+      }
+    }
+
+    if (!satisfied) {
+      throw new ValidationException(name + " value of length " + value.length + " does not meet the " + facetType + " restriction of " + lengthRestriction + ".");
+    }
   }
 }
