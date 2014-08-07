@@ -16,6 +16,8 @@
 
 package mpigott.avro.xml;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -250,10 +252,16 @@ public final class XmlSchemaElementValidator {
       throw new ValidationException(name + " cannot have a null or empty value when validating.");
     }
 
+    final Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets =
+        typeInfo.getFacets();
+
     switch( typeInfo.getBaseType() ) {
     case ANYTYPE:
     case ANYSIMPLETYPE:
     case ANYURI:
+      /* anyURI has no equivalent type in Java.
+       * (from http://docs.oracle.com/cd/E19159-01/819-3669/bnazf/index.html)
+       */
     case STRING:
       // Text plus facets.
       DatatypeConverter.parseString(value);
@@ -358,7 +366,10 @@ public final class XmlSchemaElementValidator {
 
     case FLOAT:
       try {
-        DatatypeConverter.parseFloat(value);
+        rangeChecks(
+            name,
+            new BigDecimal( DatatypeConverter.parseFloat(value) ),
+            facets);
       } catch (NumberFormatException iae) {
         throw new ValidationException(name + " value of \"" + value + "\" is not a valid float.", iae);
       }
@@ -366,7 +377,10 @@ public final class XmlSchemaElementValidator {
 
     case DECIMAL:
       try {
-        DatatypeConverter.parseDecimal(value);
+        rangeChecks(
+            name,
+            DatatypeConverter.parseDecimal(value),
+            facets);
       } catch (NumberFormatException iae) {
         throw new ValidationException(name + " value of \"" + value + "\" is not a valid decimal.", iae);
       }
@@ -374,7 +388,10 @@ public final class XmlSchemaElementValidator {
 
     case DOUBLE:
       try {
-        DatatypeConverter.parseDouble(value);
+        rangeChecks(
+            name,
+            new BigDecimal( DatatypeConverter.parseDouble(value) ),
+            facets);
       } catch (NumberFormatException iae) {
         throw new ValidationException(name + " value of \"" + value + "\" is not a valid double.", iae);
       }
@@ -406,5 +423,92 @@ public final class XmlSchemaElementValidator {
     default:
       throw new ValidationException(name + " has an unrecognized base value type of " + typeInfo.getBaseType());
     }
+  }
+
+  private static void rangeChecks(
+      String name,
+      BigDecimal value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets)
+          throws ValidationException {
+
+    if (facets == null) {
+      return;
+    }
+
+    rangeCheck(name, value, facets, XmlSchemaRestriction.Type.EXCLUSIVE_MIN);
+    rangeCheck(name, value, facets, XmlSchemaRestriction.Type.INCLUSIVE_MIN);
+    rangeCheck(name, value, facets, XmlSchemaRestriction.Type.EXCLUSIVE_MAX);
+    rangeCheck(name, value, facets, XmlSchemaRestriction.Type.INCLUSIVE_MAX);
+  }
+
+  private static void rangeCheck(
+      String name,
+      BigDecimal value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets,
+      XmlSchemaRestriction.Type rangeType)
+  throws ValidationException {
+
+    List<XmlSchemaRestriction> rangeFacets =
+        facets.get(rangeType);
+
+    boolean satisfied = true;
+    BigDecimal compareTo = null;
+
+    if ((rangeFacets != null) && !rangeFacets.isEmpty()) {
+      for (XmlSchemaRestriction rangeFacet : rangeFacets) {
+        compareTo = getBigDecimalOf( rangeFacet.getValue() );
+        final int comparison = value.compareTo(compareTo);
+
+        switch (rangeType) {
+        case EXCLUSIVE_MIN:
+          satisfied = (comparison > 0);
+          break;
+        case INCLUSIVE_MIN:
+          satisfied = (comparison >= 0);
+          break;
+        case EXCLUSIVE_MAX:
+          satisfied = (comparison < 0);
+          break;
+        case INCLUSIVE_MAX:
+          satisfied = (comparison <= 0);
+          break;
+        default:
+          throw new ValidationException("Cannot perform a range check of type " + rangeType);
+        }
+
+        if (!satisfied) {
+          break;
+        }
+      }
+    }
+
+    if (!satisfied) {
+      throw new ValidationException(name + " value \"" + value + "\" violates the " + rangeType + " restriction of " + compareTo + ".");
+    }
+  }
+
+  private static BigDecimal getBigDecimalOf(Object numericValue) {
+    BigDecimal newValue = null;
+
+    if (numericValue instanceof BigDecimal) {
+      newValue = (BigDecimal) numericValue;
+
+    } else if (numericValue instanceof Double) {
+      newValue = new BigDecimal(((Double) numericValue).doubleValue());
+
+    } else if (numericValue instanceof Float) {
+      newValue = new BigDecimal(((Float) numericValue).floatValue());
+
+    } else if (numericValue instanceof BigInteger) {
+      newValue = new BigDecimal((BigInteger) numericValue);
+
+    } else if (numericValue instanceof Number) {
+      newValue = new BigDecimal(((Number) numericValue).longValue());
+
+    } else {
+      throw new IllegalArgumentException(numericValue.getClass().getName() + " is not a subclass of java.lang.Number.");
+    }
+
+    return newValue;
   }
 }
