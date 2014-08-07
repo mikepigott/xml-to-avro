@@ -385,6 +385,7 @@ public final class XmlSchemaElementValidator {
       } catch (NumberFormatException iae) {
         throw new ValidationException(name + " value of \"" + value + "\" is not a valid decimal.", iae);
       }
+      digitsFacetChecks(name, value, facets);
       break;
 
     case DOUBLE:
@@ -617,6 +618,82 @@ public final class XmlSchemaElementValidator {
 
     if (!satisfied) {
       throw new ValidationException(name + " value of length " + value.length + " does not meet the " + facetType + " restriction of " + lengthRestriction + ".");
+    }
+  }
+
+  private static void digitsFacetChecks(
+      String name,
+      String value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets)
+  throws ValidationException {
+
+    if (facets == null) {
+      return;
+    }
+
+    String[] numSplit = value.split("\\.");
+    if ((numSplit.length == 0) || (numSplit.length > 2)) {
+      throw new ValidationException(name + " value \"" + value + "\" is expected to have one or two sections around the decimal point, not " + numSplit.length + ".");
+    }
+
+    if (numSplit.length > 1) {
+      digitsFacetCheck(
+          name,
+          numSplit,
+          facets,
+          XmlSchemaRestriction.Type.DIGITS_FRACTION);
+    }
+
+    digitsFacetCheck(
+        name,
+        numSplit,
+        facets,
+        XmlSchemaRestriction.Type.DIGITS_TOTAL);
+  }
+
+  private static void digitsFacetCheck(
+      String name,
+      String[] value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets,
+      XmlSchemaRestriction.Type facetType)
+  throws ValidationException {
+
+    final List<XmlSchemaRestriction> digitsFacets = facets.get(facetType);
+    int numDigits = 0;
+    boolean satisfied = true;
+
+    if (digitsFacets != null) {
+      for (XmlSchemaRestriction digitsFacet : digitsFacets) {
+        numDigits = Integer.parseInt( digitsFacet.getValue().toString() );
+        switch (facetType) {
+        case DIGITS_FRACTION:
+          satisfied = (value[1].length() <= numDigits);
+          break;
+        case DIGITS_TOTAL:
+        {
+          int totalDigits = value[0].length();
+          if (value.length == 2) {
+            totalDigits += value[1].length();
+          }
+          satisfied = (totalDigits <= numDigits);
+          break;
+        }
+        default:
+          throw new IllegalArgumentException("Cannot perform a digits facet check with a facet of type " + facetType);
+        }
+      }
+    }
+
+    if (!satisfied) {
+      StringBuilder errMsg = new StringBuilder(name);
+      errMsg.append(" value \"").append(value[0]);
+      if (value.length > 1) {
+        errMsg.append('.').append(value[1]);
+      }
+      errMsg.append(" does not meet the ").append(facetType);
+      errMsg.append(" check of ").append(numDigits).append(" digits.");
+
+      throw new ValidationException( errMsg.toString() );
     }
   }
 }
