@@ -425,6 +425,8 @@ public final class XmlSchemaElementValidator {
     default:
       throw new ValidationException(name + " has an unrecognized base value type of " + typeInfo.getBaseType());
     }
+
+    checkEnumerationFacet(name, value, facets);
   }
 
   private static void rangeChecks(
@@ -692,6 +694,45 @@ public final class XmlSchemaElementValidator {
       }
       errMsg.append(" does not meet the ").append(facetType);
       errMsg.append(" check of ").append(numDigits).append(" digits.");
+
+      throw new ValidationException( errMsg.toString() );
+    }
+  }
+
+  private static void checkEnumerationFacet(
+      String name,
+      String value,
+      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets)
+  throws ValidationException {
+
+    if (facets == null) {
+      return;
+    }
+
+    List<XmlSchemaRestriction> enumFacets =
+        facets.get(XmlSchemaRestriction.Type.ENUMERATION);
+
+    if (enumFacets == null) {
+      return;
+    }
+
+    boolean found = false;
+    for (XmlSchemaRestriction enumFacet : enumFacets) {
+      if ( value.equals(enumFacet.getValue().toString()) ) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      StringBuilder errMsg = new StringBuilder(name);
+      errMsg.append(" value \"").append(value).append("\" is not a member of");
+      errMsg.append(" the enumeration {\"");
+      for (int enumIndex = 0; enumIndex < enumFacets.size() - 1; ++enumIndex) {
+        errMsg.append( enumFacets.get(enumIndex).getValue() ).append("\", \"");
+      }
+      errMsg.append( enumFacets.get(enumFacets.size() - 1).getValue() );
+      errMsg.append("\"}.");
 
       throw new ValidationException( errMsg.toString() );
     }
