@@ -81,6 +81,20 @@ final class DomBuilderFromSax extends DefaultHandler {
 
     if ( !elementStack.isEmpty() ) {
       elementStack.get(elementStack.size() - 1).appendChild(element);
+    } else {
+      document.appendChild(element);
+    }
+
+    for (int attrIndex = 0; attrIndex < atts.getLength(); ++attrIndex) {
+      String attrUri   = atts.getURI(attrIndex);
+      if ( attrUri.isEmpty() ) {
+        attrUri = null;
+      }
+
+      final String attrName  = atts.getLocalName(attrIndex);
+      final String attrValue = atts.getValue(attrIndex);
+
+      element.setAttributeNS(attrUri, attrName, attrValue);
     }
 
     elementStack.add(element);
