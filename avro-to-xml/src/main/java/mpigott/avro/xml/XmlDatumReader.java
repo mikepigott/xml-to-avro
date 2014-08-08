@@ -89,7 +89,7 @@ public class XmlDatumReader implements DatumReader<Document> {
 
 	  XmlDatumConfig config = null;
 
-	  // 1. Build the root tag QName
+	  // 1. Build the root tag QName.
 	  QName rootTagQName = buildQNameFrom(rootTagNode);
 
 	  // 2. Build the list of schema files.
@@ -133,7 +133,7 @@ public class XmlDatumReader implements DatumReader<Document> {
 	    throw new IllegalArgumentException("At least one XML Schema file or URL must be defined in the xmlSchemas property.");
 	  }
 
-	  // 4. Build the xmlSchemaCollection
+	  // 4. Build the xmlSchemaCollection.
     xmlSchemaCollection = new XmlSchemaCollection();
     xmlSchemaCollection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
     xmlSchemaCollection.setBaseUri(config.getBaseUri());
@@ -145,7 +145,7 @@ public class XmlDatumReader implements DatumReader<Document> {
       throw new IllegalArgumentException("Not all of the schema sources could be read from.", e);
     }
 
-    // 5. Build the state machine
+    // 5. Build the state machine.
     final XmlSchemaStateMachineGenerator stateMachineGen =
         new XmlSchemaStateMachineGenerator();
 
@@ -170,7 +170,13 @@ public class XmlDatumReader implements DatumReader<Document> {
    */
   @Override
   public Document read(Document reuse, Decoder in) throws IOException {
-	  return null;
+    if ((inputSchema == null)
+        || (xmlSchemaCollection == null)
+        || (stateMachine == null)) {
+      throw new IllegalStateException("The Avro and XML Schemas must be defined before reading from an Avro Decoder.  Please call XmlDatumReader.setSchema(Schema) before calling this function.");
+    }
+
+    return null;
   }
 
   private static QName buildQNameFrom(JsonNode rootTagNode) {
