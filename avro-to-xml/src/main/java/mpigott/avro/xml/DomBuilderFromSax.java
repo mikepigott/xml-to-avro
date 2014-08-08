@@ -86,7 +86,7 @@ final class DomBuilderFromSax extends DefaultHandler {
     }
 
     for (int attrIndex = 0; attrIndex < atts.getLength(); ++attrIndex) {
-      String attrUri   = atts.getURI(attrIndex);
+      String attrUri = atts.getURI(attrIndex);
       if ( attrUri.isEmpty() ) {
         attrUri = null;
       }
