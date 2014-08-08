@@ -471,7 +471,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     } else if ( stack.isEmpty() ) {
       // This is the root element!
       root = record;
-      addXmlSchemasListToRoot();
+      addXmlSchemasListToRoot( element.getQName() );
 
     } else {
       /* This is not part of a substitution group,
@@ -513,7 +513,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     if ( stack.isEmpty() ) {
       // The root node in the stack is part of a substitution group.
       root = Schema.createUnion(substitutes);
-      addXmlSchemasListToRoot();
+      addXmlSchemasListToRoot( base.getQName() );
 
     } else {
       // The substitution group is part of a higher group.
@@ -661,7 +661,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     return entry;
   }
 
-  private void addXmlSchemasListToRoot() {
+  private void addXmlSchemasListToRoot(QName rootTagQName) {
     if (((schemaUrls == null) || schemaUrls.isEmpty())
         && ((schemaFiles == null) || schemaFiles.isEmpty())
         && ((baseUri == null) || !baseUri.isEmpty())) {
@@ -690,6 +690,12 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       schemasNode.put("baseUri", baseUri);
     }
 
+    final ObjectNode rootTagNode = JsonNodeFactory.instance.objectNode();
+    rootTagNode.put("namespace", rootTagQName.getNamespaceURI());
+    rootTagNode.put("localPart", rootTagQName.getLocalPart());
+
+    schemasNode.put("rootTag", rootTagNode);
+
     root.addProp("xmlSchemas", schemasNode);
   }
 
@@ -711,7 +717,9 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     return (nonOptionalIdFieldCount == 1);
   }
 
-  private static String getStackEntryInfo(QName entryQName, boolean isSubstGroup) {
+  private static String getStackEntryInfo(
+      QName entryQName,
+      boolean isSubstGroup) {
     return "\"" + entryQName + "\" (Substitution Group? " + isSubstGroup + ")";
   }
 

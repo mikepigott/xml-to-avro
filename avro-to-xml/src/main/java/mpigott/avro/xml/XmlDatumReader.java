@@ -22,6 +22,10 @@ import org.apache.avro.Schema;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.Decoder;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.JsonNodeFactory;
+import org.codehaus.jackson.node.ObjectNode;
 import org.w3c.dom.Document;
 
 /**
@@ -36,8 +40,7 @@ public class XmlDatumReader implements DatumReader<Document> {
    * Creates an {@link XmlDatumReader} with the {@link XmlSchemaCollection}
    * to use when decoding XML {@link Document}s from {@link Decoder}s.
    */
-  public XmlDatumReader(XmlSchemaCollection xmlSchemaCollection) {
-	  this.xmlSchemaCollection = xmlSchemaCollection;
+  public XmlDatumReader() {
   }
 
   /**
@@ -62,9 +65,12 @@ public class XmlDatumReader implements DatumReader<Document> {
 	    throw new IllegalArgumentException("Input schema cannot be null.");
 	  }
 
-	  if (xmlSchemaCollection != null) {
-	    // TODO: Confirm the schema validates against xmlSchemaCollection.
-	  }
+	  final JsonNode xmlSchemasNode = schema.getJsonProp("xmlSchemas");
+
+	  final JsonNode baseUriNode = xmlSchemasNode.get("baseUri");
+	  final JsonNode urlsNode    = xmlSchemasNode.get("urls");
+	  final JsonNode filesNode   = xmlSchemasNode.get("files");
+	  final JsonNode rootTagNode = xmlSchemasNode.get("rootTag");
 
 	  inputSchema = schema;
   }
