@@ -37,6 +37,7 @@ import jregex.PatternSyntaxException;
 import jregex.REFlags;
 
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
+import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
 import org.apache.xerces.util.URI;
 import org.apache.xerces.util.URI.MalformedURIException;
@@ -180,7 +181,62 @@ public final class XmlSchemaElementValidator {
   static void validateContent(
       XmlSchemaStateMachineNode state,
       String elementContent) throws ValidationException {
-    
+
+    if ((state == null)
+        || !state
+              .getNodeType()
+              .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
+      throw new ValidationException("Niether state nor attrs can be null, and state must be of an SchemaStateMachineNode.Type.ELEMENT node, not " + ((state == null) ? null : state.getNodeType()));
+    }
+
+    final QName elemQName = state.getElement().getQName();
+    final XmlSchemaTypeInfo elemType = state.getElementType();
+    final XmlSchemaElement element = state.getElement();
+
+    if (elementContent != null) {
+      elementContent = elementContent.trim();
+    }
+
+    switch ( elemType.getType() ) {
+    case COMPLEX:
+      {
+        if (!elemType.isMixed()
+          && (elementContent != null)
+          && !elementContent.isEmpty()) {
+          
+          /* If a type is COMPLEX, then it either is a mixed type or it only
+           * has elements as children.  Likewise, if the text is not null or
+           * empty, and the type is not mixed, then element content is where
+           * it is not expected.
+           */
+          throw new ValidationException(elemQName + " is a non-mixed complex type, therefore there should not be any content between the tags, like \"" + elementContent + "\".");
+        }
+        break;
+      }
+    case ATOMIC:
+    case LIST:
+    case UNION:
+      {
+        if ((elementContent == null) || elementContent.isEmpty()) {
+          if ( state.getElement().isNillable() ) {
+            // Null is a perfectly valid state.
+            return;
+          } else {
+            elementContent = element.getDefaultValue();
+            if (elementContent == null) {
+              elementContent = element.getFixedValue();
+            }
+            if (elementContent == null) {
+              throw new ValidationException("Element " + elemQName + " has no content, no default value, and no fixed value, but is of type " + elemType.getType() + ".");
+            }
+          }
+        }
+        validateType(elemQName.toString(), elementContent, elemType);
+        break;
+      }
+    default:
+      throw new IllegalStateException(elemQName + " has an unrecognized content type of " + elemType.getType() + ".");
+    }
   }
 
   private static void validateType(
@@ -432,7 +488,6 @@ public final class XmlSchemaElementValidator {
     }
 
     checkEnumerationFacet(name, value, facets);
-    checkPatternFacets(name, value, facets);
   }
 
   private static void rangeChecks(
@@ -741,36 +796,6 @@ public final class XmlSchemaElementValidator {
       errMsg.append("\"}.");
 
       throw new ValidationException( errMsg.toString() );
-    }
-  }
-
-  private static void checkPatternFacets(
-      String name,
-      String value,
-      Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets)
-  throws ValidationException {
-
-    if (facets == null) {
-      return;
-    }
-
-    final List<XmlSchemaRestriction> patternFacets =
-        facets.get(XmlSchemaRestriction.Type.PATTERN);
-
-    if (patternFacets == null) {
-      return;
-    }
-
-    for (XmlSchemaRestriction patternFacet : patternFacets) {
-      final Pattern pattern =
-          new Pattern(patternFacet.getValue().toString(), REFlags.XML_SCHEMA);
-      final Matcher matcher =
-          pattern.matcher(value);
-
-      if ( !matcher.matches() ) {
-        // TODO: Figure out what the pattern "[\i-[:]][\c-[:]]*" is and why it doesn't match anything.
-        //throw new ValidationException(name + " value \"" + value + "\" does not fulfill pattern " + patternFacet.getValue());
-      }
     }
   }
 }

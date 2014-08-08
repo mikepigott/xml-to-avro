@@ -25,6 +25,7 @@ import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
+import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -700,6 +701,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       final XmlSchemaStateMachineNode state =
           getStateMachineOfOwningElement();
 
+      final XmlSchemaElement element = state.getElement();
       final XmlSchemaTypeInfo elemTypeInfo = state.getElementType();
 
       final String text = new String(ch, start, length).trim();
@@ -719,9 +721,13 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       } else if (elemExpectsContent
                    && text.isEmpty()
                    && !state.getElement().isNillable()
-                   && !elemTypeInfo.isMixed()) {
+                   && !elemTypeInfo.isMixed()
+                   && (element.getDefaultValue() == null)
+                   && (element.getFixedValue() == null)) {
         throw new IllegalStateException("Received empty text for element " + state.getElement().getQName() + " when content was expected.");
       }
+
+      XmlSchemaElementValidator.validateContent(state, text);
 
       currentPath.getDocumentNode().setReceivedContent(true);
 
