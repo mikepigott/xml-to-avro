@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import javax.xml.namespace.QName;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.avro.Schema;
@@ -38,6 +39,8 @@ import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
 import org.codehaus.jackson.node.ObjectNode;
 import org.w3c.dom.Document;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.SAXException;
 
 /**
  * Reads an XML {@link Document} from a {@link Decoder}.
@@ -53,9 +56,10 @@ public class XmlDatumReader implements DatumReader<Document> {
    */
   public XmlDatumReader() {
     inputSchema = null;
-    stateMachine = null;
     xmlSchemaCollection = null;
     namespaceToLocationMapping = null;
+    contentHandlers = null;
+    domBuilder = null;
   }
 
   /**
@@ -169,8 +173,20 @@ public class XmlDatumReader implements DatumReader<Document> {
         xmlSchemaCollection.getElementByQName(config.getRootTagName());
     walker.walk(rootElement);
 
-    stateMachine = stateMachineGen.getStartNode();
+    try {
+      domBuilder = new DomBuilderFromSax();
+    } catch (ParserConfigurationException e) {
+      throw new IllegalStateException("Cannot configure the DOM Builder.", e);
+    }
+    domBuilder.setNamespaceToLocationMapping(namespaceToLocationMapping);
+
+    final XmlSchemaStateMachineNode stateMachine =
+        stateMachineGen.getStartNode();
 	  inputSchema = schema;
+
+	  contentHandlers = new ArrayList<ContentHandler>(2);
+	  contentHandlers.add( new XmlSchemaPathFinder(stateMachine) );
+	  contentHandlers.add(domBuilder);
   }
 
   /**
@@ -178,17 +194,39 @@ public class XmlDatumReader implements DatumReader<Document> {
    * returns it, transformed.  The <code>reuse</code> {@link Document}
    * will not be used, as {@link Document} re-use is difficult.
    *
-   * @see org.apache.avro.io.DatumReader#read(java.lang.Object, org.apache.avro.io.Decoder)
+   * @see DatumReader#read(Object, Decoder)
    */
   @Override
   public Document read(Document reuse, Decoder in) throws IOException {
     if ((inputSchema == null)
         || (xmlSchemaCollection == null)
-        || (stateMachine == null)) {
-      throw new IllegalStateException("The Avro and XML Schemas must be defined before reading from an Avro Decoder.  Please call XmlDatumReader.setSchema(Schema) before calling this function.");
+        || (domBuilder == null)
+        || (contentHandlers == null)) {
+      throw new IllegalStateException(
+          "The Avro and XML Schemas must be defined before reading from an "
+          + "Avro Decoder.  Please call XmlDatumReader.setSchema(Schema) "
+          + "before calling this function.");
     }
 
-    return null;
+    try {
+      for (ContentHandler contentHandler : contentHandlers) {
+        contentHandler.startDocument();
+      }
+    } catch (SAXException e) {
+      throw new IOException("Unable to create the new document.", e);
+    }
+
+    // TODO: Walk the document.
+
+    try {
+      for (ContentHandler contentHandler : contentHandlers) {
+        contentHandler.endDocument();
+      }
+    } catch (SAXException e) {
+      throw new IOException("Unable to create the new document.", e);
+    }
+
+    return domBuilder.getDocument();
   }
 
   private static QName buildQNameFrom(JsonNode rootTagNode) {
@@ -261,6 +299,7 @@ public class XmlDatumReader implements DatumReader<Document> {
 
   private Schema inputSchema;
   private XmlSchemaCollection xmlSchemaCollection;
-  private XmlSchemaStateMachineNode stateMachine;
   private HashMap<String, String> namespaceToLocationMapping;
+  private List<ContentHandler> contentHandlers;
+  private DomBuilderFromSax domBuilder;
 }
