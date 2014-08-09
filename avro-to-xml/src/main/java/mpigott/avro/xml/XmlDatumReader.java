@@ -887,12 +887,17 @@ public class XmlDatumReader implements DatumReader<Document> {
                      mapBlockSize > 0;
                      mapBlockSize = in.mapNext()) {
                   for (long mapIdx = 0; mapIdx < mapBlockSize; ++mapIdx) {
+                    in.skipString(); // The key is irrelevant.
+
                     // MAP of UNION of RECORD or MAP of RECORD
                     final Schema valueType = unionSchema.getValueType();
                     if ( valueType.getType().equals(Schema.Type.RECORD) ) {
                       processElement(valueType, in);
+
                     } else if (valueType.getType().equals(Schema.Type.UNION)) {
-                      // TODO
+                      final int mapUnionIndex = in.readIndex();
+                      processElement(valueType.getTypes().get(mapUnionIndex), in);
+
                     } else {
                       throw new IOException(
                           "Received a MAP of "
@@ -933,46 +938,6 @@ public class XmlDatumReader implements DatumReader<Document> {
           element.getQName()
           + " has an invalid complex content of type "
           + fieldSchema.getType() + '.');
-    }
-
-    // Complex types only have ARRAYs of UNION of MAP/RECORD for children.
-    if (field.schema().getType().equals(Schema.Type.ARRAY)
-        && field.schema().getElementType().equals(Schema.Type.UNION)) {
-
-      for (Schema unionSchema : field.schema().getElementType().getTypes()) {
-        if ( unionSchema.getType().equals(Schema.Type.RECORD) ) {
-          continue;
-
-        } else if ( unionSchema.getType().equals(Schema.Type.NULL) ) {
-          // The element is empty, meaning it is complex.
-          continue;
-
-        } else if ( unionSchema.getType().equals(Schema.Type.MAP) ) {
-          // MAPs can either be MAP of RECORD or MAP of UNION of RECORD.
-          if ( unionSchema.getValueType().equals(Schema.Type.RECORD) ) {
-            continue;
-
-          } else if (unionSchema
-                       .getValueType()
-                       .getType()
-                       .equals(Schema.Type.UNION) ) {
-            for (Schema mapUnionSchema :
-                    unionSchema.getValueType().getTypes()) {
-
-              if ( !mapUnionSchema.getType().equals(Schema.Type.RECORD) ) {
-                break;
-              }
-            }
-
-          } else {
-          }
-
-        } else if ( unionSchema.getType().equals(Schema.Type.STRING) ) {
-
-        } else {
-          
-        }
-      }
     }
   }
 
