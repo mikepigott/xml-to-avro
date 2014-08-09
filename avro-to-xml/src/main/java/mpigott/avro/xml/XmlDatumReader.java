@@ -731,6 +731,16 @@ public class XmlDatumReader implements DatumReader<Document> {
         }
 
         final int unionIndex = in.readIndex();
+
+        if ((schema.getTypes().size() <= unionIndex)
+            || (xmlType.getChildTypes().size() <= unionIndex)) {
+
+          throw new IllegalStateException("Attempted to read from union index "
+              + unionIndex + " but the Avro Schema has "
+              + schema.getTypes().size() + " types, and the XML Schema has "
+              + xmlType.getChildTypes().size() + " types.");
+        }
+
         final Schema elemType = schema.getTypes().get(unionIndex);
         final XmlSchemaTypeInfo xmlElemType =
             xmlType.getChildTypes().get(unionIndex);
@@ -781,7 +791,7 @@ public class XmlDatumReader implements DatumReader<Document> {
       return DatatypeConverter.printLong( in.readLong() );
 
     case STRING:
-      return in.readString();
+      return DatatypeConverter.printString( in.readString() );
 
     default:
       throw new IOException(schema.getType() + " is not a simple type.");
