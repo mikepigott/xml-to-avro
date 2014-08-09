@@ -19,10 +19,12 @@ package mpigott.avro.xml;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.ParserConfigurationException;
@@ -49,6 +51,114 @@ import org.xml.sax.SAXException;
  * @author  Mike Pigott
  */
 public class XmlDatumReader implements DatumReader<Document> {
+
+  private static class AvroRecordName implements Comparable<AvroRecordName> {
+
+    AvroRecordName(QName xmlQName) throws URISyntaxException {
+      recordNamespace = Utils.getAvroNamespaceFor(xmlQName.getNamespaceURI());
+      recordName = xmlQName.getLocalPart();
+    }
+
+    /**
+     * Generates a hash code representing this <code>AvroRecordName</code>.
+     *
+     * @see java.lang.Object#hashCode()
+     */
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result
+          + ((recordName == null) ? 0 : recordName.hashCode());
+      result = prime * result
+          + ((recordNamespace == null) ? 0 : recordNamespace.hashCode());
+      return result;
+    }
+
+    /**
+     * Compares this <code>AvroRecordName</code> to another one for equality.
+     *
+     * @see java.lang.Object#equals(java.lang.Object)
+     */
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
+        return false;
+      }
+      if (!(obj instanceof AvroRecordName)) {
+        return false;
+      }
+      AvroRecordName other = (AvroRecordName) obj;
+      if (recordName == null) {
+        if (other.recordName != null) {
+          return false;
+        }
+      } else if (!recordName.equals(other.recordName)) {
+        return false;
+      }
+      if (recordNamespace == null) {
+        if (other.recordNamespace != null) {
+          return false;
+        }
+      } else if (!recordNamespace.equals(other.recordNamespace)) {
+        return false;
+      }
+      return true;
+    }
+
+    /**
+     * Compares this <code>AvroRecordName</code> to another for
+     * relative ordering.  Namespaces are compared first, followed
+     * by names.
+     *
+     * @param o The other record to compare against.
+     *
+     * @return A number less than zero if this entry is the lesser,
+     *         a number greater than zero if this entry is the greater,
+     *         or zero if the two are equivalent.
+     *
+     * @see Comparable#compareTo(Object)
+     */
+    @Override
+    public int compareTo(AvroRecordName o) {
+
+      // 1. Compare Namespaces.
+      if ((recordNamespace == null) && (o.recordNamespace != null)) {
+        return -1;
+      } else if ((recordNamespace != null) && (o.recordNamespace == null)) {
+        return 1;
+      } else if ((recordNamespace != null) && (o.recordNamespace != null)) {
+        final int nsCompare = recordNamespace.compareTo(o.recordNamespace);
+        if (nsCompare != 0) {
+          return nsCompare;
+        }
+      }
+
+      // Either both namespaces are null, or they are equal to each other.
+
+      // 2. Compare Names.
+      if ((recordName == null) && (o.recordName != null)) {
+        return -1;
+      } else if ((recordName != null) && (o.recordName == null)) {
+        return 1;
+      } else if ((recordName != null) && (o.recordName != null)) {
+        final int nmCompare = recordName.compareTo(o.recordName);
+        if (nmCompare != 0) {
+          return nmCompare;
+        }
+      }
+
+      // Either both names are null, or both are equal.
+
+      return 0;
+    }
+
+    private String recordName;
+    private String recordNamespace;
+  }
 
   /**
    * Creates an {@link XmlDatumReader} with the {@link XmlSchemaCollection}
@@ -140,7 +250,12 @@ public class XmlDatumReader implements DatumReader<Document> {
 	    throw new IllegalArgumentException("At least one XML Schema file or URL must be defined in the xmlSchemas property.");
 	  }
 
-	  // 4. Build the xmlSchemaCollection, and its namespace -> location mapping.
+	  /* 4. Build the xmlSchemaCollection, its namespace -> location
+	   *    mapping, and an Avro Record Name -> XML QName mapping.
+	   */
+	  final HashMap<QName, AvroRecordName> avroNameMapping =
+	      new HashMap<QName, AvroRecordName>();
+
 	  if (namespaceToLocationMapping == null) {
 	    namespaceToLocationMapping = new HashMap<String, String>();
 	  } else {
@@ -156,6 +271,17 @@ public class XmlDatumReader implements DatumReader<Document> {
         namespaceToLocationMapping.put(
             xmlSchema.getTargetNamespace(),
             source.getSystemId());
+
+        final Map<QName, XmlSchemaElement> elementsByQName =
+            xmlSchema.getElements();
+
+        for (QName elemQName : elementsByQName.keySet()) {
+          try {
+            avroNameMapping.put(elemQName, new AvroRecordName(elemQName));
+          } catch (URISyntaxException e) {
+            throw new IllegalStateException(elemQName + " has a namespace of \"" + elemQName.getNamespaceURI() + "\" that is not a valid URI.", e);
+          }
+        }
       }
     } catch (IOException e) {
       throw new IllegalArgumentException("Not all of the schema sources could be read from.", e);
@@ -182,7 +308,20 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     final XmlSchemaStateMachineNode stateMachine =
         stateMachineGen.getStartNode();
-	  inputSchema = schema;
+
+    // 6. Build an AvroRecordName -> XmlSchemaStateMachineNode mapping.
+    final Map<QName, XmlSchemaStateMachineNode> stateMachineNodesByQName =
+        stateMachineGen.getStateMachineNodesByQName();
+
+    stateByAvroName = new HashMap<AvroRecordName, XmlSchemaStateMachineNode>();
+    for (Map.Entry<QName, XmlSchemaStateMachineNode> entry :
+      stateMachineNodesByQName.entrySet()) {
+
+      final AvroRecordName recordName = avroNameMapping.get(entry.getKey());
+      stateByAvroName.put(recordName, entry.getValue());
+    }
+
+    inputSchema = schema;
 
 	  contentHandlers = new ArrayList<ContentHandler>(2);
 	  contentHandlers.add( new XmlSchemaPathFinder(stateMachine) );
@@ -216,7 +355,7 @@ public class XmlDatumReader implements DatumReader<Document> {
       throw new IOException("Unable to create the new document.", e);
     }
 
-    // TODO: Walk the document.
+    processElement(inputSchema);
 
     try {
       for (ContentHandler contentHandler : contentHandlers) {
@@ -227,6 +366,14 @@ public class XmlDatumReader implements DatumReader<Document> {
     }
 
     return domBuilder.getDocument();
+  }
+
+  private void processElement(Schema elemSchema) {
+    
+  }
+
+  private void processContent(Schema contentSchema) {
+    
   }
 
   private static QName buildQNameFrom(JsonNode rootTagNode) {
@@ -302,4 +449,5 @@ public class XmlDatumReader implements DatumReader<Document> {
   private HashMap<String, String> namespaceToLocationMapping;
   private List<ContentHandler> contentHandlers;
   private DomBuilderFromSax domBuilder;
+  private Map<AvroRecordName, XmlSchemaStateMachineNode> stateByAvroName;
 }

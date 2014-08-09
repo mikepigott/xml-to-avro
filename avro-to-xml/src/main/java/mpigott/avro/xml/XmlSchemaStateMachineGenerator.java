@@ -71,6 +71,17 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     return startNode;
   }
 
+  Map<QName, XmlSchemaStateMachineNode> getStateMachineNodesByQName() {
+    final HashMap<QName, XmlSchemaStateMachineNode> nodes =
+        new HashMap<QName, XmlSchemaStateMachineNode>();
+
+    for (Map.Entry<QName, ElementInfo> entry : elementInfoByQName.entrySet()) {
+      nodes.put(entry.getKey(), entry.getValue().stateMachineNode);
+    }
+
+    return nodes;
+  }
+
   /**
    * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo, boolean)
    */
