@@ -41,6 +41,7 @@ import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
 import org.codehaus.jackson.node.ObjectNode;
 import org.w3c.dom.Document;
+import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
@@ -158,6 +159,174 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     private String recordName;
     private String recordNamespace;
+  }
+
+  private static class AvroAttribute {
+
+    AvroAttribute(
+        String namespace,
+        String localName,
+        String qualName,
+        String val) {
+
+      qName = new QName(namespace, localName);
+      qualifiedName = qualName;
+      value = val;
+    }
+
+    final QName qName;
+    final String qualifiedName;
+    final String value;
+  }
+
+  private static class AvroAttributes implements Attributes {
+
+    AvroAttributes() throws SAXException {
+      attributes = new ArrayList<AvroAttribute>();
+      attrsByQualifiedName = new HashMap<String, AvroAttribute>();
+      attrsByQName = new HashMap<QName, AvroAttribute>();
+
+      indexByQualifiedName = new HashMap<String, Integer>();
+      indexByQName = new HashMap<QName, Integer>();
+    }
+
+    void addAttribute(AvroAttribute attr) {
+      attrsByQualifiedName.put(attr.qualifiedName, attr);
+      attrsByQName.put(attr.qName, attr);
+
+      indexByQualifiedName.put(attr.qualifiedName, attributes.size());
+      indexByQName.put(attr.qName, attributes.size());
+
+      attributes.add(attr);
+    }
+
+    @Override
+    public int getLength() {
+      return attributes.size();
+    }
+
+    @Override
+    public String getURI(int index) {
+      if (attributes.size() <= index) {
+        return null;
+      } else {
+        return attributes.get(index).qName.getNamespaceURI();
+      }
+    }
+
+    @Override
+    public String getLocalName(int index) {
+      if (attributes.size() <= index) {
+        return null;
+      } else {
+        return attributes.get(index).qName.getLocalPart();
+      }
+    }
+
+    @Override
+    public String getQName(int index) {
+      if (attributes.size() <= index) {
+        return null;
+      } else {
+        return attributes.get(index).qualifiedName;
+      }
+    }
+
+    @Override
+    public String getType(int index) {
+      if (attributes.size() <= index) {
+        return null;
+      } else {
+        return "CDATA"; // We do not know the type information.
+      }
+    }
+
+    @Override
+    public String getValue(int index) {
+      if (attributes.size() <= index) {
+        return null;
+      } else {
+        return attributes.get(index).value;
+      }
+    }
+
+    @Override
+    public int getIndex(String uri, String localName) {
+      if ((uri == null) || (localName == null)) {
+        return -1;
+      }
+
+      final QName qName = new QName(uri, localName);
+      final Integer index = indexByQName.get(qName);
+
+      if (index == null) {
+        return -1;
+      } else {
+        return index;
+      }
+    }
+
+    @Override
+    public int getIndex(String qName) {
+      if (qName == null) {
+        return -1;
+      }
+
+      final Integer index = indexByQualifiedName.get(qName);
+      if (index == null) {
+        return -1;
+      } else {
+        return index;
+      }
+    }
+
+    @Override
+    public String getType(String uri, String localName) {
+      if ((uri == null) || (localName == null)) {
+        return null;
+      } else {
+        final AvroAttribute attr =
+            attrsByQName.get( new QName(uri, localName) );
+        return (attr == null) ? null : "CDATA";
+      }
+    }
+
+    @Override
+    public String getType(String qName) {
+      if (qName == null) {
+        return null;
+      } else {
+        final AvroAttribute attr = attrsByQualifiedName.get(qName);
+        return (attr == null) ? null : "CDATA";
+      }
+    }
+
+    @Override
+    public String getValue(String uri, String localName) {
+      if ((uri == null) || (localName == null)) {
+        return null;
+      } else {
+        final AvroAttribute attr =
+            attrsByQName.get( new QName(uri, localName) );
+        return (attr == null) ? null : attr.value;
+      }
+    }
+
+    @Override
+    public String getValue(String qName) {
+      if (qName == null) {
+        return null;
+      } else {
+        final AvroAttribute attr = attrsByQualifiedName.get(qName);
+        return (attr == null) ? null : attr.value;
+      }
+    }
+
+    private final List<AvroAttribute> attributes;
+    private final Map<String, AvroAttribute> attrsByQualifiedName;
+    private final Map<QName, AvroAttribute> attrsByQName;
+    private final Map<String, Integer> indexByQualifiedName;
+    private final Map<QName, Integer> indexByQName;
   }
 
   /**
@@ -369,7 +538,18 @@ public class XmlDatumReader implements DatumReader<Document> {
   }
 
   private void processElement(Schema elemSchema) {
-    
+    if ( !elemSchema.getType().equals(Schema.Type.RECORD) ) {
+      throw new IllegalStateException(
+          "Expected to process a RECORD, but found a \""
+          + elemSchema.getType()
+          + "\" instead.");
+    }
+
+    final List<Schema.Field> fields = elemSchema.getFields();
+    for (int index = 0; index < (fields.size() - 1); ++index) {
+      // The first N-1 fields are attributes.
+      
+    }
   }
 
   private void processContent(Schema contentSchema) {

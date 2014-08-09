@@ -69,9 +69,9 @@ final class SaxWalkerOverDom {
           node.getNodeValue());
     }
 
-    private final QName qName;
-    private final String qualifiedName;
-    private final String value;
+    final QName qName;
+    final String qualifiedName;
+    final String value;
   }
 
   private static class DomAttrsAsSax implements org.xml.sax.Attributes {
@@ -85,15 +85,15 @@ final class SaxWalkerOverDom {
       indexByQName = new HashMap<QName, Integer>();
 
       if (domAttrs != null) {
-        for (int attrIndex = 0; attrIndex < domAttrs.getLength(); ++attrIndex) {
-          Attr attribute = new Attr(domAttrs.item(attrIndex));
+        for (int attrIdx = 0; attrIdx < domAttrs.getLength(); ++attrIdx) {
+          final Attr attribute = new Attr(domAttrs.item(attrIdx));
           attributes.add(attribute);
 
           attrsByQualifiedName.put(attribute.qualifiedName, attribute);
           attrsByQName.put(attribute.qName, attribute);
 
-          indexByQualifiedName.put(attribute.qualifiedName, attrIndex);
-          indexByQName.put(attribute.qName, attrIndex);
+          indexByQualifiedName.put(attribute.qualifiedName, attrIdx);
+          indexByQName.put(attribute.qName, attrIdx);
         }
       }
     }
