@@ -217,8 +217,9 @@ final class DomBuilderFromSax extends DefaultHandler {
     rootElement.setAttributeNS(XSI_NS, XSI_SCHEMALOC, schemaList.toString());
   }
 
-  private final String XSI_NS = "http://www.w3.org/2001/XMLSchema-instance";
-  private final String XSI_SCHEMALOC = "schemaLocation";
+  private static final String XSI_NS =
+      "http://www.w3.org/2001/XMLSchema-instance";
+  private static final String XSI_SCHEMALOC = "schemaLocation";
 
   private Document document;
   private StringBuilder content;
