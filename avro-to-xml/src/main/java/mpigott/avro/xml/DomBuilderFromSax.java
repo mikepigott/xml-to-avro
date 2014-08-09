@@ -17,6 +17,7 @@
 package mpigott.avro.xml;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -44,7 +45,7 @@ final class DomBuilderFromSax extends DefaultHandler {
    * @throws ParserConfigurationException If unable to create a
    *                                      {@link DocumentBuilder}. 
    */
-  public DomBuilderFromSax() throws ParserConfigurationException {
+  DomBuilderFromSax() throws ParserConfigurationException {
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     factory.setNamespaceAware(true);
 
@@ -53,6 +54,7 @@ final class DomBuilderFromSax extends DefaultHandler {
 
     document = null;
     content = null;
+    namespaceToLocationMapping = null;
   }
 
   /**
@@ -79,12 +81,6 @@ final class DomBuilderFromSax extends DefaultHandler {
     final Element element =
         document.createElementNS(uri.isEmpty() ? null : uri, localName);
 
-    if ( !elementStack.isEmpty() ) {
-      elementStack.get(elementStack.size() - 1).appendChild(element);
-    } else {
-      document.appendChild(element);
-    }
-
     for (int attrIndex = 0; attrIndex < atts.getLength(); ++attrIndex) {
       String attrUri = atts.getURI(attrIndex);
       if ( attrUri.isEmpty() ) {
@@ -95,6 +91,13 @@ final class DomBuilderFromSax extends DefaultHandler {
       final String attrValue = atts.getValue(attrIndex);
 
       element.setAttributeNS(attrUri, attrName, attrValue);
+    }
+
+    if ( !elementStack.isEmpty() ) {
+      elementStack.get(elementStack.size() - 1).appendChild(element);
+    } else {
+      addNamespaceLocationMappings(element);
+      document.appendChild(element);
     }
 
     elementStack.add(element);
@@ -187,8 +190,39 @@ final class DomBuilderFromSax extends DefaultHandler {
     return document;
   }
 
+  Map<String, String> getNamespaceToLocationMapping() {
+    return namespaceToLocationMapping;
+  }
+
+  void setNamespaceToLocationMapping(Map<String, String> nsToLocMapping) {
+    namespaceToLocationMapping = nsToLocMapping;
+  }
+
+  private void addNamespaceLocationMappings(Element rootElement) {
+    if ((namespaceToLocationMapping == null)
+        || namespaceToLocationMapping.isEmpty()
+        || rootElement.hasAttributeNS(XSI_NS, XSI_SCHEMALOC)) {
+
+      /* There are no namesapces mappings to add,
+       * or a namespace mapping already exists.
+       */
+      return;
+    }
+
+    StringBuilder schemaList = new StringBuilder();
+    for (Map.Entry<String, String> e : namespaceToLocationMapping.entrySet()) {
+      schemaList.append( e.getKey() ).append(' ').append( e.getValue() );
+    }
+
+    rootElement.setAttributeNS(XSI_NS, XSI_SCHEMALOC, schemaList.toString());
+  }
+
+  private final String XSI_NS = "http://www.w3.org/2001/XMLSchema-instance";
+  private final String XSI_SCHEMALOC = "schemaLocation";
+
   private Document document;
   private StringBuilder content;
+  private Map<String, String> namespaceToLocationMapping;
 
   private final ArrayList<Element> elementStack;
   private final DocumentBuilder docBuilder;

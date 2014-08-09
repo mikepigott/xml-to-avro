@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.xml.namespace.QName;
@@ -29,6 +30,7 @@ import javax.xml.transform.stream.StreamSource;
 import org.apache.avro.Schema;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.Decoder;
+import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.codehaus.jackson.JsonNode;
@@ -53,6 +55,7 @@ public class XmlDatumReader implements DatumReader<Document> {
     inputSchema = null;
     stateMachine = null;
     xmlSchemaCollection = null;
+    namespaceToLocationMapping = null;
   }
 
   /**
@@ -133,13 +136,22 @@ public class XmlDatumReader implements DatumReader<Document> {
 	    throw new IllegalArgumentException("At least one XML Schema file or URL must be defined in the xmlSchemas property.");
 	  }
 
-	  // 4. Build the xmlSchemaCollection.
-    xmlSchemaCollection = new XmlSchemaCollection();
+	  // 4. Build the xmlSchemaCollection, and its namespace -> location mapping.
+	  if (namespaceToLocationMapping == null) {
+	    namespaceToLocationMapping = new HashMap<String, String>();
+	  } else {
+	    namespaceToLocationMapping.clear();
+	  }
+
+	  xmlSchemaCollection = new XmlSchemaCollection();
     xmlSchemaCollection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
     xmlSchemaCollection.setBaseUri(config.getBaseUri());
     try {
       for (StreamSource source : config.getSources()) {
-        xmlSchemaCollection.read(source);
+        final XmlSchema xmlSchema = xmlSchemaCollection.read(source);
+        namespaceToLocationMapping.put(
+            xmlSchema.getTargetNamespace(),
+            source.getSystemId());
       }
     } catch (IOException e) {
       throw new IllegalArgumentException("Not all of the schema sources could be read from.", e);
@@ -250,4 +262,5 @@ public class XmlDatumReader implements DatumReader<Document> {
   private Schema inputSchema;
   private XmlSchemaCollection xmlSchemaCollection;
   private XmlSchemaStateMachineNode stateMachine;
+  private HashMap<String, String> namespaceToLocationMapping;
 }
