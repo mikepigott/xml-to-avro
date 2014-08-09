@@ -212,7 +212,9 @@ final class DomBuilderFromSax extends DefaultHandler {
     StringBuilder schemaList = new StringBuilder();
     for (Map.Entry<String, String> e : namespaceToLocationMapping.entrySet()) {
       schemaList.append( e.getKey() ).append(' ').append( e.getValue() );
+      schemaList.append(' ');
     }
+    schemaList.delete(schemaList.length() - 1, schemaList.length());
 
     rootElement.setAttributeNS(XSI_NS, XSI_SCHEMALOC, schemaList.toString());
   }
