@@ -51,7 +51,7 @@ public class TestDomBuilderFromSax {
     */
 
     // Parse the document using a SAX parser
-    DomBuilderFromSax builder = new DomBuilderFromSax();
+    DomBuilderFromSax builder = new DomBuilderFromSax(null);
 
     SAXParserFactory spf = SAXParserFactory.newInstance();
     spf.setNamespaceAware(true);

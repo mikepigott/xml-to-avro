@@ -483,7 +483,7 @@ public class XmlDatumReader implements DatumReader<Document> {
     walker.walk(rootElement);
 
     try {
-      domBuilder = new DomBuilderFromSax();
+      domBuilder = new DomBuilderFromSax(xmlSchemaCollection);
     } catch (ParserConfigurationException e) {
       throw new IllegalStateException("Cannot configure the DOM Builder.", e);
     }
@@ -618,7 +618,39 @@ public class XmlDatumReader implements DatumReader<Document> {
       }
     }
 
-    // TODO: Process element content and/or children.
+    final Schema.Field childField = elemSchema.getField(elemSchema.getName());
+
+    final XmlSchemaTypeInfo elemType = stateMachine.getElementType();
+    switch ( elemType.getType() ) {
+    case ATOMIC:
+    case LIST:
+    case UNION:
+      {
+        final String content =
+            readSimpleType(childField.schema(), elemType, in);
+        final char[] chars = content.toCharArray();
+
+        for (ContentHandler contentHandler : contentHandlers) {
+          try {
+            contentHandler.characters(chars, 0, chars.length);
+          } catch (SAXException e) {
+            throw new IOException(
+                "Cannot process content \"" + content + "\".", e);
+          }
+        }
+        break;
+      }
+    case COMPLEX:
+      processComplexChildren(
+          childField,
+          stateMachine.getElement(),
+          elemType,
+          in);
+      break;
+    default:
+      throw new IllegalStateException(
+          elemQName + " has an unrecognized type named " + elemType.getType());
+    }
 
     // Notify the content handlers the element has ended.
     for (ContentHandler contentHandler : contentHandlers) {
@@ -795,6 +827,58 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     default:
       throw new IOException(schema.getType() + " is not a simple type.");
+    }
+  }
+
+  private void processComplexChildren(
+      Schema.Field field,
+      XmlSchemaElement element,
+      XmlSchemaTypeInfo elemType,
+      Decoder in)
+      throws IOException {
+
+    final Schema fieldSchema = field.schema();
+
+    
+
+    // Complex types only have ARRAYs of UNION of MAP/RECORD for children.
+    if (field.schema().getType().equals(Schema.Type.ARRAY)
+        && field.schema().getElementType().equals(Schema.Type.UNION)) {
+
+      for (Schema unionSchema : field.schema().getElementType().getTypes()) {
+        if ( unionSchema.getType().equals(Schema.Type.RECORD) ) {
+          continue;
+
+        } else if ( unionSchema.getType().equals(Schema.Type.NULL) ) {
+          // The element is empty, meaning it is complex.
+          continue;
+
+        } else if ( unionSchema.getType().equals(Schema.Type.MAP) ) {
+          // MAPs can either be MAP of RECORD or MAP of UNION of RECORD.
+          if ( unionSchema.getValueType().equals(Schema.Type.RECORD) ) {
+            continue;
+
+          } else if (unionSchema
+                       .getValueType()
+                       .getType()
+                       .equals(Schema.Type.UNION) ) {
+            for (Schema mapUnionSchema :
+                    unionSchema.getValueType().getTypes()) {
+
+              if ( !mapUnionSchema.getType().equals(Schema.Type.RECORD) ) {
+                break;
+              }
+            }
+
+          } else {
+          }
+
+        } else if ( unionSchema.getType().equals(Schema.Type.STRING) ) {
+
+        } else {
+          
+        }
+      }
     }
   }
 

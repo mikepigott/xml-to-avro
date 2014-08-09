@@ -19,11 +19,13 @@ package mpigott.avro.xml;
 import java.util.ArrayList;
 import java.util.Map;
 
+import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.ws.commons.schema.XmlSchemaCollection;
+import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -39,13 +41,19 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 final class DomBuilderFromSax extends DefaultHandler {
 
+  DomBuilderFromSax() throws ParserConfigurationException {
+    this(null);
+  }
+
   /**
    * Creates a new <code>DocumentBuilderFromSax</code>.
    *
    * @throws ParserConfigurationException If unable to create a
    *                                      {@link DocumentBuilder}. 
    */
-  DomBuilderFromSax() throws ParserConfigurationException {
+  DomBuilderFromSax(XmlSchemaCollection xmlSchemaCollection)
+      throws ParserConfigurationException {
+
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     factory.setNamespaceAware(true);
 
@@ -55,6 +63,7 @@ final class DomBuilderFromSax extends DefaultHandler {
     document = null;
     content = null;
     namespaceToLocationMapping = null;
+    schemas = xmlSchemaCollection;
   }
 
   /**
@@ -76,7 +85,7 @@ final class DomBuilderFromSax extends DefaultHandler {
       String qName,
       Attributes atts) throws SAXException {
 
-    addContentToCurrentElement();
+    addContentToCurrentElement(false);
 
     final Element element =
         document.createElementNS(uri.isEmpty() ? null : uri, localName);
@@ -125,7 +134,7 @@ final class DomBuilderFromSax extends DefaultHandler {
       String qName)
       throws SAXException {
 
-    addContentToCurrentElement();
+    addContentToCurrentElement(true);
 
     if ( elementStack.isEmpty() ) {
       StringBuilder errMsg = new StringBuilder("Attempted to end element {");
@@ -167,8 +176,26 @@ final class DomBuilderFromSax extends DefaultHandler {
     }
   }
 
-  private void addContentToCurrentElement() {
+  private void addContentToCurrentElement(boolean isEnd) {
     if ((content == null) || (content.length() == 0)) {
+      /* If we reached the end of the element, check if we received any
+       * content.  If not, and if the element is nillable, write a nil
+       * attribute.
+       */
+      if (isEnd && !elementStack.isEmpty() && (schemas != null)) {
+        final Element currElem  = elementStack.get(elementStack.size() - 1);
+        if (currElem.getChildNodes().getLength() == 0) {
+          final QName elemQName =
+              new QName(currElem.getNamespaceURI(), currElem.getLocalName());
+
+          final XmlSchemaElement schemaElem =
+              schemas.getElementByQName(elemQName);
+
+          if ( schemaElem.isNillable() ) {
+            currElem.setAttributeNS(XSI_NS, XSI_NIL, "true");
+          }
+        }
+      }
       return;
     }
 
@@ -222,6 +249,7 @@ final class DomBuilderFromSax extends DefaultHandler {
   private static final String XSI_NS =
       "http://www.w3.org/2001/XMLSchema-instance";
   private static final String XSI_SCHEMALOC = "schemaLocation";
+  private static final String XSI_NIL = "nil";
 
   private Document document;
   private StringBuilder content;
@@ -229,4 +257,5 @@ final class DomBuilderFromSax extends DefaultHandler {
 
   private final ArrayList<Element> elementStack;
   private final DocumentBuilder docBuilder;
+  private final XmlSchemaCollection schemas;
 }
