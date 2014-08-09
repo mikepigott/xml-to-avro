@@ -21,11 +21,14 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.bind.DatatypeConverter;
+import javax.xml.namespace.NamespaceContext;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.stream.StreamSource;
@@ -56,8 +59,13 @@ public class XmlDatumReader implements DatumReader<Document> {
   private static class AvroRecordName implements Comparable<AvroRecordName> {
 
     AvroRecordName(QName xmlQName) throws URISyntaxException {
-      recordNamespace = Utils.getAvroNamespaceFor(xmlQName.getNamespaceURI());
-      recordName = xmlQName.getLocalPart();
+      namespace = Utils.getAvroNamespaceFor(xmlQName.getNamespaceURI());
+      name = xmlQName.getLocalPart();
+    }
+
+    AvroRecordName(String recordNamespace, String recordName) {
+      namespace = recordNamespace;
+      name = recordName;
     }
 
     /**
@@ -70,9 +78,9 @@ public class XmlDatumReader implements DatumReader<Document> {
       final int prime = 31;
       int result = 1;
       result = prime * result
-          + ((recordName == null) ? 0 : recordName.hashCode());
+          + ((name == null) ? 0 : name.hashCode());
       result = prime * result
-          + ((recordNamespace == null) ? 0 : recordNamespace.hashCode());
+          + ((namespace == null) ? 0 : namespace.hashCode());
       return result;
     }
 
@@ -93,18 +101,18 @@ public class XmlDatumReader implements DatumReader<Document> {
         return false;
       }
       AvroRecordName other = (AvroRecordName) obj;
-      if (recordName == null) {
-        if (other.recordName != null) {
+      if (name == null) {
+        if (other.name != null) {
           return false;
         }
-      } else if (!recordName.equals(other.recordName)) {
+      } else if (!name.equals(other.name)) {
         return false;
       }
-      if (recordNamespace == null) {
-        if (other.recordNamespace != null) {
+      if (namespace == null) {
+        if (other.namespace != null) {
           return false;
         }
-      } else if (!recordNamespace.equals(other.recordNamespace)) {
+      } else if (!namespace.equals(other.namespace)) {
         return false;
       }
       return true;
@@ -127,12 +135,12 @@ public class XmlDatumReader implements DatumReader<Document> {
     public int compareTo(AvroRecordName o) {
 
       // 1. Compare Namespaces.
-      if ((recordNamespace == null) && (o.recordNamespace != null)) {
+      if ((namespace == null) && (o.namespace != null)) {
         return -1;
-      } else if ((recordNamespace != null) && (o.recordNamespace == null)) {
+      } else if ((namespace != null) && (o.namespace == null)) {
         return 1;
-      } else if ((recordNamespace != null) && (o.recordNamespace != null)) {
-        final int nsCompare = recordNamespace.compareTo(o.recordNamespace);
+      } else if ((namespace != null) && (o.namespace != null)) {
+        final int nsCompare = namespace.compareTo(o.namespace);
         if (nsCompare != 0) {
           return nsCompare;
         }
@@ -141,12 +149,12 @@ public class XmlDatumReader implements DatumReader<Document> {
       // Either both namespaces are null, or they are equal to each other.
 
       // 2. Compare Names.
-      if ((recordName == null) && (o.recordName != null)) {
+      if ((name == null) && (o.name != null)) {
         return -1;
-      } else if ((recordName != null) && (o.recordName == null)) {
+      } else if ((name != null) && (o.name == null)) {
         return 1;
-      } else if ((recordName != null) && (o.recordName != null)) {
-        final int nmCompare = recordName.compareTo(o.recordName);
+      } else if ((name != null) && (o.name != null)) {
+        final int nmCompare = name.compareTo(o.name);
         if (nmCompare != 0) {
           return nmCompare;
         }
@@ -157,8 +165,13 @@ public class XmlDatumReader implements DatumReader<Document> {
       return 0;
     }
 
-    private String recordName;
-    private String recordNamespace;
+    @Override
+    public String toString() {
+      return '{' + namespace + '}' + name;
+    }
+
+    private String name;
+    private String namespace;
   }
 
   private static class AvroAttribute {
@@ -181,7 +194,7 @@ public class XmlDatumReader implements DatumReader<Document> {
 
   private static class AvroAttributes implements Attributes {
 
-    AvroAttributes() throws SAXException {
+    AvroAttributes() {
       attributes = new ArrayList<AvroAttribute>();
       attrsByQualifiedName = new HashMap<String, AvroAttribute>();
       attrsByQName = new HashMap<QName, AvroAttribute>();
@@ -339,6 +352,7 @@ public class XmlDatumReader implements DatumReader<Document> {
     namespaceToLocationMapping = null;
     contentHandlers = null;
     domBuilder = null;
+    bytesBuffer = null;
   }
 
   /**
@@ -520,24 +534,26 @@ public class XmlDatumReader implements DatumReader<Document> {
       for (ContentHandler contentHandler : contentHandlers) {
         contentHandler.startDocument();
       }
-    } catch (SAXException e) {
+    } catch (Exception e) {
       throw new IOException("Unable to create the new document.", e);
     }
 
-    processElement(inputSchema);
+    processElement(inputSchema, in);
 
     try {
       for (ContentHandler contentHandler : contentHandlers) {
         contentHandler.endDocument();
       }
-    } catch (SAXException e) {
+    } catch (Exception e) {
       throw new IOException("Unable to create the new document.", e);
     }
 
     return domBuilder.getDocument();
   }
 
-  private void processElement(Schema elemSchema) {
+  private void processElement(Schema elemSchema, Decoder in)
+      throws IOException {
+
     if ( !elemSchema.getType().equals(Schema.Type.RECORD) ) {
       throw new IllegalStateException(
           "Expected to process a RECORD, but found a \""
@@ -545,15 +561,231 @@ public class XmlDatumReader implements DatumReader<Document> {
           + "\" instead.");
     }
 
+    final AvroRecordName recordName =
+        new AvroRecordName(elemSchema.getNamespace(), elemSchema.getName());
+
+    final XmlSchemaStateMachineNode stateMachine =
+        stateByAvroName.get(recordName);
+
+    if (stateMachine == null) {
+      throw new IllegalStateException(
+          "Cannot find state machine for "
+          + recordName);
+
+    } else if (!stateMachine
+                  .getNodeType()
+                  .equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
+
+      throw new IllegalStateException(
+          "State machine for "
+          + recordName
+          + " is of type "
+          + stateMachine.getNodeType()
+          + ", not ELEMENT.");
+    }
+
+    final List<XmlSchemaStateMachineNode.Attribute> expectedAttrs =
+        stateMachine.getAttributes();
+
+    final AvroAttributes attributes = new AvroAttributes();
+
     final List<Schema.Field> fields = elemSchema.getFields();
+
+    // The first N-1 fields are attributes.
     for (int index = 0; index < (fields.size() - 1); ++index) {
-      // The first N-1 fields are attributes.
-      
+      final AvroAttribute attr =
+          createAttribute(expectedAttrs, fields.get(index), in);
+      if (attr != null) {
+        attributes.addAttribute(attr);
+      }
+    }
+
+    // Determine the namespace, local name, and qualified name.
+    final QName elemQName = stateMachine.getElement().getQName();
+    final String qualifiedName = getQualifiedName(elemQName);
+
+    // Notify the content handlers an element has begun.
+    for (ContentHandler contentHandler : contentHandlers) {
+      try {
+        contentHandler.startElement(
+            elemQName.getNamespaceURI(),
+            elemQName.getLocalPart(),
+            qualifiedName,
+            attributes);
+
+      } catch (Exception e) {
+        throw new IOException("Cannot start element " + elemQName + '.', e);
+      }
+    }
+
+    // TODO: Process element content and/or children.
+
+    // Notify the content handlers the element has ended.
+    for (ContentHandler contentHandler : contentHandlers) {
+      try {
+        contentHandler.endElement(
+            elemQName.getNamespaceURI(),
+            elemQName.getLocalPart(),
+            qualifiedName);
+
+      } catch (Exception e) {
+        throw new IOException("Cannot start element " + elemQName + '.', e);
+      }
     }
   }
 
-  private void processContent(Schema contentSchema) {
+  private AvroAttribute createAttribute(
+      List<XmlSchemaStateMachineNode.Attribute> expectedAttrs,
+      Schema.Field field,
+      Decoder in)
+  throws IOException {
+
+    AvroAttribute attribute = null;
+
+    for (XmlSchemaStateMachineNode.Attribute attr : expectedAttrs) {
+      if (field.name().equals(attr.getAttribute().getQName().getLocalPart())) {
+        final String value =
+            readSimpleType(field.schema(), attr.getType(), in);
+
+        if (value != null) {
+          final QName attrQName = attr.getAttribute().getQName();
+          final String qualifiedName = getQualifiedName(attrQName);
+  
+          attribute =
+              new AvroAttribute(
+                  attrQName.getNamespaceURI(),
+                  attrQName.getLocalPart(),
+                  qualifiedName,
+                  value);
+        }
+
+        break;
+      }
+    }
+
+    return attribute;
+  }
+
+  private void processContent(Schema contentSchema, Decoder in)
+      throws IOException {
     
+  }
+
+  private String getQualifiedName(QName qName) {
+    final NamespaceContext nsContext =
+        xmlSchemaCollection.getNamespaceContext();
+
+    String prefix = null;
+    String qualifiedName = null;
+
+    if (qName.getNamespaceURI() != null) {
+      prefix = nsContext.getPrefix(qName.getNamespaceURI());
+    }
+
+    if ((prefix == null) || prefix.isEmpty()) {
+      qualifiedName = qName.getLocalPart();
+    } else {
+      qualifiedName = prefix + ':' + qName.getLocalPart();
+    }
+
+    return qualifiedName;
+  }
+
+  private String readSimpleType(
+      Schema schema,
+      XmlSchemaTypeInfo xmlType,
+      Decoder in)
+      throws IOException {
+
+    switch ( schema.getType() ) {
+    case ARRAY:
+      {
+        if (!xmlType.getType().equals(XmlSchemaTypeInfo.Type.LIST)) {
+          throw new IllegalStateException(
+              "Avro Schema is of type ARRAY, but the XML Schema is of type "
+              + xmlType.getType());
+        }
+
+        final StringBuilder result = new StringBuilder();
+        final XmlSchemaTypeInfo xmlElemType = xmlType.getChildTypes().get(0);
+        final Schema elemType = schema.getElementType();
+
+        for (long arrayBlockSize = in.readArrayStart();
+             arrayBlockSize > 0;
+             arrayBlockSize = in.arrayNext()) {
+          for (long itemNum = 0; itemNum < arrayBlockSize; ++itemNum) {
+            result.append( readSimpleType(elemType, xmlElemType, in) );
+            result.append(' ');
+          }
+          result.delete(result.length() - 1, result.length());
+        }
+
+        return result.toString();
+      }
+    case UNION:
+      {
+        if ( !xmlType.getType().equals(XmlSchemaTypeInfo.Type.UNION) ) {
+          throw new IllegalStateException(
+              "Avro Schema is of type UNION, but the XML Schema is of type "
+              + xmlType.getType());
+        }
+
+        final int unionIndex = in.readIndex();
+        final Schema elemType = schema.getTypes().get(unionIndex);
+        final XmlSchemaTypeInfo xmlElemType =
+            xmlType.getChildTypes().get(unionIndex);
+
+        return readSimpleType(elemType, xmlElemType, in);
+      }
+    case BYTES:
+      {
+        bytesBuffer = in.readBytes(bytesBuffer);
+        final int numBytes = bytesBuffer.remaining();
+        final byte[] data = new byte[numBytes];
+        bytesBuffer.get(data, 0, numBytes);
+
+        switch ( xmlType.getBaseType() ) {
+        case BIN_HEX:
+          return DatatypeConverter.printHexBinary(data);
+
+        case BIN_BASE64:
+          return DatatypeConverter.printBase64Binary(data);
+
+        default:
+          throw new IllegalStateException(
+              "Avro Schema is of type BYTES, but the XML Schema is of type "
+              + xmlType.getBaseType());
+        }
+      }
+    case NULL:
+      {
+        in.readNull();
+        return null;
+      }
+    case BOOLEAN:
+      return DatatypeConverter.printBoolean( in.readBoolean() );
+
+    case DOUBLE:
+      return DatatypeConverter.printDouble( in.readDouble() );
+
+    case ENUM:
+      return schema.getEnumSymbols().get( in.readEnum() );
+
+    case FLOAT:
+      return DatatypeConverter.printFloat( in.readFloat() );
+
+    case INT:
+      return DatatypeConverter.printInt( in.readInt() );
+
+    case LONG:
+      return DatatypeConverter.printLong( in.readLong() );
+
+    case STRING:
+      return in.readString();
+
+    default:
+      throw new IOException(schema.getType() + " is not a simple type.");
+    }
   }
 
   private static QName buildQNameFrom(JsonNode rootTagNode) {
@@ -630,4 +862,5 @@ public class XmlDatumReader implements DatumReader<Document> {
   private List<ContentHandler> contentHandlers;
   private DomBuilderFromSax domBuilder;
   private Map<AvroRecordName, XmlSchemaStateMachineNode> stateByAvroName;
+  private ByteBuffer bytesBuffer;
 }
