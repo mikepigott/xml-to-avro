@@ -448,10 +448,14 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       throw new IllegalStateException("No schema found for element \"" + elemQName + "\".");
     }
 
-    /* If this RECORD contains exactly one non-optional
-     * ID attribute, it is better served as a MAP.
+    /* If this RECORD contains exactly one non-optional ID attribute, it is
+     * better served as a MAP.  However, the root element of a document cannot
+     * be a map; it would have no siblings.
      */
-    if (!stack.isEmpty() && isMap(element, elemTypeInfo, fields)) {
+    if (!stack.isEmpty()
+        && ((stack.size() > 1)
+            || !stack.get(0).isSubstitutionGroup)
+        && isMap(fields)) {
       record = Schema.createMap(record);
       schemasByElement.put(elemQName, record);
     }
@@ -699,10 +703,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     root.addProp("xmlSchemas", schemasNode);
   }
 
-  private boolean isMap(
-      final XmlSchemaElement element,
-      final XmlSchemaTypeInfo typeInfo,
-      final List<AttributeEntry> attributes) {
+  private boolean isMap(final List<AttributeEntry> attributes) {
 
     int nonOptionalIdFieldCount = 0;
 
