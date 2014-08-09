@@ -626,18 +626,7 @@ public class XmlDatumReader implements DatumReader<Document> {
     case LIST:
     case UNION:
       {
-        final String content =
-            readSimpleType(childField.schema(), elemType, in);
-        final char[] chars = content.toCharArray();
-
-        for (ContentHandler contentHandler : contentHandlers) {
-          try {
-            contentHandler.characters(chars, 0, chars.length);
-          } catch (SAXException e) {
-            throw new IOException(
-                "Cannot process content \"" + content + "\".", e);
-          }
-        }
+        processContent(childField, elemType, in);
         break;
       }
     case COMPLEX:
@@ -698,9 +687,26 @@ public class XmlDatumReader implements DatumReader<Document> {
     return attribute;
   }
 
-  private void processContent(Schema contentSchema, Decoder in)
+  private void processContent(
+      Schema.Field field,
+      XmlSchemaTypeInfo xmlType,
+      Decoder in)
       throws IOException {
-    
+
+    processContent( readSimpleType(field.schema(), xmlType, in) );
+  }
+
+  private void processContent(String content) throws IOException {
+    final char[] chars = content.toCharArray();
+
+    for (ContentHandler contentHandler : contentHandlers) {
+      try {
+        contentHandler.characters(chars, 0, chars.length);
+      } catch (SAXException e) {
+        throw new IOException(
+            "Cannot process content \"" + content + "\".", e);
+      }
+    }
   }
 
   private String getQualifiedName(QName qName) {
@@ -757,6 +763,10 @@ public class XmlDatumReader implements DatumReader<Document> {
     case UNION:
       {
         if ( !xmlType.getType().equals(XmlSchemaTypeInfo.Type.UNION) ) {
+          /* TODO: This might be incorrect.  If an element is nillable,
+           *       or an attribute is optional, it would be written in
+           *       Avro as a union of a real type and a null type.
+           */
           throw new IllegalStateException(
               "Avro Schema is of type UNION, but the XML Schema is of type "
               + xmlType.getType());
@@ -839,7 +849,91 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     final Schema fieldSchema = field.schema();
 
-    
+    switch (fieldSchema.getType()) {
+    case NULL:
+      // This element has no children.
+      in.readNull();
+      break;
+    case STRING:
+      if ( elemType.isMixed() ) {
+        processContent( in.readString() );
+      } else {
+        throw new IllegalStateException(
+            element.getQName()
+            + " has textual content but is not a mixed type.");
+      }
+      break;
+    case ARRAY:
+      {
+        final Schema elemSchema = field.schema().getElementType();
+        if ( !elemSchema.getType().equals(Schema.Type.UNION) ) {
+          throw new IOException(
+              element.getQName()
+              + " has a child field of ARRAY of " + elemSchema.getType()
+              + " where ARRAY of UNION was expected.");
+        }
+
+        for (long arrayBlockSize = in.readArrayStart();
+            arrayBlockSize > 0;
+            arrayBlockSize = in.arrayNext()) {
+
+          for (long index = 0; index < arrayBlockSize; ++index) {
+            final int unionIndex = in.readIndex();
+            final Schema unionSchema = elemSchema.getTypes().get(unionIndex);
+            switch ( unionSchema.getType() ) {
+            case MAP:
+              {
+                for (long mapBlockSize = in.readMapStart();
+                     mapBlockSize > 0;
+                     mapBlockSize = in.mapNext()) {
+                  for (long mapIdx = 0; mapIdx < mapBlockSize; ++mapIdx) {
+                    // MAP of UNION of RECORD or MAP of RECORD
+                    final Schema valueType = unionSchema.getValueType();
+                    if ( valueType.getType().equals(Schema.Type.RECORD) ) {
+                      processElement(valueType, in);
+                    } else if (valueType.getType().equals(Schema.Type.UNION)) {
+                      // TODO
+                    } else {
+                      throw new IOException(
+                          "Received a MAP of "
+                          + valueType.getType()
+                          + " when either MAP of RECORD"
+                          + " or MAP of UNION of RECORD was expected.");
+                    }
+                  }
+                }
+                break;
+              }
+            case RECORD:
+              processElement(unionSchema, in);
+              break;
+            case STRING:
+              if ( elemType.isMixed() ) {
+                processContent( in.readString() );
+              } else {
+                throw new IOException(
+                    "Received a STRING for non-mixed type element "
+                    + element.getQName());
+              }
+              break;
+            default:
+              throw new IOException(
+                  element.getQName()
+                  + " has a child field of ARRAY of UNION with "
+                  + unionSchema.getType()
+                  + " where ARRAY of UNION of either MAP or RECORD was"
+                  + " expected.");
+            }
+          }
+        }
+        break;
+      }
+    default:
+      throw new IOException(
+          element.getQName()
+          + " has an invalid complex content of type "
+          + fieldSchema.getType() + '.');
+    }
 
     // Complex types only have ARRAYs of UNION of MAP/RECORD for children.
     if (field.schema().getType().equals(Schema.Type.ARRAY)
