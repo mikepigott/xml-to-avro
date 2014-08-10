@@ -64,49 +64,10 @@ public final class XmlSchemaElementValidator {
     return datatypeFactory;
   }
 
-  private static class QNameNamespaceContext implements NamespaceContext {
-
-    private static String NAMESPACE = "http://ws.apache.org/xmlschema/";
-    private static String PREFIX = "pfx";
-
-    QNameNamespaceContext() {
-      /* We don't actually care *what* the namespace returns,
-       * only that it returns *something*.
-       */
-      prefixes = new ArrayList<String>(1);
-      prefixes.add(PREFIX);
-    }
-
-    @Override
-    public String getNamespaceURI(String prefix) {
-      return NAMESPACE;
-    }
-
-    @Override
-    public String getPrefix(String namespaceURI) {
-      return PREFIX;
-    }
-
-    @Override
-    public Iterator getPrefixes(String namespaceURI) {
-      return prefixes.iterator();
-    }
-
-    private List<String> prefixes;
-  }
-
-  private static QNameNamespaceContext namespaceContext = null;
-
-  private static NamespaceContext getNamespaceContext() {
-    if (namespaceContext == null) {
-      namespaceContext = new QNameNamespaceContext();
-    }
-    return namespaceContext;
-  }
-
   static void validateAttributes(
       XmlSchemaStateMachineNode state,
-      Attributes attrs) throws ValidationException {
+      Attributes attrs,
+      NamespaceContext nsContext) throws ValidationException {
 
     if ((state == null)
         || (attrs == null)
@@ -174,13 +135,15 @@ public final class XmlSchemaElementValidator {
       validateType(
           "Attribute " + attrQName + " of " + elemQName,
           value,
-          attribute.getType());
+          attribute.getType(),
+          nsContext);
     }
   }
 
   static void validateContent(
       XmlSchemaStateMachineNode state,
-      String elementContent) throws ValidationException {
+      String elementContent,
+      NamespaceContext nsContext) throws ValidationException {
 
     if ((state == null)
         || !state
@@ -231,7 +194,7 @@ public final class XmlSchemaElementValidator {
             }
           }
         }
-        validateType(elemQName.toString(), elementContent, elemType);
+        validateType(elemQName.toString(), elementContent, elemType, nsContext);
         break;
       }
     default:
@@ -242,7 +205,8 @@ public final class XmlSchemaElementValidator {
   private static void validateType(
       String name,
       String value,
-      XmlSchemaTypeInfo typeInfo) throws ValidationException {
+      XmlSchemaTypeInfo typeInfo,
+      NamespaceContext nsContext) throws ValidationException {
 
     if ((value == null) || value.isEmpty()) {
       throw new ValidationException(name + " cannot have a null or empty value!");
@@ -253,7 +217,7 @@ public final class XmlSchemaElementValidator {
 
     switch ( typeInfo.getType() ) {
     case ATOMIC:
-      validateAtomicType(name, value, typeInfo);
+      validateAtomicType(name, value, typeInfo, nsContext);
       break;
     case LIST:
       {
@@ -265,7 +229,8 @@ public final class XmlSchemaElementValidator {
           validateType(
               name + " item value \"" + item + "\"",
               item,
-              typeInfo.getChildTypes().get(0));
+              typeInfo.getChildTypes().get(0),
+              nsContext);
         }
         listLengthChecks(name, values, facets);
         break;
@@ -279,7 +244,7 @@ public final class XmlSchemaElementValidator {
         boolean foundValidType = false;
         for (XmlSchemaTypeInfo unionType : typeInfo.getChildTypes()) {
           try {
-            validateType(name, value, unionType);
+            validateType(name, value, unionType, nsContext);
             foundValidType = true;
             break;
           } catch (ValidationException e) {
@@ -330,7 +295,8 @@ public final class XmlSchemaElementValidator {
   private static void validateAtomicType(
       String name,
       String value,
-      XmlSchemaTypeInfo typeInfo) throws ValidationException {
+      XmlSchemaTypeInfo typeInfo,
+      NamespaceContext nsContext) throws ValidationException {
 
     if ( !typeInfo.getType().equals(XmlSchemaTypeInfo.Type.ATOMIC) ) {
       throw new ValidationException(name + " must have a type of ATOMIC, not " + typeInfo.getType());
@@ -487,7 +453,7 @@ public final class XmlSchemaElementValidator {
 
     case QNAME:
       try {
-        DatatypeConverter.parseQName(value, getNamespaceContext());
+        DatatypeConverter.parseQName(value, nsContext);
       } catch (IllegalArgumentException iae) {
         throw new ValidationException(name + " value of \"" + value + "\" is not a valid .", iae);
       }
@@ -500,7 +466,7 @@ public final class XmlSchemaElementValidator {
          */
         final String[] qNames = value.split(" ");
         for (String qName : qNames) {
-          DatatypeConverter.parseQName(qName, getNamespaceContext());
+          DatatypeConverter.parseQName(qName, nsContext);
         }
 
       } catch (IllegalArgumentException iae) {

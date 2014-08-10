@@ -75,6 +75,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       this.path = path;
       this.out = out;
 
+      nsContext = new XmlSchemaNamespaceContext();
       stack = new ArrayList<StackEntry>();
       currLocation = null;
       content = null;
@@ -85,6 +86,18 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     @Override
     public void startDocument() throws SAXException {
       currLocation = path;
+    }
+
+    @Override
+    public void startPrefixMapping(String prefix, String uri)
+        throws SAXException {
+
+      nsContext.addNamespace(prefix, uri);
+    }
+
+    @Override
+    public void endPrefixMapping(String prefix) throws SAXException {
+      nsContext.removeNamespace(prefix);
     }
 
     @Override
@@ -838,6 +851,32 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           out.writeBoolean( Boolean.parseBoolean(data) );
           break;
         }
+      case RECORD:
+        {
+          switch (baseType) {
+          case QNAME:
+            {
+              try {
+                final QName qName =
+                    DatatypeConverter.parseQName(data, nsContext);
+
+                if (unionIndex >= 0) {
+                  out.writeIndex(unionIndex);
+                }
+                out.writeString( qName.getNamespaceURI() );
+                out.writeString( qName.getLocalPart() );
+
+              } catch (IllegalArgumentException e) {
+                throw new IOException("\"" + data + "\" is not a QName.", e);
+              }
+              break;
+            }
+           default:
+             throw new IOException(
+                 "Cannot write a record of XML Schema Type " + baseType);
+          }
+          break;
+        }
       default:
         throw new IOException("Cannot write data of type " + schema.getType());
       }
@@ -851,6 +890,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     private final XmlSchemaPathNode path;
     private final Encoder out;
+    private final XmlSchemaNamespaceContext nsContext;
   }
 
   public XmlDatumWriter(XmlDatumConfig config, Schema avroSchema)

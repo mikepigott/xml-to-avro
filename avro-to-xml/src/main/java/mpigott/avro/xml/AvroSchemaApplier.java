@@ -293,6 +293,7 @@ final class AvroSchemaApplier {
         case INT:
         case LONG:
         case STRING:
+        case RECORD:
           {
             if (!confirmEquivalent(
                     typeInfo,
@@ -584,15 +585,19 @@ final class AvroSchemaApplier {
       convertibleFrom.add(Schema.Type.STRING);
       convertibleFrom.add(Schema.Type.BOOLEAN);
       convertibleFrom.add(Schema.Type.ENUM);
+      /* falls through */
     case DOUBLE:
       // DOUBLE, FLOAT, LONG, INT -> DOUBLE
       convertibleFrom.add(Schema.Type.DOUBLE);
+      /* falls through */
     case FLOAT:
       // FLOAT, LONG, INT -> FLOAT
       convertibleFrom.add(Schema.Type.FLOAT);
+      /* falls through */
     case LONG:
       // LONG, INT -> LONG
       convertibleFrom.add(Schema.Type.LONG);
+      /* falls through */
     case INT:
       // INT -> INT
       convertibleFrom.add(Schema.Type.INT);
@@ -609,7 +614,8 @@ final class AvroSchemaApplier {
       break;
 
     case ENUM:
-      // This one is more complex.
+    case RECORD:
+      // These are more complex.
       break;
 
     default:
@@ -621,10 +627,13 @@ final class AvroSchemaApplier {
       return convertibleFrom.contains( readerType.getType() );
     }
 
-    /* If we're here, it's because the writer is an ENUM.  Confirm
-     * the writer elements are a superset of the reader elements.
+    /* If we're here, it's because the writer is either an ENUM or a RECORD.
+     * For ENUMs, confirm the writer elements are a superset of the reader
+     * elements.  For RECORDs, confirm the fields are convertible. 
      */
-    if ( readerType.getType().equals(Schema.Type.ENUM) ) {
+    if (writerType.getType().equals(Schema.Type.ENUM)
+        && readerType.getType().equals(Schema.Type.ENUM) ) {
+
       final List<String> writerSymbols = writerType.getEnumSymbols();
       final List<String> readerSymbols = readerType.getEnumSymbols();
 
@@ -635,6 +644,30 @@ final class AvroSchemaApplier {
       }
 
       return true;
+
+    } else if (
+        writerType.getType().equals(Schema.Type.RECORD)
+        && readerType.getType().equals(Schema.Type.RECORD) ) {
+
+      final List<Schema.Field> writerFields = writerType.getFields();
+      final List<Schema.Field> readerFields = readerType.getFields();
+
+      if (readerFields.size() == writerFields.size()) {
+        boolean equivalent = true;
+
+        for (int fieldIdx = 0; fieldIdx < writerFields.size(); ++fieldIdx) {
+          equivalent =
+              confirmEquivalent(
+                  readerFields.get(fieldIdx).schema(),
+                  writerFields.get(fieldIdx).schema());
+          if (!equivalent) {
+            break;
+          }
+        }
+
+        return equivalent;
+      }
+
     }
 
     return false;

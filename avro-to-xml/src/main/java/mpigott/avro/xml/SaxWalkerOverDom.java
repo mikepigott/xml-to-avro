@@ -23,6 +23,10 @@ import java.util.Map;
 
 import javax.xml.namespace.QName;
 
+import org.apache.ws.commons.schema.constants.Constants;
+import org.apache.ws.commons.schema.utils.NamespacePrefixList;
+import org.apache.ws.commons.schema.utils.PrefixCollector;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -42,9 +46,11 @@ import org.xml.sax.SAXException;
  * 
  * <ul>
  *   <li>{@link ContentHandler#startDocument()}</li>
+ *   <li>{@link ContentHandler#startPrefixMapping(String, String)}</li>
  *   <li>{@link ContentHandler#startElement(String, String, String, org.xml.sax.Attributes)}</li>
  *   <li>{@link ContentHandler#characters(char[], int, int)}</li>
  *   <li>{@link ContentHandler#endElement(String, String, String)}</li>
+ *   <li>{@link ContentHandler#endPrefixMapping(String)}</li>
  *   <li>{@link ContentHandler#endDocument()}</li>
  * </ul>
  * </p>
@@ -86,7 +92,16 @@ final class SaxWalkerOverDom {
 
       if (domAttrs != null) {
         for (int attrIdx = 0; attrIdx < domAttrs.getLength(); ++attrIdx) {
-          final Attr attribute = new Attr(domAttrs.item(attrIdx));
+          final Node domAttr = domAttrs.item(attrIdx);
+
+          if (Constants.XMLNS_ATTRIBUTE_NS_URI.equals(
+              domAttr.getNamespaceURI())) {
+
+            // Namespace declarations will be handled separately.
+            continue;
+          }
+
+          final Attr attribute = new Attr(domAttr);
           attributes.add(attribute);
 
           attrsByQualifiedName.put(attribute.qualifiedName, attribute);
@@ -228,7 +243,7 @@ final class SaxWalkerOverDom {
   /**
    * Constructs a new <code>SaxWalkerOverDom</code>.
    */
-  public SaxWalkerOverDom() {
+  SaxWalkerOverDom() {
     listeners = null;
   }
 
@@ -238,7 +253,8 @@ final class SaxWalkerOverDom {
    *
    * @param contentHandler The content handler to send events to.
    */
-  public SaxWalkerOverDom(ContentHandler contentHandler) {
+  SaxWalkerOverDom(ContentHandler contentHandler) {
+    this();
     listeners = new ArrayList<ContentHandler>(1);
     listeners.add(contentHandler);
   }
@@ -249,7 +265,8 @@ final class SaxWalkerOverDom {
    *
    * @param contentHandlers The list of content handlers to send events to.
    */
-  public SaxWalkerOverDom(List<ContentHandler> contentHandlers) {
+  SaxWalkerOverDom(List<ContentHandler> contentHandlers) {
+    this();
     listeners = contentHandlers;
   }
 
@@ -260,7 +277,7 @@ final class SaxWalkerOverDom {
    *
    * @param contentHandler The content handler to send events to.
    */
-  public void addContentHandler(ContentHandler contentHandler) {
+  void addContentHandler(ContentHandler contentHandler) {
     if (listeners == null) {
       listeners = new ArrayList<ContentHandler>(1);
     }
@@ -275,7 +292,7 @@ final class SaxWalkerOverDom {
    * @param contentHandler The content handler to stop sending events to.
    * @return <code>true</code> if it was found, <code>false</code> if not.
    */
-  public boolean removeContentHandler(ContentHandler contentHandler) {
+  boolean removeContentHandler(ContentHandler contentHandler) {
     if (listeners != null) {
       return listeners.remove(contentHandler);
     }
@@ -291,7 +308,11 @@ final class SaxWalkerOverDom {
    * @param systemId The system ID of this {@link Document}.
    * @throws SAXException if an exception occurs when notifying the handlers.
    */
-  public void walk(Document document) throws SAXException {
+  void walk(Document document) throws SAXException {
+    if (document == null) {
+      throw new IllegalArgumentException("Document cannot be null.");
+    }
+
     if ((listeners == null) || listeners.isEmpty()) {
       return;
     }
@@ -300,15 +321,22 @@ final class SaxWalkerOverDom {
       listener.startDocument();
     }
 
+    final List<String> prefixes = startPrefixMappings(document);
+
     walk( document.getDocumentElement() );
 
     for (ContentHandler listener : listeners) {
+      for (String prefix : prefixes) {
+        listener.endPrefixMapping(prefix);
+      }
       listener.endDocument();
     }
   }
 
   private void walk(Element element) throws SAXException {
     DomAttrsAsSax attrs = new DomAttrsAsSax( element.getAttributes() );
+
+    final List<String> prefixes = startPrefixMappings(element);
 
     for (ContentHandler listener : listeners) {
       listener.startElement(
@@ -338,6 +366,10 @@ final class SaxWalkerOverDom {
           convertNullToEmptyString(element.getNamespaceURI()),
           convertNullToEmptyString(element.getLocalName()),
           convertNullToEmptyString(element.getNodeName()));
+
+      for (String prefix : prefixes) {
+        listener.endPrefixMapping(prefix);
+      }
     }
   }
 
@@ -363,6 +395,51 @@ final class SaxWalkerOverDom {
       return "";
     }
     return input;
+  }
+
+  private List<String> startPrefixMappings(Node node)
+      throws DOMException, SAXException {
+
+    switch (node.getNodeType()) {
+    case Node.DOCUMENT_NODE:
+    case Node.ELEMENT_NODE:
+      break;
+    default:
+      throw new IllegalArgumentException(
+          "Cannot start prefix mappings for a node of type "
+          + node.getNodeType());
+    }
+
+    final ArrayList<String> prefixes = new ArrayList<String>();
+
+    final NamedNodeMap attrs = node.getAttributes();
+    if (attrs == null) {
+      return prefixes;
+    }
+
+    for (int attrIndex = 0; attrIndex < attrs.getLength(); ++attrIndex) {
+      final Node attr = attrs.item(attrIndex);
+      final String attrUri = attr.getNamespaceURI();
+
+      if ( Constants.XMLNS_ATTRIBUTE_NS_URI.equals(attrUri) ) {
+        final String localName = attr.getLocalName();
+        String prefix = null;
+
+        if (Constants.XMLNS_ATTRIBUTE.equals(localName)) {
+          prefix = Constants.DEFAULT_NS_PREFIX;
+        } else {
+          prefix = localName;
+        }
+
+        prefixes.add(prefix);
+
+        for (ContentHandler listener : listeners) {
+          listener.startPrefixMapping(prefix, attr.getNodeValue());
+        }
+      }
+    }
+
+    return prefixes;
   }
 
   private List<ContentHandler> listeners;

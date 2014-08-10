@@ -61,6 +61,7 @@ class Utils {
     xmlToAvroTypeMap.put(Constants.XSD_INT,           Schema.Type.INT);
     xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDINT,   Schema.Type.LONG);
     xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDSHORT, Schema.Type.INT);
+    xmlToAvroTypeMap.put(Constants.XSD_QNAME,         Schema.Type.RECORD);
   }
 
   static Set<QName> getAvroRecognizedTypes() {
@@ -79,7 +80,6 @@ class Utils {
     switch ( typeInfo.getType() ) {
     case ATOMIC:
       {
-
         Schema schema = null;
         if ( isValidEnum(typeInfo) ) {
           // This is an enumeration!
@@ -108,6 +108,40 @@ class Utils {
                   "Enumeration of symbols in " + qName,
                   ns,
                   symbols);
+
+        } else if (
+            typeInfo.getBaseType().equals(XmlSchemaBaseSimpleType.QNAME)) {
+
+          /* QNames will be represented as a RECORD
+           * with a namespace and a local part.
+           */
+          final List<Schema.Field> fields = new ArrayList<Schema.Field>(2);
+          fields.add(
+              new Schema.Field(
+                  "namespace",
+                  Schema.create(Schema.Type.STRING),
+                  "The namespace of this qualified name.",
+                  null) );
+
+          fields.add(
+              new Schema.Field(
+                  "localPart",
+                  Schema.create(Schema.Type.STRING),
+                  "The local part of this qualified name.",
+                  null) );
+
+          String ns = null;
+          try {
+            ns = Utils.getAvroNamespaceFor( Constants.URI_2001_SCHEMA_XSD );
+          } catch (URISyntaxException e) {
+            throw new IllegalStateException(
+                "Cannot create an Avro namespace for "
+                + Constants.URI_2001_SCHEMA_XSD);
+          }
+
+          schema =
+              Schema.createRecord("qName", "Qualified Name", ns, false);
+          schema.setFields(fields);
 
         } else {
 
@@ -158,6 +192,7 @@ class Utils {
         if ( typeInfo.isMixed() ) {
           return Schema.create(Schema.Type.STRING);
         }
+        /* falls through */
       }
     default:
       throw new IllegalArgumentException("Cannot create an Avro schema for a " + typeInfo.getType() + " type.");

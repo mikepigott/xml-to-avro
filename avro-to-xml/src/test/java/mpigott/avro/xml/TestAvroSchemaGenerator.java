@@ -94,7 +94,7 @@ public class TestAvroSchemaGenerator {
     checkOptionalPrimitiveField(schema.getField("gDay"),             Schema.Type.STRING, null);
     checkOptionalPrimitiveField(schema.getField("gMonth"),           Schema.Type.STRING, null);
     checkOptionalPrimitiveField(schema.getField("anyURI"),           Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("qname"),            Schema.Type.STRING, null);
+    checkOptionalPrimitiveField(schema.getField("qname"),            Schema.Type.RECORD, null);
     checkOptionalPrimitiveField(schema.getField("string"),           Schema.Type.STRING, null);
     checkOptionalPrimitiveField(schema.getField("normalizedString"), Schema.Type.STRING, null);
     checkOptionalPrimitiveField(schema.getField("token"),            Schema.Type.STRING, null);

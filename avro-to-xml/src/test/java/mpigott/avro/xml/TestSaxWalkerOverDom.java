@@ -18,7 +18,9 @@ package mpigott.avro.xml;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -186,8 +188,12 @@ public class TestSaxWalkerOverDom {
    */
   private static class ContentValidator implements ContentHandler {
 
-    ContentValidator(List<StackEntry> stack) {
+    ContentValidator(
+        List<StackEntry> stack,
+        Map<String, List<String>> prefixMappings) {
+
       this.stack = stack;
+      this.prefixMappings = prefixMappings;
     }
 
     @Override
@@ -256,18 +262,39 @@ public class TestSaxWalkerOverDom {
     }
 
     @Override
-    public void setDocumentLocator(Locator locator) {
-      throw new UnsupportedOperationException("This should not be called.");
-    }
-
-    @Override
     public void startPrefixMapping(String prefix, String uri)
         throws SAXException {
-      throw new UnsupportedOperationException("This should not be called.");
+
+      if ( !prefixMappings.containsKey(prefix) ) {
+        throw new SAXException("Prefix \"" + prefix + "\" and URI \"" + uri + "\" are not expected.");
+      }
+
+      /* This is a quick and dirty test; in reality the prefix-to-namespace
+       * mapping is only valid if it exists inside the current scope.  That
+       * said, keeping track of the scope is a much more difficult problem.
+       */
+      final List<String> namespaces = prefixMappings.get(prefix);
+      boolean found = false;
+      for (String namespace : namespaces) {
+        if (namespace.equals(uri)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        throw new SAXException("Prefix \"" + prefix + "\" does not have a namespace of \"" + uri + "\".");
+      }
     }
 
     @Override
     public void endPrefixMapping(String prefix) throws SAXException {
+      if ( !prefixMappings.containsKey(prefix) ) {
+        throw new SAXException("Prefix \"" + prefix + "\" is not expected.");
+      }
+    }
+
+    @Override
+    public void setDocumentLocator(Locator locator) {
       throw new UnsupportedOperationException("This should not be called.");
     }
 
@@ -310,6 +337,7 @@ public class TestSaxWalkerOverDom {
     }
 
     private List<StackEntry> stack;
+    private Map<String, List<String>> prefixMappings;
   }
 
   /**
@@ -319,10 +347,15 @@ public class TestSaxWalkerOverDom {
 
     public StackBuilder() {
       stack = new ArrayList<StackEntry>();
+      prefixMappings = new HashMap<String, List<String>>();
     }
 
     public ArrayList<StackEntry> getStack() {
       return stack;
+    }
+
+    public Map<String, List<String>> getPrefixMappings() {
+      return prefixMappings;
     }
 
     @Override
@@ -350,7 +383,20 @@ public class TestSaxWalkerOverDom {
       stack.add( new StackEntry( new String(ch, start, length) ) );
     }
 
+    @Override
+    public void startPrefixMapping(String prefix, String uri)
+        throws SAXException {
+
+      List<String> mappings = prefixMappings.get(prefix);
+      if (mappings == null) {
+        mappings = new ArrayList<String>(1);
+        prefixMappings.put(prefix, mappings);
+      }
+      mappings.add(uri);
+    }
+
     private final ArrayList<StackEntry> stack;
+    private final Map<String, List<String>> prefixMappings;
   }
 
   @Test
@@ -377,7 +423,8 @@ public class TestSaxWalkerOverDom {
     final int stackSize = stack.size();
 
     final SaxWalkerOverDom walker =
-        new SaxWalkerOverDom(new ContentValidator(stack));
+        new SaxWalkerOverDom(
+            new ContentValidator(stack, stackBuilder.getPrefixMappings()));
 
     try {
       walker.walk(doc);

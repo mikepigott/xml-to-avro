@@ -411,6 +411,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
    */
   XmlSchemaPathFinder(XmlSchemaStateMachineNode root) {
     pathMgr = new XmlSchemaPathManager();
+    nsContext = new XmlSchemaNamespaceContext();
 
     rootNode = root;
 
@@ -436,6 +437,18 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     if (decisionPoints != null) {
       decisionPoints.clear();
     }
+  }
+
+  @Override
+  public void startPrefixMapping(String prefix, String uri)
+      throws SAXException {
+
+    nsContext.addNamespace(prefix, uri);
+  }
+
+  @Override
+  public void endPrefixMapping(String prefix) throws SAXException {
+    nsContext.removeNamespace(prefix);
   }
 
   /**
@@ -727,7 +740,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         throw new IllegalStateException("Received empty text for element " + state.getElement().getQName() + " when content was expected.");
       }
 
-      XmlSchemaElementValidator.validateContent(state, text);
+      XmlSchemaElementValidator.validateContent(state, text, nsContext);
 
       currentPath.getDocumentNode().setReceivedContent(true);
 
@@ -1727,13 +1740,16 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     try {
       XmlSchemaElementValidator.validateAttributes(
           currentPath.getStateMachineNode(),
-          attrs);
+          attrs,
+          nsContext);
     } catch (ValidationException ve) {
       throw new IllegalStateException("Cannot validate attributes of " + currentPath.getStateMachineNode().getElement().getQName() +".", ve);
     }
   }
 
   private final XmlSchemaStateMachineNode rootNode;
+  private final XmlSchemaNamespaceContext nsContext;
+
   private XmlSchemaPathNode rootPathNode;
 
   private XmlSchemaPathNode currentPath;
