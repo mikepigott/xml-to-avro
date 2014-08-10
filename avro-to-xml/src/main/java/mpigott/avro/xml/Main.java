@@ -2,6 +2,7 @@ package mpigott.avro.xml;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -19,12 +20,18 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
 import org.antlr.stringtemplate.StringTemplate;
 import org.antlr.stringtemplate.StringTemplateGroup;
 import org.apache.avro.Schema;
+import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.io.JsonDecoder;
 import org.apache.avro.io.JsonEncoder;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
@@ -49,14 +56,17 @@ public class Main {
   }
 
   public static void main(String[] args) throws Exception {
+    /*
     final XmlDatumConfig config = new XmlDatumConfig(new URL("http://xbrl.fasb.org/us-gaap/2012/elts/us-gaap-2012-01-31.xsd"), new QName("http://www.xbrl.org/2003/instance", "xbrl"));
     config.addSchemaUrl(new URL("http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd"));
     config.addSchemaUrl(new URL("http://xbrl.sec.gov/dei/2012/dei-2012-01-31.xsd"));
 
     final XmlDatumWriter writer = new XmlDatumWriter(config);
 
+    final Schema avroSchema = writer.getSchema();
+
     FileWriter schemaWriter = new FileWriter("xbrl.avsc");
-    schemaWriter.write( writer.getSchema().toString(true) );
+    schemaWriter.write( avroSchema.toString(true) );
     schemaWriter.close();
 
     final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -69,13 +79,39 @@ public class Main {
 
     final FileOutputStream outStream = new FileOutputStream("xbrl.avro");
 
-    final JsonEncoder encoder = ef.jsonEncoder(writer.getSchema(), outStream, true);
+    final JsonEncoder encoder = ef.jsonEncoder(avroSchema, outStream, true);
 
     writer.write(xbrlDoc, encoder);
 
     encoder.flush();
 
     outStream.close();
+     */
+    Schema.Parser parser = new Schema.Parser();
+
+    Schema avroSchema = parser.parse(new File("xbrl.avsc"));
+
+    DecoderFactory df = DecoderFactory.get();
+
+    FileInputStream inStream = new FileInputStream("xbrl.avro");
+
+    JsonDecoder jd = df.jsonDecoder(avroSchema, inStream);
+
+    XmlDatumReader reader = new XmlDatumReader();
+    reader.setSchema(avroSchema);
+
+    final Document doc = reader.read(null, jd);
+
+    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    Transformer transformer = transformerFactory.newTransformer();
+    DOMSource source = new DOMSource(doc);
+ 
+    // Output to console for testing
+    StreamResult result = new StreamResult(new FileOutputStream("new_xbrl.xml"));
+
+    transformer.transform(source, result);
+
+    inStream.close();
   }
 
   /**

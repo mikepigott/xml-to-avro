@@ -287,7 +287,32 @@ public final class XmlSchemaElementValidator {
           }
         }
         if (!foundValidType) {
-          throw new ValidationException(name + " does not validate against any of its union of types.");
+          StringBuilder errMsg = new StringBuilder(name);
+          errMsg.append(" does not validate against any of its union of");
+          errMsg.append(" types.  The value is \"").append(value);
+          errMsg.append("\" and the union types are: ");
+
+          for (int childIndex = 0;
+               childIndex < typeInfo.getChildTypes().size() - 1;
+              ++childIndex) {
+
+            errMsg.append(
+                typeInfo
+                  .getChildTypes()
+                  .get(childIndex)
+                  .getBaseType() );
+            errMsg.append(", ");
+
+          }
+          errMsg
+            .append(
+                typeInfo
+                  .getChildTypes()
+                  .get(typeInfo.getChildTypes().size() - 1)
+                  .getBaseType());
+          errMsg.append('.');
+
+          throw new ValidationException( errMsg.toString() );
         }
         break;
       }

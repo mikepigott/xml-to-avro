@@ -18,6 +18,7 @@ package mpigott.avro.xml;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -433,11 +434,7 @@ public class XmlDatumReader implements DatumReader<Document> {
 	    throw new IllegalArgumentException("At least one XML Schema file or URL must be defined in the xmlSchemas property.");
 	  }
 
-	  /* 4. Build the xmlSchemaCollection, its namespace -> location
-	   *    mapping, and an Avro Record Name -> XML QName mapping.
-	   */
-	  final HashMap<QName, AvroRecordName> avroNameMapping =
-	      new HashMap<QName, AvroRecordName>();
+	  // 4. Build the xmlSchemaCollection and its namespace -> location mapping.
 
 	  if (namespaceToLocationMapping == null) {
 	    namespaceToLocationMapping = new HashMap<String, String>();
@@ -454,23 +451,12 @@ public class XmlDatumReader implements DatumReader<Document> {
         namespaceToLocationMapping.put(
             xmlSchema.getTargetNamespace(),
             source.getSystemId());
-
-        final Map<QName, XmlSchemaElement> elementsByQName =
-            xmlSchema.getElements();
-
-        for (QName elemQName : elementsByQName.keySet()) {
-          try {
-            avroNameMapping.put(elemQName, new AvroRecordName(elemQName));
-          } catch (URISyntaxException e) {
-            throw new IllegalStateException(elemQName + " has a namespace of \"" + elemQName.getNamespaceURI() + "\" that is not a valid URI.", e);
-          }
-        }
       }
     } catch (IOException e) {
       throw new IllegalArgumentException("Not all of the schema sources could be read from.", e);
     }
 
-    // 5. Build the state machine.
+    // 6. Build the state machine.
     final XmlSchemaStateMachineGenerator stateMachineGen =
         new XmlSchemaStateMachineGenerator();
 
@@ -492,7 +478,7 @@ public class XmlDatumReader implements DatumReader<Document> {
     final XmlSchemaStateMachineNode stateMachine =
         stateMachineGen.getStartNode();
 
-    // 6. Build an AvroRecordName -> XmlSchemaStateMachineNode mapping.
+    // 7. Build an AvroRecordName -> XmlSchemaStateMachineNode mapping.
     final Map<QName, XmlSchemaStateMachineNode> stateMachineNodesByQName =
         stateMachineGen.getStateMachineNodesByQName();
 
@@ -500,8 +486,16 @@ public class XmlDatumReader implements DatumReader<Document> {
     for (Map.Entry<QName, XmlSchemaStateMachineNode> entry :
       stateMachineNodesByQName.entrySet()) {
 
-      final AvroRecordName recordName = avroNameMapping.get(entry.getKey());
-      stateByAvroName.put(recordName, entry.getValue());
+      try {
+        stateByAvroName.put(new AvroRecordName(entry.getKey()), entry.getValue());
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException(
+            entry.getKey()
+            + "'s namespace of \""
+            + entry.getKey().getNamespaceURI()
+            + "\" is not a valid URI.",
+            e);
+      }
     }
 
     inputSchema = schema;
@@ -602,7 +596,6 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     // Determine the namespace, local name, and qualified name.
     final QName elemQName = stateMachine.getElement().getQName();
-    final String qualifiedName = getQualifiedName(elemQName);
 
     // Notify the content handlers an element has begun.
     for (ContentHandler contentHandler : contentHandlers) {
@@ -610,7 +603,7 @@ public class XmlDatumReader implements DatumReader<Document> {
         contentHandler.startElement(
             elemQName.getNamespaceURI(),
             elemQName.getLocalPart(),
-            qualifiedName,
+            "",
             attributes);
 
       } catch (Exception e) {
@@ -647,7 +640,7 @@ public class XmlDatumReader implements DatumReader<Document> {
         contentHandler.endElement(
             elemQName.getNamespaceURI(),
             elemQName.getLocalPart(),
-            qualifiedName);
+            "");
 
       } catch (Exception e) {
         throw new IOException("Cannot start element " + elemQName + '.', e);
@@ -670,13 +663,12 @@ public class XmlDatumReader implements DatumReader<Document> {
 
         if (value != null) {
           final QName attrQName = attr.getAttribute().getQName();
-          final String qualifiedName = getQualifiedName(attrQName);
   
           attribute =
               new AvroAttribute(
                   attrQName.getNamespaceURI(),
                   attrQName.getLocalPart(),
-                  qualifiedName,
+                  "",
                   value);
         }
 
@@ -697,6 +689,10 @@ public class XmlDatumReader implements DatumReader<Document> {
   }
 
   private void processContent(String content) throws IOException {
+    if (content == null) {
+      return;
+    }
+
     final char[] chars = content.toCharArray();
 
     for (ContentHandler contentHandler : contentHandlers) {
@@ -707,26 +703,6 @@ public class XmlDatumReader implements DatumReader<Document> {
             "Cannot process content \"" + content + "\".", e);
       }
     }
-  }
-
-  private String getQualifiedName(QName qName) {
-    final NamespaceContext nsContext =
-        xmlSchemaCollection.getNamespaceContext();
-
-    String prefix = null;
-    String qualifiedName = null;
-
-    if (qName.getNamespaceURI() != null) {
-      prefix = nsContext.getPrefix(qName.getNamespaceURI());
-    }
-
-    if ((prefix == null) || prefix.isEmpty()) {
-      qualifiedName = qName.getLocalPart();
-    } else {
-      qualifiedName = prefix + ':' + qName.getLocalPart();
-    }
-
-    return qualifiedName;
   }
 
   private String readSimpleType(
@@ -762,21 +738,9 @@ public class XmlDatumReader implements DatumReader<Document> {
       }
     case UNION:
       {
-        if ( !xmlType.getType().equals(XmlSchemaTypeInfo.Type.UNION) ) {
-          /* TODO: This might be incorrect.  If an element is nillable,
-           *       or an attribute is optional, it would be written in
-           *       Avro as a union of a real type and a null type.
-           */
-          throw new IllegalStateException(
-              "Avro Schema is of type UNION, but the XML Schema is of type "
-              + xmlType.getType());
-        }
-
         final int unionIndex = in.readIndex();
 
-        if ((schema.getTypes().size() <= unionIndex)
-            || (xmlType.getChildTypes().size() <= unionIndex)) {
-
+        if (schema.getTypes().size() <= unionIndex) {
           throw new IllegalStateException("Attempted to read from union index "
               + unionIndex + " but the Avro Schema has "
               + schema.getTypes().size() + " types, and the XML Schema has "
@@ -784,8 +748,21 @@ public class XmlDatumReader implements DatumReader<Document> {
         }
 
         final Schema elemType = schema.getTypes().get(unionIndex);
-        final XmlSchemaTypeInfo xmlElemType =
-            xmlType.getChildTypes().get(unionIndex);
+
+        XmlSchemaTypeInfo xmlElemType = xmlType;
+        if ( xmlType.getType().equals(XmlSchemaTypeInfo.Type.UNION) ) {
+          if (xmlType.getChildTypes().size() <= unionIndex) {
+            /* Utils.getAvroSchemaFor() will add a NULL type and/or a STRING
+             * type on the end of the XML types to account for optional values
+             * and mixed elements, respectively.  If the schema union index is
+             * bigger than the number of XML types, we are in this situation.
+             * Luckily, we do not need the XML type for either of those.
+             */
+            xmlElemType = null;
+          } else {
+            xmlElemType = xmlType.getChildTypes().get(unionIndex);
+          }
+        }
 
         return readSimpleType(elemType, xmlElemType, in);
       }
@@ -818,8 +795,22 @@ public class XmlDatumReader implements DatumReader<Document> {
       return DatatypeConverter.printBoolean( in.readBoolean() );
 
     case DOUBLE:
-      return DatatypeConverter.printDouble( in.readDouble() );
+      {
+        final double value = in.readDouble();
 
+        switch ( xmlType.getBaseType() ) {
+        case DECIMAL:
+          return DatatypeConverter.printDecimal( new BigDecimal(value) );
+
+        case DOUBLE:
+          return DatatypeConverter.printDouble(value);
+
+        default:
+          throw new IOException(
+              "Avro Schema is of type DOUBLE, but the XML Schema is of type "
+              + xmlType.getBaseType());
+        }
+      }
     case ENUM:
       return schema.getEnumSymbols().get( in.readEnum() );
 
