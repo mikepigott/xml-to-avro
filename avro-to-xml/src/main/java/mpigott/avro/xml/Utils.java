@@ -91,7 +91,8 @@ class Utils {
           try {
             ns = Utils.getAvroNamespaceFor(qName.getNamespaceURI()) + ".enums";
           } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(qName + " does not have a valid namespace.", e);
+            throw new IllegalArgumentException(
+                qName + " does not have a valid namespace.", e);
           }
 
           final List<XmlSchemaRestriction> enumFacet =
