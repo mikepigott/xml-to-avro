@@ -169,23 +169,30 @@ class Utils {
     case UNION:
       {
         List<XmlSchemaTypeInfo> unionTypes = typeInfo.getChildTypes();
-        Set<Schema> avroTypes = new HashSet<Schema>( unionTypes.size() );
+        List<Schema> avroTypes =
+            new ArrayList<Schema>(unionTypes.size() + 2);
 
         for (XmlSchemaTypeInfo unionType : unionTypes) {
-          avroTypes.add( getAvroSchemaFor(unionType, qName, false) );
+          final Schema avroSchema = getAvroSchemaFor(unionType, qName, false);
+          if ( !avroTypes.contains(avroSchema) ) {
+            avroTypes.add(avroSchema);
+          }
         }
 
         if (isOptional) {
-          avroTypes.add( Schema.create(Schema.Type.NULL) );
+          final Schema avroSchema = Schema.create(Schema.Type.NULL);
+          if ( !avroTypes.contains(avroSchema) ) {
+            avroTypes.add(avroSchema);
+          }
         }
         if ( typeInfo.isMixed() ) {
-          avroTypes.add( Schema.create(Schema.Type.STRING) );
+          final Schema avroSchema = Schema.create(Schema.Type.STRING);
+          if ( !avroTypes.contains(avroSchema) ) {
+            avroTypes.add(avroSchema);
+          }
         }
 
-        final List<Schema> avroUnionTypes =
-            Arrays.asList(avroTypes.toArray(new Schema[avroTypes.size()]));
-
-        return Schema.createUnion(avroUnionTypes);
+        return Schema.createUnion(avroTypes);
       }
     case COMPLEX:
       {

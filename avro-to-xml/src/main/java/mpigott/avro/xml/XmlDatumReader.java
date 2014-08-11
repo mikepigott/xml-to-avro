@@ -353,6 +353,7 @@ public class XmlDatumReader implements DatumReader<Document> {
     contentHandlers = null;
     domBuilder = null;
     bytesBuffer = null;
+    nsContext = new XmlSchemaNamespaceContext();
   }
 
   /**
@@ -382,7 +383,10 @@ public class XmlDatumReader implements DatumReader<Document> {
 	    throw new IllegalArgumentException("Avro schema must be created by XmlDatumWriter for it to be used with XmlDatumReader.");
 	  }
 
-	  final JsonNode baseUriNode = xmlSchemasNode.get("baseUri");
+    nsContext.clear();
+    currNsNum = 0;
+
+    final JsonNode baseUriNode = xmlSchemasNode.get("baseUri");
 	  final JsonNode urlsNode    = xmlSchemasNode.get("urls");
 	  final JsonNode filesNode   = xmlSchemasNode.get("files");
 	  final JsonNode rootTagNode = xmlSchemasNode.get("rootTag");
@@ -477,7 +481,9 @@ public class XmlDatumReader implements DatumReader<Document> {
     final XmlSchemaStateMachineNode stateMachine =
         stateMachineGen.getStartNode();
 
-    // 7. Build an AvroRecordName -> XmlSchemaStateMachineNode mapping.
+    /* 7. Build an AvroRecordName -> XmlSchemaStateMachineNode mapping
+     *    along with a namespace prefix mapping.
+     */
     final Map<QName, XmlSchemaStateMachineNode> stateMachineNodesByQName =
         stateMachineGen.getStateMachineNodesByQName();
 
@@ -494,6 +500,15 @@ public class XmlDatumReader implements DatumReader<Document> {
             + entry.getKey().getNamespaceURI()
             + "\" is not a valid URI.",
             e);
+      }
+
+      final String prefix =
+          nsContext.getPrefix( entry.getKey().getNamespaceURI() );
+      if (prefix == null) {
+        nsContext.addNamespace(
+            "ns" + currNsNum,
+            entry.getKey().getNamespaceURI());
+        ++currNsNum;
       }
     }
 
@@ -523,10 +538,18 @@ public class XmlDatumReader implements DatumReader<Document> {
           + "before calling this function.");
     }
 
+    final String[] prefixes = nsContext.getDeclaredPrefixes();
     try {
       for (ContentHandler contentHandler : contentHandlers) {
         contentHandler.startDocument();
+
+        for (String prefix : prefixes) {
+          contentHandler.startPrefixMapping(
+              prefix,
+              nsContext.getNamespaceURI(prefix));
+        }
       }
+
     } catch (Exception e) {
       throw new IOException("Unable to create the new document.", e);
     }
@@ -535,6 +558,10 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     try {
       for (ContentHandler contentHandler : contentHandlers) {
+        for (String prefix : prefixes) {
+          contentHandler.endPrefixMapping(prefix);
+        }
+
         contentHandler.endDocument();
       }
     } catch (Exception e) {
@@ -586,15 +613,72 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     // The first N-1 fields are attributes.
     for (int index = 0; index < (fields.size() - 1); ++index) {
-      final AvroAttribute attr =
-          createAttribute(expectedAttrs, fields.get(index), in);
-      if (attr != null) {
-        attributes.addAttribute(attr);
+      try {
+        final AvroAttribute attr =
+            createAttribute(expectedAttrs, fields.get(index), in);
+        if (attr != null) {
+          attributes.addAttribute(attr);
+        }
+      } catch (IOException ioe) {
+        throw new IOException("Failed to create attribute for element " + stateMachine.getElement().getQName(), ioe);
       }
+    }
+
+    /* It is possible that the element's child is a QName in a
+     * new namespace we have not seen before.  SAX requires us
+     * to add all new namespaces *before* the corresponding
+     * element, so if this is a simple type, we need to fetch
+     * the content now and determine if we need to adjust the
+     * namespace context accordingly.
+     */
+    final Schema.Field childField = elemSchema.getField(elemSchema.getName());
+    final XmlSchemaTypeInfo elemType = stateMachine.getElementType();
+
+    String content = null;
+    switch ( elemType.getType() ) {
+    case ATOMIC:
+    case LIST:
+    case UNION:
+      {
+        content = readSimpleType(childField.schema(), elemType, in);
+        break;
+      }
+    default:
+      // Nothing to do here.
+    }
+
+    List<String> newPrefixes = null;
+    if ((newlyAddedQNamesToNs != null) && !newlyAddedQNamesToNs.isEmpty()) {
+      newPrefixes = new ArrayList<String>( newlyAddedQNamesToNs.size() );
+      for (QName qName : newlyAddedQNamesToNs) {
+        final String ns = qName.getNamespaceURI();
+        final String prefix = qName.getPrefix();
+        newPrefixes.add(prefix);
+        for (ContentHandler contentHandler : contentHandlers) {
+          try {
+            contentHandler.startPrefixMapping(prefix, ns);
+          } catch (Exception e) {
+            throw new IOException(
+                "Cannot add namespace " + ns
+                + " and prefix " + prefix
+                + " to content handlers.",
+                e);
+          }
+        }
+      }
+      newlyAddedQNamesToNs.clear();
     }
 
     // Determine the namespace, local name, and qualified name.
     final QName elemQName = stateMachine.getElement().getQName();
+
+    final String prefix = nsContext.getPrefix(elemQName.getNamespaceURI());
+    String qName = null;
+    if (prefix == null) {
+      qName = elemQName.getLocalPart();
+    } else {
+      qName = prefix + ':' + elemQName.getLocalPart();
+    }
 
     // Notify the content handlers an element has begun.
     for (ContentHandler contentHandler : contentHandlers) {
@@ -602,7 +686,7 @@ public class XmlDatumReader implements DatumReader<Document> {
         contentHandler.startElement(
             elemQName.getNamespaceURI(),
             elemQName.getLocalPart(),
-            "",
+            qName,
             attributes);
 
       } catch (Exception e) {
@@ -610,15 +694,12 @@ public class XmlDatumReader implements DatumReader<Document> {
       }
     }
 
-    final Schema.Field childField = elemSchema.getField(elemSchema.getName());
-
-    final XmlSchemaTypeInfo elemType = stateMachine.getElementType();
     switch ( elemType.getType() ) {
     case ATOMIC:
     case LIST:
     case UNION:
       {
-        processContent(childField, elemType, in);
+        processContent(content);
         break;
       }
     case COMPLEX:
@@ -639,10 +720,23 @@ public class XmlDatumReader implements DatumReader<Document> {
         contentHandler.endElement(
             elemQName.getNamespaceURI(),
             elemQName.getLocalPart(),
-            "");
+            qName);
+
+        if (newPrefixes != null) {
+          for (String newPrefix : newPrefixes) {
+            contentHandler.endPrefixMapping(newPrefix);
+          }
+        }
 
       } catch (Exception e) {
         throw new IOException("Cannot start element " + elemQName + '.', e);
+      }
+    }
+
+    // Also remove any newly added prefixes from our namespace context.
+    if (newPrefixes != null) {
+      for (String newPrefix : newPrefixes) {
+        nsContext.removeNamespace(newPrefix);
       }
     }
   }
@@ -657,18 +751,31 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     for (XmlSchemaStateMachineNode.Attribute attr : expectedAttrs) {
       if (field.name().equals(attr.getAttribute().getQName().getLocalPart())) {
-        final String value =
-            readSimpleType(field.schema(), attr.getType(), in);
-
-        if (value != null) {
-          final QName attrQName = attr.getAttribute().getQName();
+        try {
+          final String value =
+              readSimpleType(field.schema(), attr.getType(), in);
   
-          attribute =
-              new AvroAttribute(
-                  attrQName.getNamespaceURI(),
-                  attrQName.getLocalPart(),
-                  "",
-                  value);
+          if (value != null) {
+            final QName attrQName = attr.getAttribute().getQName();
+            final String prefix =
+                nsContext.getPrefix(attrQName.getNamespaceURI());
+    
+            String qualifiedName = null;
+            if (prefix == null) {
+              qualifiedName = attrQName.getLocalPart();
+            } else {
+              qualifiedName = prefix + ':' + attrQName.getLocalPart();
+            }
+
+            attribute =
+                new AvroAttribute(
+                    attrQName.getNamespaceURI(),
+                    attrQName.getLocalPart(),
+                    qualifiedName,
+                    value);
+          }
+        } catch (Exception e) {
+          throw new IOException("Cannot generate attribute " + attr.getAttribute().getQName(), e);
         }
 
         break;
@@ -690,6 +797,10 @@ public class XmlDatumReader implements DatumReader<Document> {
   private void processContent(String content) throws IOException {
     if (content == null) {
       return;
+    }
+
+    if ((newlyAddedQNamesToNs != null) && !newlyAddedQNamesToNs.isEmpty()) {
+      
     }
 
     final char[] chars = content.toCharArray();
@@ -750,20 +861,31 @@ public class XmlDatumReader implements DatumReader<Document> {
 
         XmlSchemaTypeInfo xmlElemType = xmlType;
         if ( xmlType.getType().equals(XmlSchemaTypeInfo.Type.UNION) ) {
+          /* Utils.getAvroSchemaFor() will add a NULL type and/or a STRING
+           * type on the end of the XML types to account for optional values
+           * and mixed elements, respectively.
+           *
+           * In addition, if multiple XML Types resolve to the same Avro type,
+           * the duplicates were purged.  Likewise, we need to rotate through
+           * all of the XML union types, and go with the first XML type that
+           * translates to the same Avro type, whose string generation
+           * succeeds.
+           */
           if (xmlType.getChildTypes().size() <= unionIndex) {
-            /* Utils.getAvroSchemaFor() will add a NULL type and/or a STRING
-             * type on the end of the XML types to account for optional values
-             * and mixed elements, respectively.  If the schema union index is
-             * bigger than the number of XML types, we are in this situation.
-             * Luckily, we do not need the XML type for either of those.
-             */
             xmlElemType = null;
           } else {
             xmlElemType = xmlType.getChildTypes().get(unionIndex);
           }
-        }
 
-        return readSimpleType(elemType, xmlElemType, in);
+          // TODO: Split reading the type & its validation.
+          return readSimpleType(elemType, xmlElemType, in);
+
+        } else {
+          /* The same XML Type applies; the union
+           * is for optional & mixed types. 
+           */
+          return readSimpleType(elemType, xmlElemType, in);
+        }
       }
     case BYTES:
       {
@@ -782,7 +904,7 @@ public class XmlDatumReader implements DatumReader<Document> {
         default:
           throw new IllegalStateException(
               "Avro Schema is of type BYTES, but the XML Schema is of type "
-              + xmlType.getBaseType());
+              + xmlType.getBaseType() + '.');
         }
       }
     case NULL:
@@ -807,7 +929,7 @@ public class XmlDatumReader implements DatumReader<Document> {
         default:
           throw new IOException(
               "Avro Schema is of type DOUBLE, but the XML Schema is of type "
-              + xmlType.getBaseType());
+              + xmlType.getBaseType() + '.');
         }
       }
     case ENUM:
@@ -824,6 +946,50 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     case STRING:
       return DatatypeConverter.printString( in.readString() );
+
+    case RECORD:
+      {
+        switch ( xmlType.getBaseType() ) {
+        case QNAME:
+          {
+            final String ns = in.readString();
+            final String lp = in.readString();
+
+            String prefix = nsContext.getPrefix(ns);
+            boolean isNew = false;
+
+            if (prefix == null) {
+              isNew = true;
+              prefix = "ns" + currNsNum;
+              nsContext.addNamespace(prefix, ns);
+              ++currNsNum;
+            }
+
+            final QName qName = new QName(ns, lp, prefix);
+
+            /* While we need to add the namespace to the context so we can
+             * properly generate a qualified name, we also need to notify
+             * our content handlers of the namespace declaration.
+             *
+             * We cannot do that here, because we cannot properly open and
+             * close the scope.  newlyAddedQNamesToNs will be checked in
+             * a place that can properly handle the scope requirements.
+             */
+            if (isNew) {
+              if (newlyAddedQNamesToNs == null) {
+                newlyAddedQNamesToNs = new ArrayList<QName>(1);
+              }
+              newlyAddedQNamesToNs.add(qName);
+            }
+
+            return DatatypeConverter.printQName(qName, nsContext);
+          }
+        default:
+          throw new IOException(
+              "Avro Schema is of type RECORD, but the XML Schema is of type "
+              + xmlType.getBaseType() + '.');
+        }
+      }
 
     default:
       throw new IOException(schema.getType() + " is not a simple type.");
@@ -1005,5 +1171,8 @@ public class XmlDatumReader implements DatumReader<Document> {
   private List<ContentHandler> contentHandlers;
   private DomBuilderFromSax domBuilder;
   private Map<AvroRecordName, XmlSchemaStateMachineNode> stateByAvroName;
+  private XmlSchemaNamespaceContext nsContext;
+  private int currNsNum;
+  private ArrayList<QName> newlyAddedQNamesToNs;
   private ByteBuffer bytesBuffer;
 }

@@ -17,6 +17,7 @@
 package mpigott.avro.xml;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import javax.xml.namespace.QName;
@@ -26,6 +27,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.constants.Constants;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -59,6 +61,8 @@ final class DomBuilderFromSax extends DefaultHandler {
 
     docBuilder = factory.newDocumentBuilder();
     elementStack = new ArrayList<Element>();
+    newPrefixes = new ArrayList<String>();
+    nsContext = new XmlSchemaNamespaceContext();
 
     document = null;
     content = null;
@@ -75,6 +79,19 @@ final class DomBuilderFromSax extends DefaultHandler {
     document.setXmlStandalone(true);
   }
 
+  @Override
+  public void startPrefixMapping(String prefix, String uri)
+      throws SAXException {
+
+    nsContext.addNamespace(prefix, uri);
+    newPrefixes.add(prefix);
+  }
+
+  @Override
+  public void endPrefixMapping(String prefix) throws SAXException {
+    nsContext.removeNamespace(prefix);
+  }
+
   /**
    * @see org.xml.sax.helpers.DefaultHandler#startElement(java.lang.String, java.lang.String, java.lang.String, org.xml.sax.Attributes)
    */
@@ -88,20 +105,36 @@ final class DomBuilderFromSax extends DefaultHandler {
     addContentToCurrentElement(false);
 
     final Element element =
-        document.createElementNS(uri.isEmpty() ? null : uri, localName);
+        document.createElementNS(uri.isEmpty() ? null : uri, qName);
 
+    // Define New Prefixes
+    for (String newPrefix : newPrefixes) {
+      final String namespace = nsContext.getNamespaceURI(newPrefix);
+      if (namespace == null) {
+        throw new SAXException("Prefix " + newPrefix + " is not recognized.");
+      }
+      final String qualifiedName = Constants.XMLNS_ATTRIBUTE + ':' + newPrefix;
+      element.setAttributeNS(
+          Constants.XMLNS_ATTRIBUTE_NS_URI,
+          qualifiedName,
+          namespace);
+    }
+    newPrefixes.clear();
+
+    // Add Attributes
     for (int attrIndex = 0; attrIndex < atts.getLength(); ++attrIndex) {
       String attrUri = atts.getURI(attrIndex);
       if ( attrUri.isEmpty() ) {
         attrUri = null;
       }
 
-      final String attrName  = atts.getLocalName(attrIndex);
+      final String attrName  = atts.getQName(attrIndex);
       final String attrValue = atts.getValue(attrIndex);
 
       element.setAttributeNS(attrUri, attrName, attrValue);
     }
 
+    // Update the Parent Element
     if ( !elementStack.isEmpty() ) {
       elementStack.get(elementStack.size() - 1).appendChild(element);
     } else {
@@ -254,6 +287,8 @@ final class DomBuilderFromSax extends DefaultHandler {
   private Document document;
   private StringBuilder content;
   private Map<String, String> namespaceToLocationMapping;
+  private List<String> newPrefixes;
+  private XmlSchemaNamespaceContext nsContext;
 
   private final ArrayList<Element> elementStack;
   private final DocumentBuilder docBuilder;
