@@ -28,17 +28,33 @@ public class TestUtils {
 
   @Test
   public void testGetAvroNamespaceForString() throws URISyntaxException {
-    Assert.assertEquals(EXPECTED_RESULT, Utils.getAvroNamespaceFor(NAMESPACE_URI));
+    Assert.assertEquals(
+        EXPECTED_RESULT,
+        Utils.getAvroNamespaceFor(NAMESPACE_URI));
   }
 
   @Test
-  public void testGetAvroNamespaceForURL() throws MalformedURLException, URISyntaxException {
-    Assert.assertEquals(EXPECTED_RESULT, Utils.getAvroNamespaceFor(new URL(NAMESPACE_URI)));
+  public void testGetAvroNamespaceForURL()
+      throws MalformedURLException, URISyntaxException {
+    Assert.assertEquals(
+        EXPECTED_RESULT,
+        Utils.getAvroNamespaceFor(new URL(NAMESPACE_URI)));
   }
 
   @Test
   public void testGetAvroNamespaceForURI() throws URISyntaxException {
-    Assert.assertEquals(EXPECTED_RESULT, Utils.getAvroNamespaceFor(new URI(NAMESPACE_URI)));
+    Assert.assertEquals(
+        EXPECTED_RESULT,
+        Utils.getAvroNamespaceFor(new URI(NAMESPACE_URI)));
+  }
+
+  @Test
+  public void testUblUrn() throws URISyntaxException {
+    URI uri =
+        new URI("urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2");
+    Assert.assertEquals(
+        "oasis.names.specification.ubl.schema.xsd.ApplicationResponse-2",
+        Utils.getAvroNamespaceFor(uri));
   }
 
   private static String NAMESPACE_URI = "http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd";

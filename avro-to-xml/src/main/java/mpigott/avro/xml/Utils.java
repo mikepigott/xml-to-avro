@@ -268,7 +268,7 @@ class Utils {
   }
 
   static String getAvroNamespaceFor(java.net.URI uri) {
-	  ArrayList<String> components = new ArrayList<String>();
+    final ArrayList<String> components = new ArrayList<String>();
 
 	  // xsd.example.org -> org.example.xsd
 	  final String host = uri.getHost();
@@ -284,11 +284,25 @@ class Utils {
 	  // path/to/schema.xsd -> path.to.schema.xsd
 	  final String path = uri.getPath();
 	  if (path != null) {
-	    String[] pathParts = path.split("/");
+	    final String[] pathParts = path.split("/");
 	    for (String pathPart : pathParts) {
 		    if ( !pathPart.isEmpty() ) {
 		      components.add(pathPart);
 		    }
+	    }
+	  }
+
+	  /* This URI is of the form a:b:c:d:e.
+	   * We can convert that to a.b.c.d.e.
+	   */
+	  if ( components.isEmpty() ) {
+	    final String schemeSpecificPart = uri.getSchemeSpecificPart();
+	    final String[] schemeParts = schemeSpecificPart.split("\\:");
+
+	    for (String schemePart : schemeParts) {
+	      if ( !schemePart.isEmpty() ) {
+	        components.add(schemePart);
+	      }
 	    }
 	  }
 
