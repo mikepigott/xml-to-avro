@@ -44,6 +44,7 @@ import org.xml.sax.InputSource;
 class Utils {
 
   private static final int UNDERSCORE_CP = '_';
+  private static final int PERIOD_CP = '.';
 
   private static final Map<QName, Schema.Type> xmlToAvroTypeMap =
       new HashMap<QName, Schema.Type>();
@@ -307,15 +308,35 @@ class Utils {
 	  }
 
 	  if ( components.isEmpty() ) {
-	    throw new IllegalArgumentException("URI provided without enough content to create a namespace for.");
+	    throw new IllegalArgumentException(
+	        "URI \"" + uri.toString()
+	        + "\" does not have enough content to create a namespace for it.");
 	  }
 
 	  StringBuilder namespace = new StringBuilder(components.get(0));
 	  for (int c = 1; c < components.size(); ++c) {
-	    namespace.append('.').append( components.get(c) );
+	    namespace.append('.').append( createValidName( components.get(c) ) );
 	  }
 
 	  return namespace.toString();
+  }
+
+  private static String createValidName(String component) {
+    StringBuilder str = new StringBuilder();
+    final int length = component.length();
+    for (int offset = 0; offset < length; ) {
+      final int codepoint = component.codePointAt(offset);
+      if (!Character.isLetterOrDigit(codepoint)
+          && (codepoint != UNDERSCORE_CP)
+          && (codepoint != PERIOD_CP)) {
+        str.append('_');
+      } else {
+        str.append( Character.toChars(codepoint) );
+      }
+
+      offset += Character.charCount(codepoint);
+    }
+    return str.toString();
   }
 
   static JsonNode createJsonNodeFor(String value, Schema type) {
