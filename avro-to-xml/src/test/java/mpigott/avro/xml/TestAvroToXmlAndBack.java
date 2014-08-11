@@ -41,6 +41,7 @@ import org.apache.avro.io.JsonDecoder;
 import org.apache.avro.io.JsonEncoder;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
@@ -75,6 +76,30 @@ public class TestAvroToXmlAndBack {
   public void testRoot() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
+    final File xmlFile = new File("src\\test\\resources\\test1_root.xml");
+
+    final XmlDatumConfig config =
+        new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
+
+    runTest(config, xmlFile);
+  }
+
+  @Test
+  public void testChildren() throws Exception {
+    final QName root = new QName("http://avro.apache.org/AvroTest", "root");
+    final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
+    final File xmlFile = new File("src\\test\\resources\\test2_children.xml");
+
+    final XmlDatumConfig config =
+        new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
+
+    runTest(config, xmlFile);
+  }
+
+  @Test
+  public void testGrandchildren() throws Exception {
+    final QName root = new QName("http://avro.apache.org/AvroTest", "root");
+    final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
     final File xmlFile = new File("src\\test\\resources\\test3_grandchildren.xml");
 
     final XmlDatumConfig config =
@@ -86,10 +111,6 @@ public class TestAvroToXmlAndBack {
   private void runTest(XmlDatumConfig config, File xmlFile) throws Exception {
     final XmlDatumWriter writer = new XmlDatumWriter(config);
     final Schema xmlToAvroSchema = writer.getSchema();
-
-    FileWriter schemaWriter = new FileWriter("test_schema.avsc");
-    schemaWriter.write( xmlToAvroSchema.toString(true) );
-    schemaWriter.close();
 
     final Document xmlDoc = docBuilder.parse(xmlFile);
 
@@ -113,19 +134,7 @@ public class TestAvroToXmlAndBack {
 
     final Document outDoc = reader.read(null, decoder);
 
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
-    Transformer transformer = transformerFactory.newTransformer();
-    DOMSource source = new DOMSource(outDoc);
-    FileOutputStream fileOutStream = new FileOutputStream("test1_results.xml");
-    StreamResult result = new StreamResult(fileOutStream);
-    transformer.transform(source, result);
-    fileOutStream.flush();
-    fileOutStream.close();
-
-    /* Ultimately this is a success, but numbers
-     * change and prefixes are expected to be the same.
-     */
-    //DocumentComparer.assertEquivalent(xmlDoc, outDoc);
+    DocumentComparer.assertEquivalent(xmlDoc, outDoc);
   }
 
   private DocumentBuilder docBuilder;

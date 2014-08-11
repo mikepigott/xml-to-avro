@@ -690,7 +690,15 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             }
           }
         }
-        if (isNullable) {
+
+        if (isString && (data != null) && data.isEmpty()) {
+          // Preserve empty strings when possible.
+          if (stringIndex >= 0) {
+            out.writeIndex(stringIndex);
+          }
+          out.writeString(data);
+
+        } else if (isNullable) {
           if (nullUnionIndex >= 0) {
             out.writeIndex(nullUnionIndex);
           }
@@ -701,10 +709,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             out.writeIndex(stringIndex);
           }
           out.writeString("");
+
         } else {
-          throw new IOException(
-              "Cannot write a null or empty string "
-              + "as a non-null or non-string type.");
+            throw new IOException(
+                "Cannot write a null or empty string "
+                + "as a non-null or non-string type.");
         }
 
         return;

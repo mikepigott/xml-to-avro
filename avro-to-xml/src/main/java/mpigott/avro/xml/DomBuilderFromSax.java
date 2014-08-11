@@ -139,7 +139,13 @@ final class DomBuilderFromSax extends DefaultHandler {
         attrUri = null;
       }
 
-      final String attrName  = atts.getQName(attrIndex);
+      String attrName = null;
+      if ( !elementStack.isEmpty() ) {
+        attrName = atts.getQName(attrIndex);
+      } else {
+        attrName = atts.getLocalName(attrIndex);
+      }
+
       final String attrValue = atts.getValue(attrIndex);
 
       element.setAttributeNS(attrUri, attrName, attrValue);

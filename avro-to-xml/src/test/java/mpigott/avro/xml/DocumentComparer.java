@@ -34,13 +34,11 @@ final class DocumentComparer {
   static void assertEquivalent(Document expected, Document actual) {
     XMLUnit.setIgnoreWhitespace(true);
     XMLUnit.setIgnoreAttributeOrder(true);
+
     DetailedDiff diff = new DetailedDiff(XMLUnit.compareXML(expected, actual));
 
-    List<?> allDifferences = diff.getAllDifferences();
-
-    assertEquals(
+    assertTrue(
         "Differences found: " + diff.toString(),
-        0,
-        allDifferences.size());
+        diff.similar());
   }
 }

@@ -19,6 +19,7 @@ package mpigott.avro.xml;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -39,6 +40,7 @@ import org.apache.avro.io.Decoder;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.constants.Constants;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
@@ -341,6 +343,9 @@ public class XmlDatumReader implements DatumReader<Document> {
     private final Map<String, Integer> indexByQualifiedName;
     private final Map<QName, Integer> indexByQName;
   }
+
+  private static final BigDecimal MAX_UNSIGNEDLONG =
+      new BigDecimal("18446744073709551615");
 
   /**
    * Creates an {@link XmlDatumReader} with the {@link XmlSchemaCollection}
@@ -923,7 +928,20 @@ public class XmlDatumReader implements DatumReader<Document> {
 
         switch ( xmlType.getBaseType() ) {
         case DECIMAL:
-          return DatatypeConverter.printDecimal( new BigDecimal(value) );
+          {
+            BigDecimal result = new BigDecimal(value);
+
+            if (xmlType
+                  .getUserRecognizedType()
+                  .equals(Constants.XSD_UNSIGNEDLONG)) {
+
+              if (result.compareTo(MAX_UNSIGNEDLONG) > 0) {
+                result = MAX_UNSIGNEDLONG;
+              }
+            }
+
+            return DatatypeConverter.printDecimal(result);
+          }
 
         case DOUBLE:
           return DatatypeConverter.printDouble(value);

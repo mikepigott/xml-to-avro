@@ -62,6 +62,7 @@ class Utils {
     xmlToAvroTypeMap.put(Constants.XSD_INT,           Schema.Type.INT);
     xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDINT,   Schema.Type.LONG);
     xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDSHORT, Schema.Type.INT);
+    xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDLONG,  Schema.Type.DOUBLE);
     xmlToAvroTypeMap.put(Constants.XSD_QNAME,         Schema.Type.RECORD);
   }
 

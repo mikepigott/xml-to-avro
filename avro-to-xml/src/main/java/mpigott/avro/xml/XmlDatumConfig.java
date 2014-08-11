@@ -99,7 +99,7 @@ public class XmlDatumConfig {
           final StreamSource source =
             new StreamSource(
               new FileReader(schemaFile),
-              schemaFile.getAbsolutePath());
+              schemaFile.getName());
           sources.add(source);
         }
       }
