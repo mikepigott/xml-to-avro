@@ -631,6 +631,7 @@ public class XmlDatumReader implements DatumReader<Document> {
      * the content now and determine if we need to adjust the
      * namespace context accordingly.
      */
+    final QName elemQName = stateMachine.getElement().getQName();
     final Schema.Field childField = elemSchema.getField(elemSchema.getName());
     final XmlSchemaTypeInfo elemType = stateMachine.getElementType();
 
@@ -640,7 +641,7 @@ public class XmlDatumReader implements DatumReader<Document> {
     case LIST:
     case UNION:
       {
-        content = readSimpleType(childField.schema(), elemType, in);
+        content = readSimpleType(childField.schema(), elemQName, elemType, in);
         break;
       }
     default:
@@ -670,8 +671,6 @@ public class XmlDatumReader implements DatumReader<Document> {
     }
 
     // Determine the namespace, local name, and qualified name.
-    final QName elemQName = stateMachine.getElement().getQName();
-
     final String prefix = nsContext.getPrefix(elemQName.getNamespaceURI());
     String qName = null;
     if (prefix == null) {
@@ -750,13 +749,13 @@ public class XmlDatumReader implements DatumReader<Document> {
     AvroAttribute attribute = null;
 
     for (XmlSchemaStateMachineNode.Attribute attr : expectedAttrs) {
-      if (field.name().equals(attr.getAttribute().getQName().getLocalPart())) {
+      final QName attrQName = attr.getAttribute().getQName();
+      if (field.name().equals(attrQName.getLocalPart())) {
         try {
           final String value =
-              readSimpleType(field.schema(), attr.getType(), in);
+              readSimpleType(field.schema(), attrQName, attr.getType(), in);
   
           if (value != null) {
-            final QName attrQName = attr.getAttribute().getQName();
             final String prefix =
                 nsContext.getPrefix(attrQName.getNamespaceURI());
     
@@ -787,11 +786,12 @@ public class XmlDatumReader implements DatumReader<Document> {
 
   private void processContent(
       Schema.Field field,
+      QName elemQName,
       XmlSchemaTypeInfo xmlType,
       Decoder in)
       throws IOException {
 
-    processContent( readSimpleType(field.schema(), xmlType, in) );
+    processContent( readSimpleType(field.schema(), elemQName, xmlType, in) );
   }
 
   private void processContent(String content) throws IOException {
@@ -817,6 +817,7 @@ public class XmlDatumReader implements DatumReader<Document> {
 
   private String readSimpleType(
       Schema schema,
+      QName typeQName,
       XmlSchemaTypeInfo xmlType,
       Decoder in)
       throws IOException {
@@ -838,7 +839,8 @@ public class XmlDatumReader implements DatumReader<Document> {
              arrayBlockSize > 0;
              arrayBlockSize = in.arrayNext()) {
           for (long itemNum = 0; itemNum < arrayBlockSize; ++itemNum) {
-            result.append( readSimpleType(elemType, xmlElemType, in) );
+            result.append(
+                readSimpleType(elemType, typeQName, xmlElemType, in));
             result.append(' ');
           }
           result.delete(result.length() - 1, result.length());
@@ -868,23 +870,33 @@ public class XmlDatumReader implements DatumReader<Document> {
            * In addition, if multiple XML Types resolve to the same Avro type,
            * the duplicates were purged.  Likewise, we need to rotate through
            * all of the XML union types, and go with the first XML type that
-           * translates to the same Avro type, whose string generation
-           * succeeds.
+           * translates to the same Avro type.
+           *
+           * This approach works fine for the current mappings, but may show
+           * poor results when date types are added to Avro.  That is because
+           * there are 8 different date types in XML, but there will be only
+           * one in Avro.
            */
           if (xmlType.getChildTypes().size() <= unionIndex) {
             xmlElemType = null;
           } else {
-            xmlElemType = xmlType.getChildTypes().get(unionIndex);
+            for (XmlSchemaTypeInfo childType : xmlType.getChildTypes()) {
+              final Schema avroSchemaOfChildType =
+                  Utils.getAvroSchemaFor(childType, typeQName, false);
+              if ( avroSchemaOfChildType.equals(elemType) ) {
+                xmlElemType = childType;
+                break;
+              }
+            }
           }
 
-          // TODO: Split reading the type & its validation.
-          return readSimpleType(elemType, xmlElemType, in);
+          return readSimpleType(elemType, typeQName, xmlElemType, in);
 
         } else {
           /* The same XML Type applies; the union
            * is for optional & mixed types. 
            */
-          return readSimpleType(elemType, xmlElemType, in);
+          return readSimpleType(elemType, typeQName, xmlElemType, in);
         }
       }
     case BYTES:
