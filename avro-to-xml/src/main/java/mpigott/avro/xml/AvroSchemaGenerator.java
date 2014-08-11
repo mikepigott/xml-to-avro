@@ -298,7 +298,10 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
           && !children.isEmpty()
           && (typeInfo != null)
           && (typeInfo.getUserRecognizedType() != null)) {
-      throw new IllegalStateException("Element \"" + entry.elementQName + "\" has both a type (" + typeInfo.getUserRecognizedType() + ") and " + children.size() + " child elements.");
+      throw new IllegalStateException(
+          "Element \"" + entry.elementQName + "\" has both a type ("
+          + typeInfo.getUserRecognizedType() + ") and " + children.size()
+          + " child elements.");
 
     } else if ((children != null) && !children.isEmpty()) {
       boolean isMixedType = false;
@@ -333,15 +336,29 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
                     || typeInfo.getType().equals(XmlSchemaTypeInfo.Type.UNION)
                     || typeInfo.isMixed()
                     || (typeInfo.getUserRecognizedType() != null))) {
+
+      final Schema childSchema =
+          Utils.getAvroSchemaFor(
+              typeInfo,
+              element.getQName(),
+              element.isNillable());
+
+      String defaultValue = element.getDefaultValue();
+      if (defaultValue == null) {
+        defaultValue = element.getFixedValue();
+      }
+      JsonNode defaultNode = null;
+      if (defaultValue != null) {
+        defaultNode = Utils.createJsonNodeFor(defaultValue, childSchema);
+      }
+
       final Schema.Field field =
           new Schema.Field(
               entry.elementQName.getLocalPart(),
-              Utils.getAvroSchemaFor(
-                  typeInfo,
-                  element.getQName(),
-                  element.isNillable()),
+              childSchema,
               "Simple type " + typeInfo.getUserRecognizedType(),
-              null);
+              defaultNode);
+
       schemaFields.add(field);
 
     } else if (((children == null) || children.isEmpty())

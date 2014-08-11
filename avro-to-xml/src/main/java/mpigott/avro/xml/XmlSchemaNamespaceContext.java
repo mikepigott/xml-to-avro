@@ -28,8 +28,7 @@ import org.apache.ws.commons.schema.constants.Constants;
 import org.apache.ws.commons.schema.utils.NamespacePrefixList;
 
 /**
- * A {@link javax.xml.namespace.NamespaceContext}
- * built from {@link SaxWalkerOverDom}.
+ * A {@link javax.xml.namespace.NamespaceContext}.
  *
  * @author  Mike Pigott
  */

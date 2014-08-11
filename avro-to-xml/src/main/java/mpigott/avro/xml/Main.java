@@ -56,7 +56,6 @@ public class Main {
   }
 
   public static void main(String[] args) throws Exception {
-    /*
     final XmlDatumConfig config = new XmlDatumConfig(new URL("http://xbrl.fasb.org/us-gaap/2012/elts/us-gaap-2012-01-31.xsd"), new QName("http://www.xbrl.org/2003/instance", "xbrl"));
     config.addSchemaUrl(new URL("http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd"));
     config.addSchemaUrl(new URL("http://xbrl.sec.gov/dei/2012/dei-2012-01-31.xsd"));
@@ -86,10 +85,10 @@ public class Main {
     encoder.flush();
 
     outStream.close();
-    */
+    // */
     Schema.Parser parser = new Schema.Parser();
 
-    Schema avroSchema = parser.parse(new File("xbrl.avsc"));
+    /*Schema */avroSchema = parser.parse(new File("xbrl.avsc"));
 
     DecoderFactory df = DecoderFactory.get();
 
