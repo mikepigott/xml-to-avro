@@ -261,6 +261,24 @@ class Utils {
     return true;
   }
 
+  static XmlSchemaTypeInfo chooseUnionType(XmlSchemaTypeInfo xmlType, QName typeQName, Schema elemType, int unionIndex) {
+    XmlSchemaTypeInfo xmlElemType = xmlType;
+    if (xmlType.getChildTypes().size() <= unionIndex) {
+      xmlElemType = null;
+    } else {
+      for (XmlSchemaTypeInfo childType : xmlType.getChildTypes()) {
+        final Schema avroSchemaOfChildType =
+            Utils.getAvroSchemaFor(childType, typeQName, false);
+        if ( avroSchemaOfChildType.equals(elemType) ) {
+          xmlElemType = childType;
+          break;
+        }
+      }
+    }
+    return xmlElemType;
+
+  }
+
   static String getAvroNamespaceFor(String xmlSchemaNamespace) throws URISyntaxException {
 	  return getAvroNamespaceFor(new URI(xmlSchemaNamespace));
   }

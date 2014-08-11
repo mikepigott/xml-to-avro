@@ -138,7 +138,7 @@ public class TestAvroSchemaApplier {
     applier.apply(rootPath);
 
     final int numElemsProcessed = checkDoc(rootDoc);
-    assertEquals(18, numElemsProcessed);
+    assertEquals(19, numElemsProcessed);
   }
 
   private int checkDoc(XmlSchemaDocumentNode<AvroRecordInfo> doc) {

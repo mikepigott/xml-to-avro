@@ -273,11 +273,12 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
 
           final XmlSchemaTypeInfo typeInfo = attrTypes.get( field.name() );
+          final QName attrQName = schemaAttrs.get( field.name() ).getQName();
 
           String value =
               getAttrValue(
                   atts,
-                  schemaAttrs.get( field.name() ).getQName().getNamespaceURI(),
+                  attrQName.getNamespaceURI(),
                   field.name());
 
           if (value == null) {
@@ -292,7 +293,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
 
           try {
-            write(typeInfo.getBaseType(), field.schema(), value);
+            write(typeInfo, attrQName, field.schema(), value);
           } catch (Exception e) {
             throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemName, e);
           }
@@ -333,7 +334,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           if ((nilIndex >= 0)
               && Boolean.parseBoolean(atts.getValue(nilIndex))) {
 
-            write(doc.getStateMachineNode().getElementType().getBaseType(),
+            write(doc.getStateMachineNode().getElementType(),
+                  elemName,
                   avroSchema.getField( elemName.getLocalPart() ).schema(),
                   null);
             entry.receivedContent = true;
@@ -358,6 +360,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         throw new SAXException("We are processing content, but the element stack is empty!");
       }
 
+      final XmlSchemaPathNode currPathNode = currLocation;
+
       currLocation = currLocation.getNext();
 
       if ((currLocation == null)
@@ -366,7 +370,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 .equals(XmlSchemaPathNode.Direction.CONTENT)) {
         String str = new String(ch, start, length).trim();
         if (str.isEmpty()) {
-          currLocation = currLocation.getPrevious();
+          if (currLocation == null) {
+            currLocation = currPathNode;
+          } else {
+            currLocation = currLocation.getPrevious();
+          }
           return;
         } else {
           throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).docNode.getStateMachineNode().getElement().getQName() + " but the current direction is " + currLocation.getDirection() + ", not CONTENT.");
@@ -411,30 +419,26 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         final StackEntry entry = stack.get(stack.size() - 1);
         final XmlSchemaDocumentNode<AvroRecordInfo> docNode = entry.docNode;
 
-        final XmlSchemaBaseSimpleType baseType =
-            docNode.getStateMachineNode().getElementType().getBaseType();
+        final XmlSchemaTypeInfo elemType =
+            docNode.getStateMachineNode().getElementType();
+
+        final QName elemQName =
+            docNode
+              .getStateMachineNode()
+              .getElement()
+              .getQName();
 
         final Schema avroSchema =
            docNode
              .getUserDefinedContent()
              .getAvroSchema()
-             .getField(
-                 docNode
-                   .getStateMachineNode()
-                   .getElement()
-                   .getQName()
-                   .getLocalPart())
+             .getField(elemQName.getLocalPart())
              .schema();
 
         try {
-          write(baseType, avroSchema, result);
+          write(elemType, elemQName, avroSchema, result);
           entry.receivedContent = true;
         } catch (Exception ioe) {
-          final QName elemQName =
-              docNode
-                .getStateMachineNode()
-                .getElement()
-                .getQName();
           throw new RuntimeException("Unable to write the content \"" + result + "\" for " + elemQName + "", ioe);
         }
       }
@@ -470,8 +474,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           value = docNode.getStateMachineNode().getElement().getFixedValue();
         }
 
-        final XmlSchemaBaseSimpleType baseType =
-            docNode.getStateMachineNode().getElementType().getBaseType();
+        final XmlSchemaTypeInfo elemType =
+            docNode.getStateMachineNode().getElementType();
 
         final Schema avroSchema =
             docNode
@@ -481,7 +485,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               .schema();
 
         try {
-          write(baseType, avroSchema, value);
+          write(elemType, elemName, avroSchema, value);
         } catch (IOException e) {
           throw new RuntimeException("Attempted to write a default value of \"" + value + "\" for " + elemName + " and failed.", e);
         }
@@ -519,8 +523,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             .equals(Schema.Type.ARRAY)) {
         try {
           out.writeArrayEnd();
-        } catch (IOException ioe) {
-          throw new RuntimeException("Unable to end the array for " + elemName, ioe);
+        } catch (Exception e) {
+          throw new RuntimeException(
+              "Unable to end the array for " + elemName, e);
         }
       }
     }
@@ -627,15 +632,17 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     }
 
     private void write(
-        XmlSchemaBaseSimpleType baseType,
+        XmlSchemaTypeInfo xmlType,
+        QName xmlQName,
         Schema schema,
         String data) throws IOException {
 
-      write(baseType, schema, data, -1);
+      write(xmlType, xmlQName, schema, data, -1);
     }
 
     private void write(
-        XmlSchemaBaseSimpleType baseType,
+        XmlSchemaTypeInfo xmlType,
+        QName xmlQName,
         Schema schema,
         String data,
         int unionIndex)
@@ -644,6 +651,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       /* If the data is empty or null, write
        * it as a null or string, if possible.
        */
+      final XmlSchemaBaseSimpleType baseType = xmlType.getBaseType();
+
       if ((data == null) || data.isEmpty()) {
         boolean isNullable = (schema.getType().equals(Schema.Type.NULL));
         boolean isString = (schema.getType().equals(Schema.Type.STRING));
@@ -682,13 +691,48 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
           out.writeString("");
         } else {
-          throw new IOException("Cannot write a null or empty string as a non-null or non-string type.");
+          throw new IOException(
+              "Cannot write a null or empty string "
+              + "as a non-null or non-string type.");
         }
 
         return;
       }
 
       switch ( schema.getType() ) {
+      case ARRAY:
+        {
+          /* While unions of lists of different types are technically possible, 
+           * supporting them here would be difficult, to say the least.  For
+           * now, only one array type will be supported in a union.
+           */
+          if (unionIndex >= 0) {
+            out.writeIndex(unionIndex);
+          }
+
+          if ( xmlType.getType().equals(XmlSchemaTypeInfo.Type.UNION) ) {
+            xmlType = Utils.chooseUnionType(xmlType, null, schema, unionIndex);
+          }
+          if ( xmlType.getType().equals(XmlSchemaTypeInfo.Type.LIST) ) {
+            xmlType = xmlType.getChildTypes().get(0);
+          }
+
+          final String[] items = data.split(" ");
+          final List<String> itemList = new ArrayList<String>(items.length);
+          for (String item : items) {
+            if ( !item.isEmpty() ) {
+              itemList.add(item);
+            }
+          }
+          out.writeArrayStart();
+          out.setItemCount( itemList.size() );
+          for (String item : itemList) {
+            out.startItem();
+            write(xmlType, xmlQName, schema.getElementType(), item);
+          }
+          out.writeArrayEnd();
+          break;
+        }
       case UNION:
         {
           int textIndex = -1;
@@ -712,8 +756,19 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               continue;
             }
 
+            // Determine the corresponding XML union type.
+            XmlSchemaTypeInfo xmlSubType = xmlType;
+            if ( xmlType.getType().equals(XmlSchemaTypeInfo.Type.UNION) ) {
+              xmlSubType =
+                  Utils.chooseUnionType(
+                      xmlType,
+                      xmlQName,
+                      subType,
+                      subTypeIndex);
+            }
+
             try {
-              write(baseType, subType, data, subTypeIndex);
+              write(xmlSubType, xmlQName, subType, data, subTypeIndex);
               written = true;
               break;
             } catch (IOException ioe) {
@@ -726,7 +781,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           if (!written) {
             if (bytesIndex >= 0) {
               try {
-                write(baseType, bytesType, data, bytesIndex);
+                write(xmlType, xmlQName, bytesType, data, bytesIndex);
                 written = true;
               } catch (IOException ioe) {
                 // Cannot write the data as bytes either.
@@ -754,6 +809,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             break;
           default:
             throw new IllegalArgumentException("Cannot generate bytes for data of a base type of " + baseType);
+          }
+          if (unionIndex >= 0) {
+            out.writeIndex(unionIndex);
           }
           out.writeBytes(bytes);
           break;

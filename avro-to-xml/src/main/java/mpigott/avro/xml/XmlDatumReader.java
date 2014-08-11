@@ -877,18 +877,8 @@ public class XmlDatumReader implements DatumReader<Document> {
            * there are 8 different date types in XML, but there will be only
            * one in Avro.
            */
-          if (xmlType.getChildTypes().size() <= unionIndex) {
-            xmlElemType = null;
-          } else {
-            for (XmlSchemaTypeInfo childType : xmlType.getChildTypes()) {
-              final Schema avroSchemaOfChildType =
-                  Utils.getAvroSchemaFor(childType, typeQName, false);
-              if ( avroSchemaOfChildType.equals(elemType) ) {
-                xmlElemType = childType;
-                break;
-              }
-            }
-          }
+          xmlElemType =
+              Utils.chooseUnionType(xmlType, typeQName, elemType, unionIndex);
 
           return readSimpleType(elemType, typeQName, xmlElemType, in);
 
@@ -967,17 +957,23 @@ public class XmlDatumReader implements DatumReader<Document> {
             final String ns = in.readString();
             final String lp = in.readString();
 
-            String prefix = nsContext.getPrefix(ns);
+            QName qName = null;
             boolean isNew = false;
 
-            if (prefix == null) {
-              isNew = true;
-              prefix = "ns" + currNsNum;
-              nsContext.addNamespace(prefix, ns);
-              ++currNsNum;
-            }
+            if ( !ns.isEmpty() ) {
+              String prefix = nsContext.getPrefix(ns);
 
-            final QName qName = new QName(ns, lp, prefix);
+              if (prefix == null) {
+                isNew = true;
+                prefix = "ns" + currNsNum;
+                nsContext.addNamespace(prefix, ns);
+                ++currNsNum;
+              }
+
+              qName = new QName(ns, lp, prefix);
+            } else {
+              qName = new QName(lp);
+            }
 
             /* While we need to add the namespace to the context so we can
              * properly generate a qualified name, we also need to notify
