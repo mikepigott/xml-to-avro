@@ -506,6 +506,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             .getUserDefinedContent()
             .getAvroSchema();
 
+      boolean isMapEnd = false;
       if (avroSchema.getType().equals(Schema.Type.MAP)) {
         avroSchema = avroSchema.getValueType();
 
@@ -514,6 +515,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         if (mapUnionIndex >= 0) {
           avroSchema = avroSchema.getTypes().get(mapUnionIndex);
         }
+
+        isMapEnd = isMapEnd();
       }
 
       if (avroSchema
@@ -527,6 +530,15 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           throw new RuntimeException(
               "Unable to end the array for " + elemName, e);
         }
+      }
+
+      if (isMapEnd) {
+        try {
+          out.writeMapEnd();
+        } catch (Exception e) {
+          throw new RuntimeException("Unable to process a MAP_END.", e);
+        }
+
       }
     }
 
@@ -560,37 +572,22 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
 
       do {
-        if (currLocation.getUserDefinedContent() != null) {
-          /* Ideally this would live somewhere else, but in a mixed element,
-           * a child end-element can be followed by content nodes, and not
-           * necessarily the parent.  So the only reliable place to check for
-           * a MAP_END (without duplicating code) is here.
-           */
-          if (currLocation
-                .getUserDefinedContent()
-                .getType()
-                .equals(AvroMapNode.Type.MAP_END)) {
-            try {
-              out.writeMapEnd();
-            } catch (IOException e) {
-              throw new RuntimeException("Unable to process a MAP_END.", e);
-            }
-          }
-        }
         currLocation = currLocation.getNext();
       } while ((currLocation != null)
-                  && (currLocation
-                        .getDirection()
-                        .equals(XmlSchemaPathNode.Direction.PARENT)
-                  || (!currLocation.getDirection().equals(XmlSchemaPathNode.Direction.PARENT)
-                        && !currLocation
-                              .getStateMachineNode()
-                              .getNodeType()
-                              .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-                        && !currLocation
-                              .getStateMachineNode()
-                              .getNodeType()
-                              .equals(XmlSchemaStateMachineNode.Type.ANY))));
+                && (currLocation
+                      .getDirection()
+                      .equals(XmlSchemaPathNode.Direction.PARENT)
+                    || (!currLocation
+                           .getDirection()
+                           .equals(XmlSchemaPathNode.Direction.PARENT)
+                         && !currLocation
+                               .getStateMachineNode()
+                               .getNodeType()
+                               .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+                         && !currLocation
+                               .getStateMachineNode()
+                               .getNodeType()
+                               .equals(XmlSchemaStateMachineNode.Type.ANY))));
 
       if (currLocation == null) {
         throw new IllegalStateException("Cannot find " + elemName + " in the path!");
@@ -606,6 +603,20 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 .equals(elemName)) {
         throw new IllegalStateException("The next element in the path is " + currLocation.getStateMachineNode().getElement().getQName() + " (" + currLocation.getDirection() + "), not " + elemName + ".");
       }
+    }
+
+    private boolean isMapEnd() {
+      XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> position = currLocation;
+      while ((position != null)
+              && (position.getUserDefinedContent() == null)) {
+        position = position.getNext();
+      }
+
+      return ((position != null)
+              && position
+                   .getUserDefinedContent()
+                   .getType()
+                   .equals(AvroMapNode.Type.MAP_END));
     }
 
     private String getAttrValue(Attributes atts, String namespaceUri, String name) {

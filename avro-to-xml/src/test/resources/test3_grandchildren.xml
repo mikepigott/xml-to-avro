@@ -38,7 +38,6 @@
 		<avro:map avro:id="id5">
 			<avro:primitive>long</avro:primitive>
 		</avro:map>
-    <avro:primitive>long</avro:primitive>
 	</avro:map>
 	<avro:nonNullPrimitive>long</avro:nonNullPrimitive>
 	<avro:nonNullPrimitive>boolean</avro:nonNullPrimitive>
