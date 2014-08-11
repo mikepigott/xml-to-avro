@@ -164,6 +164,8 @@ public class TestXmlSchemaNamespaceContext {
     nsContext.removeNamespace(deiPrefix);
     expPrefixToNsMap.remove(deiPrefix);
     expNsToPrefixMap.remove(avroNs);
+
+    assertEquality(expPrefixToNsMap, expNsToPrefixMap, nsContext);
   }
 
   static void assertEquality(
