@@ -147,6 +147,9 @@ final class XmlSchemaNamespaceContext implements NamespacePrefixList {
           + "\" is not mapped to any namespaces.");
     }
     namespaceStack.remove(namespaceStack.size() - 1);
+    if (namespaceStack.isEmpty()) {
+      namespacesByPrefixStack.remove(prefix);
+    }
   }
 
   void clear() {
