@@ -28,6 +28,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.constants.Constants;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -113,11 +114,21 @@ final class DomBuilderFromSax extends DefaultHandler {
       if (namespace == null) {
         throw new SAXException("Prefix " + newPrefix + " is not recognized.");
       }
-      final String qualifiedName = Constants.XMLNS_ATTRIBUTE + ':' + newPrefix;
-      element.setAttributeNS(
-          Constants.XMLNS_ATTRIBUTE_NS_URI,
-          qualifiedName,
-          namespace);
+      String qualifiedName = null;
+      if ( !newPrefix.isEmpty() ) {
+        qualifiedName = Constants.XMLNS_ATTRIBUTE + ':' + newPrefix;
+      } else {
+        qualifiedName = Constants.XMLNS_ATTRIBUTE;
+      }
+
+      try {
+        element.setAttributeNS(
+            Constants.XMLNS_ATTRIBUTE_NS_URI,
+            qualifiedName,
+            namespace);
+      } catch (DOMException e) {
+        throw new IllegalStateException("Cannot add namespace attribute ns=\"" + Constants.XMLNS_ATTRIBUTE_NS_URI + "\", qn=\"" + qualifiedName + "\", value=\"" + namespace + "\" to element \"" + qName + "\".", e);
+      }
     }
     newPrefixes.clear();
 

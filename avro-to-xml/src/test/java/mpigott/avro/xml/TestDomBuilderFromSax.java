@@ -29,6 +29,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
@@ -39,35 +41,57 @@ import org.w3c.dom.Document;
  */
 public class TestDomBuilderFromSax {
 
-  @Test
-  public void test() throws Exception {
-    final File xmlFile = new File("src\\test\\resources\\test3_grandchildren.xml");
+  @BeforeClass
+  public static void setUpFactories() {
+    dbf = DocumentBuilderFactory.newInstance();
+    dbf.setNamespaceAware(true);
 
-    /* Parse the document using a real DOM parser
-    final DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-    dbFactory.setNamespaceAware(true);
-    final DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-    final Document doc = dBuilder.parse(xmlFile);
-    */
+    spf = SAXParserFactory.newInstance();
+    spf.setNamespaceAware(true);
+  }
+
+  @Before
+  public void setUpTest() throws Exception {
+    saxParser = spf.newSAXParser();
+    domParser = dbf.newDocumentBuilder();
+  }
+
+  @Test
+  public void testSchema() throws Exception {
+    runTest(new File("src\\test\\resources\\test_schema.xsd"));
+  }
+
+  @Test
+  public void testRoot() throws Exception {
+    runTest(new File("src\\test\\resources\\test1_root.xml"));
+  }
+
+  @Test
+  public void testChildren() throws Exception {
+    runTest(new File("src\\test\\resources\\test2_children.xml"));
+  }
+
+  @Test
+  public void testGrandchildren() throws Exception {
+    runTest(new File("src\\test\\resources\\test3_grandchildren.xml"));
+  }
+
+  private void runTest(File xmlFile) throws Exception {
+    // Parse the document using a real DOM parser
+    final Document expectedDoc = domParser.parse(xmlFile);
 
     // Parse the document using a SAX parser
     DomBuilderFromSax builder = new DomBuilderFromSax(null);
-
-    SAXParserFactory spf = SAXParserFactory.newInstance();
-    spf.setNamespaceAware(true);
-    SAXParser saxParser = spf.newSAXParser();
     saxParser.parse(xmlFile, builder);
 
-    final Document outDoc = builder.getDocument();
+    final Document actualDoc = builder.getDocument();
 
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
-    Transformer transformer = transformerFactory.newTransformer();
-    DOMSource source = new DOMSource(outDoc);
- 
-    // Output to console for testing
-    StreamResult result = new StreamResult(System.out);
-
-    transformer.transform(source, result);
+    DocumentComparer.assertEquivalent(expectedDoc, actualDoc);
   }
 
+  private SAXParser saxParser;
+  private DocumentBuilder domParser;
+
+  private static SAXParserFactory spf;
+  private static DocumentBuilderFactory dbf;
 }
