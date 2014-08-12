@@ -262,7 +262,12 @@ class Utils {
     return true;
   }
 
-  static XmlSchemaTypeInfo chooseUnionType(XmlSchemaTypeInfo xmlType, QName typeQName, Schema elemType, int unionIndex) {
+  static XmlSchemaTypeInfo chooseUnionType(
+      XmlSchemaTypeInfo xmlType,
+      QName typeQName,
+      Schema elemType,
+      int unionIndex) {
+
     XmlSchemaTypeInfo xmlElemType = xmlType;
     if (xmlType.getChildTypes().size() <= unionIndex) {
       xmlElemType = null;
@@ -402,7 +407,14 @@ class Utils {
         break;
       }
     case BOOLEAN:
-      return JsonNodeFactory.instance.booleanNode( Boolean.parseBoolean(value) );
+      if (value.equalsIgnoreCase("true")
+          || value.equalsIgnoreCase("false") ) {
+
+        return JsonNodeFactory
+                 .instance
+                 .booleanNode( Boolean.parseBoolean(value) );
+      }
+      break;
 
     case BYTES:
     case STRING:
