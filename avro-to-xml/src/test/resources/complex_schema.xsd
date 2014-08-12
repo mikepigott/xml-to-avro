@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:avro:complex_schema" xmlns:avro="urn:avro:complex_schema" elementFormDefault="qualified">
+	<element name="root" abstract="true" />
+	<element name="realRoot" substitutionGroup="avro:root">
+		<complexType>
+			<sequence>
+				<element ref="avro:backtrack"    />
+				<element ref="avro:allTheThings" />
+				<element ref="avro:prohibit"     />
+			</sequence>
+			<attribute name="year"  type="gYear"  fixed="2014"    />
+			<attribute name="month" type="gMonth" default="--08"  />
+			<attribute name="day"   type="gDay"   default="---12" />
+		</complexType>
+	</element>
+	<element name="backtrack">
+		<annotation>
+			<documentation>
+				This forces backtracking through the different schema options.
+				Consider the following elements:
+				&lt;backtrack&gt;
+				   &lt;qName&gt;avro:qName&lt;/qName&gt;
+				   &lt;avroEnum&gt;avro&lt;/avroEnum&gt;
+				   &lt;xmlEnum&gt;rest.li&lt;/xmlEnum&gt;
+				   &lt;xmlEnum&gt;xml&lt;/xmlEnum&gt;
+				   &lt;unsignedLongList&gt;18446744073709551615 1844674407370955 12579&lt;/unsignedLongList&gt;
+				   &lt;listOfUnion&gt;true 18446744073709551616 false -2147483648 -1234.567 avro&lt;/listOfUnion&gt;
+				&lt;/backtrack&gt;
+				The first four elements in the list can match either the first choice
+				group or the second sequence group, and by default the first branch will
+				be taken.  It is not until the last child element, &lt;listOfUnion&gt;,
+				is reached, that it becomes clear the choice group should not be followed.
+			</documentation>
+		</annotation>
+		<complexType>
+			<sequence>
+				<choice minOccurs="0" maxOccurs="1">
+					<choice maxOccurs="3">
+						<element ref="avro:qName"    />
+						<element ref="avro:avroEnum" />
+						<element ref="avro:xmlEnum"  />
+					</choice>
+					<sequence>
+						<element ref="avro:xmlEnum"          />
+						<element ref="avro:unsignedLongList" />
+					</sequence>
+				</choice>
+				<sequence>
+					<element ref="avro:qName"                 />
+					<element ref="avro:avroEnum"              />
+					<element ref="avro:xmlEnum" maxOccurs="2" />
+					<element ref="avro:unsignedLongList"      />
+					<element ref="avro:listOfUnion"           />
+				</sequence>
+			</sequence>
+		</complexType>
+	</element>
+	<element name="qName">
+		<simpleType>
+			<restriction base="QName">
+				<minLength value="1" />
+				<maxLength value="256" />
+			</restriction>
+		</simpleType>
+	</element>
+	<element name="avroEnum">
+		<simpleType>
+			<restriction base="string">
+				<enumeration value="xml"      />
+				<enumeration value="json"     />
+				<enumeration value="avro"     />
+				<enumeration value="thrift"   />
+				<enumeration value="protobuf" />
+				<enumeration value="rest_li"  />
+			</restriction>
+		</simpleType>
+	</element>
+	<element name="xmlEnum">
+		<simpleType>
+			<restriction base="string">
+				<enumeration value="xml"      />
+				<enumeration value="json"     />
+				<enumeration value="avro"     />
+				<enumeration value="thrift"   />
+				<enumeration value="protobuf" />
+				<enumeration value="rest.li"  />
+			</restriction>
+		</simpleType>
+	</element>
+	<element name="unsignedLongList">
+		<simpleType>
+			<list itemType="unsignedLong" />
+		</simpleType>
+	</element>
+	<element name="listOfUnion">
+		<simpleType>
+			<list>
+				<simpleType>
+					<union memberTypes="boolean string int positiveInteger double" />
+				</simpleType>
+			</list>
+		</simpleType>
+	</element>
+	<element name="allTheThings">
+		<annotation>
+			<documentation>
+				This is a map containing a map of a union of firstMap and secondMap.
+				The maps are generated as all three have a single required attribute
+				of type ID.
+
+				The inner two maps become a union because a union of two map types is
+				not allowed.  Likewise, the map itself must become a union of two other
+				types.
+			</documentation>
+		</annotation>
+		<complexType>
+			<all>
+				<element name="firstMap">
+					<complexType>
+						<sequence>
+							<element name="value" type="decimal" default="1234567" nillable="true" />
+						</sequence>
+						<attribute name="id" type="ID" use="required" />
+					</complexType>
+				</element>
+				<element name="secondMap">
+					<complexType mixed="true">
+						<attribute name="id" type="ID" use="required" />
+						<attribute name="value" type="string" use="required" />
+					</complexType>
+				</element>
+			</all>
+			<attribute name="id" type="ID" use="required" />
+			<attribute name="listOfNumbers" default="127 -32768 18446744073709551615 -18446744073709551616">
+				<simpleType>
+					<list>
+						<simpleType>
+							<union memberTypes="byte unsignedLong int negativeInteger" />
+						</simpleType>
+					</list>
+				</simpleType>
+			</attribute>
+			<attribute name="truth" type="boolean" fixed="true" />
+		</complexType>
+	</element>
+	<complexType name="baseType">
+		<sequence>
+			<element name="fixed" type="integer" fixed="100" />
+		</sequence>
+		<attribute name="optional" type="string" use="optional" />
+	</complexType>
+	<element name="prohibit">
+		<complexType>
+			<complexContent>
+				<restriction base="avro:baseType">
+					<sequence>
+						<element name="fixed" type="integer" fixed="100" />
+					</sequence>
+					<attribute name="optional" type="string" use="prohibited" />
+				</restriction>
+			</complexContent>
+		</complexType>
+	</element>
+	<element name="anyAndFriends">
+		<complexType mixed="true">
+			<choice minOccurs="1" maxOccurs="3">
+				<any minOccurs="1" maxOccurs="2" />
+			</choice>
+		</complexType>
+	</element>
+</schema>
