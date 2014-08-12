@@ -18,7 +18,13 @@ package mpigott.avro.xml;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.namespace.QName;
+
 import org.apache.ws.commons.schema.constants.Constants;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -27,6 +33,39 @@ import org.junit.Test;
  * @author  Mike Pigott
  */
 public class TestXmlSchemaBaseSimpleType {
+
+  @BeforeClass
+  public static void setUpNonBaseTypes() {
+    nonBaseTypes = new ArrayList<QName>(28);
+
+    nonBaseTypes.add(Constants.XSD_ANY);
+    nonBaseTypes.add(Constants.XSD_BYTE);
+    nonBaseTypes.add(Constants.XSD_ENTITIES);
+    nonBaseTypes.add(Constants.XSD_ENTITY);
+    nonBaseTypes.add(Constants.XSD_ID);
+    nonBaseTypes.add(Constants.XSD_IDREF);
+    nonBaseTypes.add(Constants.XSD_IDREFS);
+    nonBaseTypes.add(Constants.XSD_INT);
+    nonBaseTypes.add(Constants.XSD_INTEGER);
+    nonBaseTypes.add(Constants.XSD_LANGUAGE);
+    nonBaseTypes.add(Constants.XSD_LONG);
+    nonBaseTypes.add(Constants.XSD_NAME);
+    nonBaseTypes.add(Constants.XSD_NCNAME);
+    nonBaseTypes.add(Constants.XSD_NEGATIVEINTEGER);
+    nonBaseTypes.add(Constants.XSD_NMTOKEN);
+    nonBaseTypes.add(Constants.XSD_NMTOKENS);
+    nonBaseTypes.add(Constants.XSD_NONNEGATIVEINTEGER);
+    nonBaseTypes.add(Constants.XSD_NONPOSITIVEINTEGER);
+    nonBaseTypes.add(Constants.XSD_NORMALIZEDSTRING);
+    nonBaseTypes.add(Constants.XSD_POSITIVEINTEGER);
+    nonBaseTypes.add(Constants.XSD_SCHEMA);
+    nonBaseTypes.add(Constants.XSD_SHORT);
+    nonBaseTypes.add(Constants.XSD_TOKEN);
+    nonBaseTypes.add(Constants.XSD_UNSIGNEDBYTE);
+    nonBaseTypes.add(Constants.XSD_UNSIGNEDINT);
+    nonBaseTypes.add(Constants.XSD_UNSIGNEDLONG);
+    nonBaseTypes.add(Constants.XSD_UNSIGNEDSHORT);
+  }
 
   @Test
   public void testMappings() {
@@ -180,5 +219,85 @@ public class TestXmlSchemaBaseSimpleType {
     assertEquals(
         XmlSchemaBaseSimpleType.NOTATION,
         XmlSchemaBaseSimpleType.getBaseSimpleTypeFor(Constants.XSD_NOTATION));
+
+    for (QName nonBaseType : nonBaseTypes) {
+      final XmlSchemaBaseSimpleType simpleType =
+          XmlSchemaBaseSimpleType.getBaseSimpleTypeFor(nonBaseType);
+      assertNull(nonBaseType + " -> " + simpleType, simpleType);
+    }
   }
+
+  @Test
+  public void testIsBaseSimpleType() {
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_ANYTYPE) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_ANYSIMPLETYPE));
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_DURATION) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_DATETIME) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_TIME) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_DATE) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_YEARMONTH) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_YEAR) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_MONTHDAY) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_DAY) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_MONTH) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_STRING) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_BOOLEAN) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_BASE64) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_HEXBIN) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_FLOAT) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_DECIMAL) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_DOUBLE) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_ANYURI) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_QNAME) );
+
+    assertTrue(
+        XmlSchemaBaseSimpleType.isBaseSimpleType(Constants.XSD_NOTATION) );
+
+    for (QName nonBaseType : nonBaseTypes) {
+      assertFalse(
+          nonBaseType.toString(),
+          XmlSchemaBaseSimpleType.isBaseSimpleType(nonBaseType) );
+    }
+  }
+
+  private static List<QName> nonBaseTypes;
 }
