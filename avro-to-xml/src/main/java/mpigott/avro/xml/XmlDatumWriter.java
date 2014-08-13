@@ -167,7 +167,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
         if (avroSchema.getType().equals(Schema.Type.RECORD)) {
           if ( !stack.isEmpty() ) {
-            System.out.println("Starting item " + elemName);
             out.startItem();
           }
           if (recordInfo.getUnionIndex() >= 0) {
@@ -177,7 +176,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         } else if ( avroSchema.getType().equals(Schema.Type.MAP) ) {
           final AvroMapNode mapNode = currLocation.getUserDefinedContent();
           if (mapNode == null) {
-            throw new IllegalStateException("Reached " + elemName + ", a MAP node, but there is no map information here.");
+            throw new IllegalStateException(
+                "Reached "
+                + elemName
+                + ", a MAP node, but there is no map information here.");
           }
 
           switch ( mapNode.getType() ) {
@@ -317,10 +319,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           out.writeArrayStart();
 
           if (recordInfo.getNumChildren() > 0) {
-            System.out.println(elemName + " has " + recordInfo.getNumChildren() + " children.");
             out.setItemCount( recordInfo.getNumChildren() );
           } else {
-            System.out.println(elemName + " has " + 0 + " children.");
             out.setItemCount(0);
           }
 
@@ -489,12 +489,19 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           value = docNode.getStateMachineNode().getElement().getFixedValue();
         }
 
-        final Schema avroSchema =
-            docNode
-              .getUserDefinedContent()
-              .getAvroSchema()
-              .getField(localName)
-              .schema();
+        final AvroRecordInfo record = docNode.getUserDefinedContent();
+
+        Schema avroSchema = record.getAvroSchema();
+
+        if ( avroSchema.getType().equals(Schema.Type.MAP) ) {
+          avroSchema = avroSchema.getValueType();
+
+          if (record.getMapUnionIndex() >= 0) {
+            avroSchema = avroSchema.getTypes().get( record.getMapUnionIndex() );
+          }
+        }
+
+        avroSchema = avroSchema.getField(localName).schema();
 
         try {
           write(elemType, elemName, avroSchema, value);
@@ -625,10 +632,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     private boolean isMapEnd() {
       XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> position = currLocation;
-      while ((position != null)
-              && (position.getUserDefinedContent() == null)) {
+
+      do {
         position = position.getNext();
-      }
+      } while ((position != null)
+                && (position.getUserDefinedContent() == null));
 
       return ((position != null)
               && position
