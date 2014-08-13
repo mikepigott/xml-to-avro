@@ -143,18 +143,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         return 0;
       }
 
-      boolean log =
-          end.getStateMachineNode().getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-          && end.getStateMachineNode().getElement().getQName().getLocalPart().equals("xmlEnum");
-
-      log = false;
-
-      if (log) {
-        System.out.println("Logging Comparison Of:");
-        System.out.println("\t" + this);
-        System.out.println("\t" + o);
-      }
-
       /* Paths which end in a wildcard element are of lower
        * rank (higher order) than those that end in elements.
        */
@@ -212,18 +200,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
           if (thisIter.getIndexOfNextNodeState()
                 < thatIter.getIndexOfNextNodeState()) {
 
-            if (log) {
-              System.out.println("--> thisIter.getIndexOfNextNodeState() (" + thisIter.getIndexOfNextNodeState() + ") < thatIter.getIndexOfNextNodeState(" + thatIter.getIndexOfNextNodeState() + ").");
-            }
-
             return -1;
 
           } else if (thisIter.getIndexOfNextNodeState()
                        > thatIter.getIndexOfNextNodeState()) {
 
-            if (log) {
-              System.out.println("--> thisIter.getIndexOfNextNodeState() (" + thisIter.getIndexOfNextNodeState() + ") > thatIter.getIndexOfNextNodeState(" + thatIter.getIndexOfNextNodeState() + ").");
-            }
             return  1;
           }
 
@@ -233,30 +214,18 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
         if ((thisIter == null) && (thatIter != null)) {
           // This path is shorter.
-          if (log) {
-            System.out.println("this is shorter.");
-          }
           return -1;
         } else if ((thisIter != null) && (thatIter == null)) {
           // That path is shorter.
-          if (log) {
-            System.out.println("that is shorter.");
-          }
           return 1;
         }
 
       } else if ((thisLength == 0) && (thatLength > 0)) {
         // This path is shorter.
-        if (log) {
-          System.out.println("thisLength is shorter.");
-        }
         return -1;
 
       } else if ((thisLength > 0) && (thatLength == 0)) {
         // That path is shorter.
-        if (log) {
-          System.out.println("thatLength is shorter.");
-        }
         return 1;
 
       } else {
@@ -626,14 +595,10 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               + ", but the next path is null.");
         }
 
-        System.out.println("Following path " + nextPath);
-
         followPath(nextPath);
 
       } else {
         // OR: If no paths are returned:
-        System.out.println("Cannot find a path to " + elemQName + "; backtracking.");
-
         while ((decisionPoints != null) && !decisionPoints.isEmpty()) {
           /* 2a. Backtrack to the most recent decision point.
            *     Remove the top path (the one we just tried),
@@ -652,15 +617,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
             continue;
           }
 
-          System.out.println("---");
-          System.out.println("Following " + nextPath);
-          System.out.print("from " + priorPoint);
-
-          if ( priorPoint.getDecisionPoint().getStateMachineNode().getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-              && priorPoint.getDecisionPoint().getStateMachineNode().getElement().getQName().getLocalPart().equals("backtrack") ) {
-            System.out.println("<<<<< This is the last one. >>>>>");
-          }
-
           pathMgr.unfollowPath(priorPoint.getDecisionPoint());
 
           elementStack = priorPoint.getElementStack();
@@ -671,8 +627,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
            * in the list, including this one.  If not, repeat step 2a,
            * removing decision points from the stack as we refute them.
            */
-          System.out.println("Following backtracked path " + nextPath);
-
           followPath(nextPath);
 
           final QName traversedQName =
@@ -700,7 +654,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               possiblePaths = find(currentPath, te.elemName);
 
               if ((possiblePaths == null) || possiblePaths.isEmpty()) {
-                System.out.println("Found no paths to " + te.elemName);
                 break;
 
               } else if (possiblePaths.size() > 1) {
@@ -726,7 +679,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               }
 
               // If we find (a) path(s) that match(es), success!  Follow it.
-              System.out.println("Following path to " + te.elemName);
               followPath(nextPath);
 
               if (currentPath
@@ -775,8 +727,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               throw new IllegalStateException("Unrecognized element traversal direction for " + te.elemName + " of " + te.traversal + '.');
             }
           }
-          System.out.println("Reached " + currentPath.getStateMachineNode() + "; found " + ((possiblePaths == null) ? 0 : possiblePaths.size()) + " paths; nextPath is " + nextPath);
-          System.out.println("Reached traversed element " + index + " of " + traversedElements.size());
 
           if (index < traversedElements.size()) {
             /* This attempt is also incorrect.  However, we may have introduced
@@ -790,8 +740,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
            * list! Now try the current one again.
            */
           possiblePaths = find(currentPath, elemQName);
-
-          System.out.println("Found " + ((possiblePaths == null) ? 0 : possiblePaths.size()) + " paths from " + currentPath.getStateMachineNode() + " to " + elemQName);
 
           if (possiblePaths == null) {
             // Still incorrect!
@@ -813,7 +761,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
           }
 
           if (nextPath != null) {
-            System.out.println("Found a correct path! " + nextPath);
             followPath(nextPath);
             break;
           }

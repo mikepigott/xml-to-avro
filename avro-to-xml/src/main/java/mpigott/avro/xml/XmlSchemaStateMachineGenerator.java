@@ -123,10 +123,27 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
             + " parent state machine node to attach it to!");
       }
 
-      stack.get(stack.size() - 1)
-           .addPossibleNextState(elemInfo.stateMachineNode);
+      XmlSchemaStateMachineNode stateMachineNode =
+          elemInfo.stateMachineNode;
 
-      stack.add(elemInfo.stateMachineNode);
+      /* If this element is identical in every way except for the minimum and
+       * maximum number of occurrences, we want to create a new state machine
+       * node to represent this element.
+       */
+      if ((stateMachineNode.getMinOccurs() != element.getMinOccurs())
+          || (stateMachineNode.getMaxOccurs() != element.getMaxOccurs())) {
+        System.out.println("Creating a new state machine node for " + element.getQName());
+        stateMachineNode =
+            new XmlSchemaStateMachineNode(
+                element,
+                elemInfo.attributes,
+                elemInfo.typeInfo);
+      }
+
+      stack.get(stack.size() - 1)
+           .addPossibleNextState(stateMachineNode);
+
+      stack.add(stateMachineNode);
     }
   }
 
