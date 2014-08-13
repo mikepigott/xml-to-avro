@@ -1547,7 +1547,9 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         final XmlSchemaAny any = state.getAny();
 
         if (any.getNamespace() == null) {
-          throw new IllegalStateException("The XmlSchemaAny element traversed when searching for " + elemQName + " does not have a namespace!");
+          choices = new ArrayList<PathSegment>(1);
+          choices.add( createPathSegment(startNode) );
+          break;
         }
 
         boolean needTargetNamespace = false;
