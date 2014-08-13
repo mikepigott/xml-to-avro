@@ -949,13 +949,15 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
         final boolean elemExpectsContent =
             (elemTypeInfo != null)
-            && (!elemTypeInfo.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX)
-                || elemTypeInfo.isMixed());
+            && (!elemTypeInfo.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX));
 
         if (elemExpectsContent
             && !state.getElement().isNillable()
             && !currentPath.getDocumentNode().getReceivedContent()) {
-          throw new IllegalStateException("We are ending element " + elemQName + "; it expected to receive content but did not.");
+          throw new IllegalStateException(
+              "We are ending element "
+              + elemQName
+              + "; it expected to receive content but did not.");
         }
       }
 
