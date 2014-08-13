@@ -684,6 +684,10 @@ final class XmlSchemaScope {
         && (attribute.getSchemaType() != null)
         && !forceCopy) {
 
+      if ( attribute.getUse().equals(XmlSchemaUse.NONE) ) {
+        attribute.setUse(XmlSchemaUse.OPTIONAL);
+      }
+
       return attribute;
     }
 
