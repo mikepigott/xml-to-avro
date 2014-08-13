@@ -421,8 +421,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         this.anyStack = (ArrayList<QName>) anyStack.clone();
       }
 
-      this.elementStack.add(elemQName);
-
       java.util.Collections.sort(choices);
     }
 
@@ -648,9 +646,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
           nextPath = priorPoint.tryNextPath();
 
-          System.out.println("Selecting " + nextPath);
-          System.out.println("from " + priorPoint);
-
           if (nextPath == null) {
             /* We have tried all paths at this decision point.
              * Remove it and try the next prior decision point.
@@ -658,6 +653,10 @@ final class XmlSchemaPathFinder extends DefaultHandler {
             decisionPoints.remove(decisionPoints.size() - 1);
             continue;
           }
+
+          System.out.println("---");
+          System.out.println("Following " + nextPath);
+          System.out.print("from " + priorPoint);
 
           pathMgr.unfollowPath(priorPoint.getDecisionPoint());
 
@@ -673,19 +672,32 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
           followPath(nextPath);
 
-          for (int index = priorPoint.traversedElementIndex + 1;
-              index < traversedElements.size();
-              ++index) {
+          final QName traversedQName =
+              traversedElements.get(priorPoint.traversedElementIndex).elemName;
 
+          elementStack.add(traversedQName);
+
+          if (currentPath
+              .getStateMachineNode()
+              .getNodeType()
+              .equals(XmlSchemaStateMachineNode.Type.ANY)) {
+            if (anyStack == null) {
+              anyStack = new ArrayList<QName>();
+            }
+            anyStack.add(traversedQName);
+          }
+
+          int index = priorPoint.traversedElementIndex + 1;
+          for (; index < traversedElements.size(); ++index) {
             nextPath = null;
 
             final TraversedElement te = traversedElements.get(index);
 
             if (te.traversal.equals(TraversedElement.Traversal.START)) {
-              possiblePaths =
-                  find(currentPath, traversedElements.get(index).elemName);
+              possiblePaths = find(currentPath, te.elemName);
 
               if ((possiblePaths == null) || possiblePaths.isEmpty()) {
+                System.out.println("Found no paths to " + te.elemName);
                 break;
 
               } else if (possiblePaths.size() > 1) {
@@ -705,10 +717,13 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               }
 
               if (nextPath == null) {
-                throw new IllegalStateException("Somehow after finding a new path to follow, that path is null.");
+                throw new IllegalStateException(
+                    "Somehow after finding a new path to follow,"
+                    + " that path is null.");
               }
 
               // If we find (a) path(s) that match(es), success!  Follow it.
+              System.out.println("Following path to " + te.elemName);
               followPath(nextPath);
 
               if (currentPath
@@ -718,7 +733,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                 if (anyStack == null) {
                   anyStack = new ArrayList<QName>();
                 }
-                anyStack.add(elemQName);
+                anyStack.add(te.elemName);
               }
 
               elementStack.add(te.elemName);
@@ -741,7 +756,12 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                   elementStack.remove(elementStack.size() - 1);
 
               if (!te.elemName.equals(endingElemName)) {
-                throw new IllegalStateException("Attempted to end element " + te.elemName + " but found " + endingElemName + " on the stack instead!");
+                throw new IllegalStateException(
+                    "Attempted to end element "
+                    + te.elemName
+                    + " but found "
+                    + endingElemName
+                    + " on the stack instead!");
               }
 
               if (isAny) {
@@ -752,13 +772,47 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               throw new IllegalStateException("Unrecognized element traversal direction for " + te.elemName + " of " + te.traversal + '.');
             }
           }
+          System.out.println("Reached " + currentPath.getStateMachineNode() + "; found " + ((possiblePaths == null) ? 0 : possiblePaths.size()) + " paths; nextPath is " + nextPath);
+          System.out.println("Reached traversed element " + index + " of " + traversedElements.size());
 
-          if ((possiblePaths == null) || possiblePaths.isEmpty()) {
+          if (index < traversedElements.size()) {
             /* This attempt is also incorrect.  However, we may have introduced
              * new decision points along the way, and we want to follow them
              * first.  So let's go back around for another try.
              */
             continue;
+          }
+
+          /* We made it to the end of the element
+           * list! Now try the current one again.
+           */
+          possiblePaths = find(currentPath, elemQName);
+
+          System.out.println("Found " + ((possiblePaths == null) ? 0 : possiblePaths.size()) + " paths from " + currentPath.getStateMachineNode() + " to " + elemQName);
+
+          if (possiblePaths == null) {
+            // Still incorrect!
+            continue;
+
+          } else if (possiblePaths.size() > 1) {
+            final DecisionPoint decisionPoint =
+                new DecisionPoint(
+                    currentPath,
+                    possiblePaths,
+                    traversedElements.size(),
+                    elemQName,
+                    elementStack,
+                    anyStack);
+            decisionPoints.add(decisionPoint);
+            nextPath = decisionPoint.tryNextPath();
+          } else {
+            nextPath = possiblePaths.get(0);
+          }
+
+          if (nextPath != null) {
+            System.out.println("Found a correct path! " + nextPath);
+            followPath(nextPath);
+            break;
           }
         }
       }
