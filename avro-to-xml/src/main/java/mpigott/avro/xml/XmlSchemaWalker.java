@@ -120,12 +120,6 @@ final class XmlSchemaWalker {
 
   // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
   void walk(XmlSchemaElement element) {
-    final boolean watch = element.isRef() && element.getTargetQName().getLocalPart().equals("xmlEnum");
-    if (watch) {
-      System.out.println("====");
-      System.out.println(element.getTargetQName() + " maxOccurs = " + element.getMaxOccurs());
-    }
-
     element = getElement(element, false);
 
     final XmlSchemaElement substGroupElem = element;
@@ -145,10 +139,6 @@ final class XmlSchemaWalker {
       element = getElement(element, true);
       element.setMinOccurs(XmlSchemaParticle.DEFAULT_MIN_OCCURS);
       element.setMaxOccurs(XmlSchemaParticle.DEFAULT_MAX_OCCURS);
-    }
-
-    if (watch) {
-      System.out.println(element.getQName() + " maxOccurs = " + element.getMaxOccurs());
     }
 
     XmlSchemaType schemaType = element.getSchemaType();

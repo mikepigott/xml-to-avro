@@ -132,7 +132,6 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
        */
       if ((stateMachineNode.getMinOccurs() != element.getMinOccurs())
           || (stateMachineNode.getMaxOccurs() != element.getMaxOccurs())) {
-        System.out.println("Creating a new state machine node for " + element.getQName());
         stateMachineNode =
             new XmlSchemaStateMachineNode(
                 element,
