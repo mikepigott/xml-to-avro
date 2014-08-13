@@ -445,6 +445,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
   private static class TraversedElement {
     enum Traversal {
       START,
+      CONTENT,
       END
     }
 
@@ -719,6 +720,19 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                 anyStack.remove(anyStack.size() - 1);
               }
 
+            } else if (
+                te.traversal.equals(TraversedElement.Traversal.CONTENT)) {
+
+              currentPath.getDocumentNode().setReceivedContent(true);
+
+              final XmlSchemaPathNode contentPath =
+                  pathMgr.addParentSiblingOrContentNodeToPath(
+                      currentPath,
+                      XmlSchemaPathNode.Direction.CONTENT);
+
+              currentPath.setNextNode(-1, contentPath);
+              currentPath = contentPath;
+
             } else {
               throw new IllegalStateException("Unrecognized element traversal direction for " + te.elemName + " of " + te.traversal + '.');
             }
@@ -870,6 +884,10 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
       currentPath.setNextNode(-1, contentPath);
       currentPath = contentPath;
+
+      traversedElements.add(
+          new TraversedElement(element.getQName(),
+              TraversedElement.Traversal.CONTENT) );
 
     } catch (Exception e) {
       throw new RuntimeException("Error occurred while processing characters; traversed path was " + getElementsTraversedAsString(), e);

@@ -377,7 +377,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
           return;
         } else {
-          throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).docNode.getStateMachineNode().getElement().getQName() + " but the current direction is " + currLocation.getDirection() + ", not CONTENT.");
+          throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).docNode.getStateMachineNode().getElement().getQName() + " but the current direction is " + currLocation.getDirection() + " to " + currLocation.getStateMachineNode() + ", not CONTENT.");
         }
 
       } else if (currLocation.getNext() == null) {
