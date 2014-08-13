@@ -958,7 +958,10 @@ final class AvroSchemaApplier {
     }
 
     if (docNodeStack.size() != 1) {
-      throw new IllegalStateException("Expected the stack to have one element in it at the end, but found " + docNodeStack.size() + ".");
+      throw new IllegalStateException(
+          "Expected the stack to have one element in it at the end, but found "
+          + docNodeStack.size()
+          + ".");
     }
 
     for (Map.Entry<QName, List<List<AvroMapNode>>> entry :
@@ -994,7 +997,10 @@ final class AvroSchemaApplier {
     if (!path.getStateMachineNode()
                 .getNodeType()
                 .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
-      throw new IllegalArgumentException("Starting node should be at an element, not a " + path.getStateMachineNode().getNodeType());
+      throw new IllegalArgumentException(
+          "Starting node should be at an element, not a "
+          + path.getStateMachineNode().getNodeType()
+          + '.');
     }
 
     XmlSchemaDocumentNode<AvroRecordInfo> docNode = path.getDocumentNode();
@@ -1006,7 +1012,10 @@ final class AvroSchemaApplier {
                 .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
 
     if (docNode.getUserDefinedContent() == null) {
-      throw new IllegalStateException("Reached a node representing " + docNode.getStateMachineNode() + ", but it contains no Avro record information.");
+      throw new IllegalStateException(
+          "Reached a node representing "
+          + docNode.getStateMachineNode()
+          + ", but it contains no Avro record information.");
     }
 
     docNode.getUserDefinedContent().incrementChildCount();
