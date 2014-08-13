@@ -981,8 +981,6 @@ final class AvroSchemaApplier {
         }
       }
     }
-
-    
   }
 
   private void addEndNode(
