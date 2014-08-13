@@ -4,9 +4,10 @@
 	<element name="realRoot" substitutionGroup="avro:root">
 		<complexType>
 			<sequence>
-				<element ref="avro:backtrack"    />
-				<element ref="avro:allTheThings" />
-				<element ref="avro:prohibit"     />
+				<element ref="avro:backtrack"     />
+				<element ref="avro:allTheThings"  />
+				<element ref="avro:prohibit"      />
+				<element ref="avro:anyAndFriends" />
 			</sequence>
 			<attribute name="year"  type="gYear"  fixed="2014"    />
 			<attribute name="month" type="gMonth" default="--08"  />
@@ -96,7 +97,7 @@
 		<simpleType>
 			<list>
 				<simpleType>
-					<union memberTypes="boolean string int positiveInteger double" />
+					<union memberTypes="boolean string int positiveInteger" />
 				</simpleType>
 			</list>
 		</simpleType>
@@ -118,7 +119,7 @@
 				<element name="firstMap">
 					<complexType>
 						<sequence>
-							<element name="value" type="decimal" default="1234567" nillable="true" />
+							<element name="value" type="decimal" default="1234567" nillable="true" minOccurs="1" maxOccurs="2" />
 						</sequence>
 						<attribute name="id" type="ID" use="required" />
 					</complexType>

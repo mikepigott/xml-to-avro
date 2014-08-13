@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<avro:realRoot day="---12" month="--08" xmlns:avro="urn:avro:complex_schema" xmlns:test="http://avro.apache.org/AvroTest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:avro:complex_schema complex_schema.xsd http://avro.apache.org/AvroTest test_schema.xsd"  year="2014">
+  <avro:backtrack>
+    <avro:qName>avro:unsignedLongList</avro:qName>
+    <avro:avroEnum>avro</avro:avroEnum>
+    <avro:xmlEnum>thrift</avro:xmlEnum>
+    <avro:xmlEnum>rest.li</avro:xmlEnum>
+    <avro:unsignedLongList>1 2 345 67890 1234567890 12345678901234567890</avro:unsignedLongList>
+    <avro:listOfUnion>true false hello goodbye 1234567890 -2147483648 2147483649</avro:listOfUnion>
+  </avro:backtrack>
+  <avro:allTheThings id="idvalue0">
+    <avro:secondMap id="idvalue2" value="Second Map Value"/>
+    <avro:firstMap id="idvalue1">
+      <avro:value />
+      <avro:value xsi:nil="true" />
+    </avro:firstMap>
+  </avro:allTheThings>
+  <avro:prohibit>
+    <avro:fixed>100</avro:fixed>
+  </avro:prohibit>
+  <avro:anyAndFriends>
+    This is a mixed element
+  	<test:primitive>null</test:primitive>
+  	interspersed with wildcard elements.
+  	<test:primitive>boolean</test:primitive>
+  	Since the wildcard elements are filtered
+  	<test:primitive>int</test:primitive>
+  	away, the final Avro document should
+  	<test:primitive>long</test:primitive>
+  	<test:list>
+  		<test:record>
+  			<test:primitive>float</test:primitive>
+  		</test:record>
+  	</test:list>
+  	only contain this text.
+  	<test:nonNullPrimitive>string</test:nonNullPrimitive>
+  	(If I did it right.)
+  </avro:anyAndFriends>
+</avro:realRoot>
