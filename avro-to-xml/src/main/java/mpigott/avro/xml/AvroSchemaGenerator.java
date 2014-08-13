@@ -294,15 +294,6 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
         }
       }
 
-      if ((indicesToRemove != null) && !indicesToRemove.isEmpty()) {
-        ListIterator<Integer> iter =
-            indicesToRemove.listIterator(indicesToRemove.size());
-
-        while ( iter.hasPrevious() ) {
-          children.remove( iter.previous().intValue() );
-        }
-      }
-
       // Now, remove duplicate children.
       final HashSet<String> duplicates = new HashSet<String>();
 
@@ -319,6 +310,15 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
           indicesToRemove.add(childIndex);
         } else {
           duplicates.add( child.getFullName() );
+        }
+      }
+
+      if ((indicesToRemove != null) && !indicesToRemove.isEmpty()) {
+        ListIterator<Integer> iter =
+            indicesToRemove.listIterator(indicesToRemove.size());
+
+        while ( iter.hasPrevious() ) {
+          children.remove( iter.previous().intValue() );
         }
       }
     }
