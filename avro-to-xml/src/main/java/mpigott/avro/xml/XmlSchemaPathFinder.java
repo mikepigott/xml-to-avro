@@ -529,12 +529,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
     final QName elemQName = new QName(uri, localName);
 
-    System.out.println("*** Processing " + elemQName + " ***");
-
-    if ( elemQName.getLocalPart().equals("listOfUnion") ) {
-      System.out.println("{Starting Debugger}");
-    }
-
     try {
       if (currentPath == null) {
         /* We just started a new document.  Likewise we need
@@ -552,6 +546,8 @@ final class XmlSchemaPathFinder extends DefaultHandler {
          * anything about the element or its children.  So it does not make
          * sense to follow the children or grandchildren of this element.
          */
+        elementStack.add(elemQName);
+        anyStack.add(elemQName);
         return;
       }
 
@@ -832,7 +828,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
          * care - we won't be processing the content.
          */
         return;
-      } 
+      }   
 
       final XmlSchemaStateMachineNode state =
           getStateMachineOfOwningElement();
@@ -961,14 +957,16 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         }
       }
 
-      walkUpTree(elemQName);
-
       traversedElements.add(
           new TraversedElement(elemQName, TraversedElement.Traversal.END));
 
       elementStack.remove(elementStack.size() - 1);
       if (isAny) {
         anyStack.remove(anyStack.size() - 1);
+      }
+
+      if ((anyStack == null) || anyStack.isEmpty()) {
+        walkUpTree(elemQName);
       }
 
     } catch (Exception e) {
