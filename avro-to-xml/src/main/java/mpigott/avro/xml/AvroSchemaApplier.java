@@ -380,7 +380,7 @@ final class AvroSchemaApplier {
       }
 
       AvroRecordInfo recordInfo = null;
-      if ( avroRecordStack.isEmpty() ) {
+      if (avroRecordStack.isEmpty() && (doc.getParent() == null)) {
         recordInfo = new AvroRecordInfo(elemSchema);
         avroRecordStack.add(recordInfo);
       } else {
@@ -389,8 +389,12 @@ final class AvroSchemaApplier {
 
         /* Maps will be counted separately, as their
          * children are not part of this array.
+         *
+         * The stack will be empty if the root element
+         * is part of a substitution group.
          */
-        if ( !elemSchema.getType().equals(Schema.Type.MAP) ) {
+        if (!elemSchema.getType().equals(Schema.Type.MAP)
+            && !avroRecordStack.isEmpty()) {
           avroRecordStack
             .get(avroRecordStack.size() - 1)
             .incrementChildCount();
@@ -957,12 +961,12 @@ final class AvroSchemaApplier {
       ++pathIndex;
     }
 
-    if (docNodeStack.size() != 1) {
-      throw new IllegalStateException(
-          "Expected the stack to have one element in it at the end, but found "
-          + docNodeStack.size()
-          + ".");
-    }
+//    if (docNodeStack.size() != 1) {
+//      throw new IllegalStateException(
+//          "Expected the stack to have one element in it at the end, but found "
+//          + docNodeStack.size()
+//          + ".");
+//    }
 
     for (Map.Entry<QName, List<List<AvroMapNode>>> entry :
            occurrencesByName.entrySet()) {

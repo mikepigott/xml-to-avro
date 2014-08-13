@@ -745,7 +745,28 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     schemasNode.put("rootTag", rootTagNode);
 
-    root.addProp("xmlSchemas", schemasNode);
+    if ( root.getType().equals(Schema.Type.RECORD) ) {
+      root.addProp("xmlSchemas", schemasNode);
+
+    } else if ( root.getType().equals(Schema.Type.UNION) ) {
+      if ((root.getTypes() == null) || root.getTypes().isEmpty()) {
+        throw new IllegalStateException(
+            "Root is a substitution group with no children!");
+      }
+
+      final Schema firstElem = root.getTypes().get(0);
+      if ( !firstElem.getType().equals(Schema.Type.RECORD) ) {
+        throw new IllegalStateException(
+            "Root is a substitution group with a first element of type "
+            + firstElem.getType());
+      }
+
+      firstElem.addProp("xmlSchemas", schemasNode);
+
+    } else {
+      throw new IllegalStateException(
+          "Document root is neither a RECORD nor a UNION.");
+    }
   }
 
   private boolean isMap(final List<AttributeEntry> attributes) {
