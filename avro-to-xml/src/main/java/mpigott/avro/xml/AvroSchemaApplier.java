@@ -395,9 +395,12 @@ final class AvroSchemaApplier {
          */
         if (!elemSchema.getType().equals(Schema.Type.MAP)
             && !avroRecordStack.isEmpty()) {
-          avroRecordStack
-            .get(avroRecordStack.size() - 1)
-            .incrementChildCount();
+
+          for (int docIter = 0; docIter < doc.getIteration(); ++docIter) {
+            avroRecordStack
+              .get(avroRecordStack.size() - 1)
+              .incrementChildCount();
+          }
         }
         avroRecordStack.add(recordInfo);
       }

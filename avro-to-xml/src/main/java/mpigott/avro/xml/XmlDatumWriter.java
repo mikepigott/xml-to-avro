@@ -167,6 +167,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
         if (avroSchema.getType().equals(Schema.Type.RECORD)) {
           if ( !stack.isEmpty() ) {
+            System.out.println("Starting item " + elemName);
             out.startItem();
           }
           if (recordInfo.getUnionIndex() >= 0) {
@@ -316,8 +317,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           out.writeArrayStart();
 
           if (recordInfo.getNumChildren() > 0) {
+            System.out.println(elemName + " has " + recordInfo.getNumChildren() + " children.");
             out.setItemCount( recordInfo.getNumChildren() );
           } else {
+            System.out.println(elemName + " has " + 0 + " children.");
             out.setItemCount(0);
           }
 
@@ -437,10 +440,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               .getElement()
               .getQName();
 
-        if (elemQName.getLocalPart().equals("unsignedLongList")) {
-          System.out.println("Start debugger.");
-        }
-
         final Schema avroSchema =
            docNode
              .getUserDefinedContent()
@@ -475,6 +474,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       final StackEntry entry = stack.remove(stack.size() - 1);
       final XmlSchemaDocumentNode<AvroRecordInfo> docNode = entry.docNode;
 
+      final XmlSchemaTypeInfo elemType =
+          docNode.getStateMachineNode().getElementType();
+
       if (!entry.receivedContent) {
 
         /* Look for either the default value
@@ -486,9 +488,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         if (value == null) {
           value = docNode.getStateMachineNode().getElement().getFixedValue();
         }
-
-        final XmlSchemaTypeInfo elemType =
-            docNode.getStateMachineNode().getElementType();
 
         final Schema avroSchema =
             docNode
@@ -532,11 +531,17 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         isMapEnd = isMapEnd();
       }
 
+      boolean isComplexType = true;
+      if ( !elemType.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX) ) {
+        isComplexType = false;
+      }
+
       if (avroSchema
             .getField( elemName.getLocalPart() )
             .schema()
             .getType()
-            .equals(Schema.Type.ARRAY)) {
+            .equals(Schema.Type.ARRAY)
+          && isComplexType) {
         try {
           out.writeArrayEnd();
         } catch (Exception e) {
