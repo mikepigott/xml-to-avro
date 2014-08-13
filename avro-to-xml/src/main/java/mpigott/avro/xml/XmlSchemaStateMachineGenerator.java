@@ -109,9 +109,18 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
       final ElementInfo elemInfo =
           elementInfoByQName.get( element.getQName() );
       if ((elemInfo == null) || (elemInfo.stateMachineNode == null)) {
-        throw new IllegalStateException("Element " + element.getQName() + " was already visited, but we do not have a state machine for it.");
+        throw new IllegalStateException(
+            "Element "
+            + element.getQName()
+            + " was already visited, but we do not"
+            + " have a state machine for it.");
+
       } else if ( stack.isEmpty() ) {
-        throw new IllegalStateException("Element " + element.getQName() + " was previously visited, but there is no parent state machine node to attach it to!");
+        throw new IllegalStateException(
+            "Element "
+            + element.getQName()
+            + " was previously visited, but there is no"
+            + " parent state machine node to attach it to!");
       }
 
       stack.get(stack.size() - 1)
@@ -131,14 +140,28 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
       boolean previouslyVisited) {
 
     if ( stack.isEmpty() ) {
-      throw new IllegalStateException("Exiting " + element.getQName() + ", but the stack is empty.");
+      throw new IllegalStateException(
+          "Exiting "
+          + element.getQName()
+          + ", but the stack is empty.");
     }
 
     final XmlSchemaStateMachineNode node = stack.remove(stack.size() - 1);
     if (!node.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
-      throw new IllegalStateException("Exiting element " + element.getQName() + ", but  " + node + " is on the stack.");
+      throw new IllegalStateException(
+          "Exiting element "
+          + element.getQName()
+          + ", but  "
+          + node
+          + " is on the stack.");
+
     } else if (!node.getElement().getQName().equals(element.getQName())) {
-      throw new IllegalStateException("Element " + element.getQName() + " is not the same in-memory copy we received on creation.  Our copy is of a " + node.getElement().getQName());
+      throw new IllegalStateException(
+          "Element "
+          + element.getQName()
+          + " is not the same in-memory copy we received on creation.  Our"
+          + " copy is of a "
+          + node.getElement().getQName());
     }
   }
 
@@ -146,12 +169,15 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
    * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAttribute(org.apache.ws.commons.schema.XmlSchemaElement, org.apache.ws.commons.schema.XmlSchemaAttribute, mpigott.avro.xml.XmlSchemaTypeInfo)
    */
   @Override
-  public void onVisitAttribute(XmlSchemaElement element,
-      XmlSchemaAttribute attribute, XmlSchemaTypeInfo attributeType) {
+  public void onVisitAttribute(
+      XmlSchemaElement element,
+      XmlSchemaAttribute attribute,
+      XmlSchemaTypeInfo attributeType) {
 
     final ElementInfo elemInfo = elementInfoByQName.get(element.getQName());
     if (elemInfo == null) {
-      throw new IllegalStateException("No record exists for element " + element.getQName());
+      throw new IllegalStateException(
+          "No record exists for element " + element.getQName());
     }
 
     elemInfo.addAttribute(attribute, attributeType);
@@ -168,7 +194,12 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     final ElementInfo elemInfo = elementInfoByQName.get(element.getQName());
 
     if (elemInfo.stateMachineNode != null) {
-      throw new IllegalStateException("Parent element " + element.getQName() + " is supposedly undefined, but that entry already has a state machine of " + elemInfo.stateMachineNode);
+      throw new IllegalStateException(
+          "Parent element "
+          + element.getQName()
+          + " is supposedly undefined, but that entry already has a state"
+          + " machine of "
+          + elemInfo.stateMachineNode);
     }
 
     elemInfo.stateMachineNode =
@@ -284,7 +315,8 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
         new XmlSchemaStateMachineNode(any);
 
     if ( stack.isEmpty() ) {
-      throw new IllegalStateException("Reached an wildcard with no parent!  The stack is empty.");
+      throw new IllegalStateException(
+          "Reached an wildcard with no parent!  The stack is empty.");
     }
 
     stack.get(stack.size() - 1).addPossibleNextState(node);
@@ -306,7 +338,10 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
       long maxOccurs) {
 
     if ( stack.isEmpty() ) {
-      throw new IllegalStateException("Attempted to create a(n) " + groupType + " group with no parent - the stack is empty!");
+      throw new IllegalStateException(
+          "Attempted to create a(n) "
+          + groupType
+          + " group with no parent - the stack is empty!");
     }
 
     final XmlSchemaStateMachineNode node =
@@ -321,18 +356,29 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
 
   private void popGroup(XmlSchemaStateMachineNode.Type groupType) {
     if ( stack.isEmpty() ) {
-      throw new IllegalStateException("Exiting an " + groupType + " group, but the stack is empty!");
+      throw new IllegalStateException(
+          "Exiting an "
+          + groupType
+          + " group, but the stack is empty!");
     }
 
     final XmlSchemaStateMachineNode node = stack.remove(stack.size() - 1);
 
     if (!node.getNodeType().equals(groupType)) {
-      throw new IllegalStateException("Attempted to pop a " + groupType + " off of the stack, but found a " + node.getNodeType() + " instead!");
+      throw new IllegalStateException(
+          "Attempted to pop a "
+          + groupType
+          + " off of the stack, but found a "
+          + node.getNodeType()
+          + " instead!");
     }
 
     if (!groupType.equals(XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP)
         && stack.isEmpty()) {
-      throw new IllegalStateException("Popped a group of type " + groupType + " only to find it did not have a parent.");
+      throw new IllegalStateException(
+          "Popped a group of type "
+          + groupType
+          + " only to find it did not have a parent.");
     }
   }
 

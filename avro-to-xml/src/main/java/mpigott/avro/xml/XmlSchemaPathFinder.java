@@ -562,7 +562,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
     System.out.println("*** Processing " + elemQName + " ***");
 
-    if ( elemQName.getLocalPart().equals("unsignedLongList") ) {
+    if ( elemQName.getLocalPart().equals("listOfUnion") ) {
       System.out.println("{Starting Debugger}");
     }
 
@@ -612,8 +612,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
           }
           decisionPoints.add(decisionPoint);
 
-          //System.out.println("Adding decision point " + decisionPoint);
-
           nextPath = decisionPoint.tryNextPath();
         } else {
           nextPath = possiblePaths.get(0);
@@ -657,6 +655,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
           System.out.println("---");
           System.out.println("Following " + nextPath);
           System.out.print("from " + priorPoint);
+
+          if ( priorPoint.getDecisionPoint().getStateMachineNode().getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+              && priorPoint.getDecisionPoint().getStateMachineNode().getElement().getQName().getLocalPart().equals("backtrack") ) {
+            System.out.println("<<<<< This is the last one. >>>>>");
+          }
 
           pathMgr.unfollowPath(priorPoint.getDecisionPoint());
 
@@ -1770,20 +1773,24 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       }
     } while ((iter != null)
         && !iter
-        .getStateMachineNode()
-        .getNodeType()
-        .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
+              .getStateMachineNode()
+              .getNodeType()
+              .equals(XmlSchemaStateMachineNode.Type.ELEMENT));
 
     if (!currentPath
-          .getStateMachineNode()
-          .getNodeType()
-          .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+           .getStateMachineNode()
+           .getNodeType()
+           .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
         || !currentPath
               .getStateMachineNode()
               .getElement()
               .getQName()
               .equals(element)) {
-      throw new IllegalStateException("Walked up tree and stopped at node " + currentPath.getStateMachineNode() + ", which does not represent element " + element);
+      throw new IllegalStateException(
+          "Walked up tree and stopped at node "
+          + currentPath.getStateMachineNode()
+          + ", which does not represent element "
+          + element);
     }
   }
 
@@ -1793,14 +1800,17 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     case ANY:
       break;
     default:
-      throw new IllegalStateException("Path does not end in an element or a wildcard element.");
+      throw new IllegalStateException(
+          "Path does not end in an element or a wildcard element.");
     }
 
     // Join the start element with the new path.
     XmlSchemaPathNode startNode = path.getStart();
 
     if (path.getAfterStart() != null) {
-      startNode.setNextNode(path.getAfterStartPathIndex(), path.getAfterStart());
+      startNode.setNextNode(
+          path.getAfterStartPathIndex(),
+          path.getAfterStart());
     }
 
     pathMgr.followPath(startNode);
