@@ -27,10 +27,21 @@ import java.util.List;
 final class XmlSchemaPathNode<U, V> {
 
   enum Direction {
-    PARENT,
-    CHILD,
-    CONTENT,
-    SIBLING
+    PARENT(2),
+    CHILD(0),
+    CONTENT(3),
+    SIBLING(1);
+
+    // CHILD < SIBLING < PARENT < CONTENT when comparing possible paths.
+    Direction (int rank) {
+      this.rank = rank;
+    }
+
+    int getRank() {
+      return rank;
+    }
+
+    final int rank;
   }
 
   XmlSchemaPathNode(

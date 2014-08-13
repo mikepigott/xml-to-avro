@@ -35,8 +35,8 @@
 		</annotation>
 		<complexType>
 			<sequence>
-				<choice minOccurs="0" maxOccurs="1">
-					<choice maxOccurs="3">
+				<choice minOccurs="0" maxOccurs="2">
+					<choice minOccurs="1" maxOccurs="3">
 						<element ref="avro:qName"    />
 						<element ref="avro:avroEnum" />
 						<element ref="avro:xmlEnum"  />

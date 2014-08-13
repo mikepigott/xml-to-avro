@@ -143,6 +143,18 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         return 0;
       }
 
+      boolean log =
+          end.getStateMachineNode().getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+          && end.getStateMachineNode().getElement().getQName().getLocalPart().equals("xmlEnum");
+
+      log = false;
+
+      if (log) {
+        System.out.println("Logging Comparison Of:");
+        System.out.println("\t" + this);
+        System.out.println("\t" + o);
+      }
+
       /* Paths which end in a wildcard element are of lower
        * rank (higher order) than those that end in elements.
        */
@@ -164,7 +176,13 @@ final class XmlSchemaPathFinder extends DefaultHandler {
           return -1;
 
         } else {
-          throw new IllegalStateException("The end nodes do not have the same machine node type, so one should be an ELEMENT and the other should be an ANY.  However, this end node is a " + end.getStateMachineNode().getNodeType() + " while the other has an end node of type " + o.getEnd().getStateMachineNode().getNodeType() + ".");
+          throw new IllegalStateException(
+              "The end nodes do not have the same machine node type, so one "
+              + "should be an ELEMENT and the other should be an ANY.  "
+              + "However, this end node is a "
+              + end.getStateMachineNode().getNodeType()
+              + " while the other has an end node of type "
+              + o.getEnd().getStateMachineNode().getNodeType() + ".");
         }
       }
 
@@ -183,12 +201,29 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         XmlSchemaPathNode thatIter = o.getAfterStart();
 
         while ((thisIter != null) && (thatIter != null)) {
+          if (thisIter.getDirection().getRank()
+               < thatIter.getDirection().getRank() ) {
+            return -1;
+          } else if (thisIter.getDirection().getRank()
+              > thatIter.getDirection().getRank()) {
+            return 1;
+          }
+
           if (thisIter.getIndexOfNextNodeState()
                 < thatIter.getIndexOfNextNodeState()) {
+
+            if (log) {
+              System.out.println("--> thisIter.getIndexOfNextNodeState() (" + thisIter.getIndexOfNextNodeState() + ") < thatIter.getIndexOfNextNodeState(" + thatIter.getIndexOfNextNodeState() + ").");
+            }
+
             return -1;
 
           } else if (thisIter.getIndexOfNextNodeState()
                        > thatIter.getIndexOfNextNodeState()) {
+
+            if (log) {
+              System.out.println("--> thisIter.getIndexOfNextNodeState() (" + thisIter.getIndexOfNextNodeState() + ") > thatIter.getIndexOfNextNodeState(" + thatIter.getIndexOfNextNodeState() + ").");
+            }
             return  1;
           }
 
@@ -198,18 +233,30 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
         if ((thisIter == null) && (thatIter != null)) {
           // This path is shorter.
+          if (log) {
+            System.out.println("this is shorter.");
+          }
           return -1;
         } else if ((thisIter != null) && (thatIter == null)) {
           // That path is shorter.
+          if (log) {
+            System.out.println("that is shorter.");
+          }
           return 1;
         }
 
       } else if ((thisLength == 0) && (thatLength > 0)) {
         // This path is shorter.
+        if (log) {
+          System.out.println("thisLength is shorter.");
+        }
         return -1;
 
       } else if ((thisLength > 0) && (thatLength == 0)) {
         // That path is shorter.
+        if (log) {
+          System.out.println("thatLength is shorter.");
+        }
         return 1;
 
       } else {
@@ -299,6 +346,31 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       this.length = 0;
     }
 
+    @Override
+    public String toString() {
+      final StringBuilder str = new StringBuilder("Path Segment: [ ");
+
+      str.append( start.getDirection() ).append(" | ");
+      str.append( start.getStateMachineNode() ).append(" ]");
+
+      if (afterStart != null) {
+        XmlSchemaPathNode path = afterStart;
+
+        do {
+          str.append(" [").append( path.getDirection() ).append(" | ");
+          str.append( path.getStateMachineNode() ).append(" ]");
+
+          path = path.getNext();
+        } while (path != null);
+
+      } else {
+        str.append(" [").append( end.getDirection() ).append(" | ");
+        str.append( end.getStateMachineNode() ).append(" ]");
+      }
+
+      return str.toString();
+    }
+
     private XmlSchemaPathNode start;
     private XmlSchemaPathNode end;
     private XmlSchemaPathNode afterStart;
@@ -321,15 +393,21 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         XmlSchemaPathNode decisionPoint,
         List<PathSegment> choices,
         int traversedElementIndex,
+        QName elemQName,
         ArrayList<QName> elementStack,
         ArrayList<QName> anyStack) {
 
       if (decisionPoint == null) {
-        throw new IllegalArgumentException("The decision point path node cannot be null.");
+        throw new IllegalArgumentException(
+            "The decision point path node cannot be null.");
       } else if (choices == null) {
-        throw new IllegalArgumentException("The set of choice paths to follow cannot be null.");
+        throw new IllegalArgumentException(
+            "The set of choice paths to follow cannot be null.");
       } else if (choices.size() < 2) {
-        throw new IllegalArgumentException("There must be at least two choices to constitute a decision point, not " + choices.size());
+        throw new IllegalArgumentException(
+            "There must be at least two choices to constitute a decision point"
+            + ", not "
+            + choices.size());
       }
 
       this.decisionPoint = decisionPoint;
@@ -342,6 +420,8 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       } else {
         this.anyStack = (ArrayList<QName>) anyStack.clone();
       }
+
+      this.elementStack.add(elemQName);
 
       java.util.Collections.sort(choices);
     }
@@ -369,6 +449,23 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
     ArrayList<QName> getAnyStack() {
       return (anyStack == null) ? null : ((ArrayList<QName>) anyStack.clone());
+    }
+
+    @Override
+    public String toString() {
+      final String nl = System.getProperty("line.separator");
+
+      final StringBuilder str = new StringBuilder("Decision Point: ");
+
+      str.append( decisionPoint.getDirection() ).append(" | ");
+      str.append( decisionPoint.getStateMachineNode() );
+      str.append(" ]").append(nl);
+
+      for (PathSegment choice : choices) {
+        str.append('\t').append(choice).append(nl);
+      }
+
+      return str.toString();
     }
 
     private final XmlSchemaPathNode decisionPoint;
@@ -465,6 +562,12 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
     final QName elemQName = new QName(uri, localName);
 
+    System.out.println("*** Processing " + elemQName + " ***");
+
+    if ( elemQName.getLocalPart().equals("unsignedLongList") ) {
+      System.out.println("{Starting Debugger}");
+    }
+
     try {
       if (currentPath == null) {
         /* We just started a new document.  Likewise we need
@@ -502,6 +605,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                   currentPath,
                   possiblePaths,
                   traversedElements.size(),
+                  elemQName,
                   elementStack,
                   anyStack);
 
@@ -510,20 +614,29 @@ final class XmlSchemaPathFinder extends DefaultHandler {
           }
           decisionPoints.add(decisionPoint);
 
+          //System.out.println("Adding decision point " + decisionPoint);
+
           nextPath = decisionPoint.tryNextPath();
         } else {
           nextPath = possiblePaths.get(0);
         }
 
         if (nextPath == null) {
-          throw new IllegalStateException("When searching for " + elemQName + ", received a set of path choices of size " + possiblePaths.size() + ", but the next path is null.");
+          throw new IllegalStateException(
+              "When searching for "
+              + elemQName
+              + ", received a set of path choices of size "
+              + possiblePaths.size()
+              + ", but the next path is null.");
         }
+
+        System.out.println("Following path " + nextPath);
 
         followPath(nextPath);
 
       } else {
         // OR: If no paths are returned:
-        System.err.println("Cannot find a path to " + elemQName + "; backtracking.");
+        System.out.println("Cannot find a path to " + elemQName + "; backtracking.");
 
         while ((decisionPoints != null) && !decisionPoints.isEmpty()) {
           /* 2a. Backtrack to the most recent decision point.
@@ -534,6 +647,9 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               decisionPoints.get(decisionPoints.size() - 1);
 
           nextPath = priorPoint.tryNextPath();
+
+          System.out.println("Selecting " + nextPath);
+          System.out.println("from " + priorPoint);
 
           if (nextPath == null) {
             /* We have tried all paths at this decision point.
@@ -553,6 +669,8 @@ final class XmlSchemaPathFinder extends DefaultHandler {
            * in the list, including this one.  If not, repeat step 2a,
            * removing decision points from the stack as we refute them.
            */
+          System.out.println("Following backtracked path " + nextPath);
+
           followPath(nextPath);
 
           for (int index = priorPoint.traversedElementIndex + 1;
@@ -576,6 +694,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                         currentPath,
                         possiblePaths,
                         index,
+                        te.elemName,
                         elementStack,
                         anyStack);
                 decisionPoints.add(decisionPoint);
@@ -1320,7 +1439,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
           }
 
           final boolean reachedMinOccurs =
-              (nextPath.getIteration() >= nextPath.getMinOccurs());
+              (nextPath.getDocIteration() >= nextPath.getMinOccurs());
 
           final List<PathSegment> seqPaths =
               find(nextPath, elemQName, currDepth + 1);
