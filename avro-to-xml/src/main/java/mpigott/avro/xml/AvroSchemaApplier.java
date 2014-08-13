@@ -74,7 +74,9 @@ final class AvroSchemaApplier {
     if ( avroSchema.getType().equals(Schema.Type.ARRAY) ) {
       // ARRAY of UNION of RECORDs/MAPs is not valid when writing XML.
       if (xmlIsWritten) {
-        throw new IllegalArgumentException("The Avro Schema cannot be an ARRAY of UNION of MAPs/RECORDs when writing XML; it must conform to the corresponding XML schema.");
+        throw new IllegalArgumentException(
+            "The Avro Schema cannot be an ARRAY of UNION of MAPs/RECORDs when "
+            + "writing XML; it must conform to the corresponding XML schema.");
       }
 
       /* The user is only looking to retrieve specific elements from the XML
@@ -84,7 +86,11 @@ final class AvroSchemaApplier {
        * (The expected format is Array<Union<Type>>)
        */
       if ( !avroSchema.getElementType().getType().equals(Schema.Type.UNION) ) {
-        throw new IllegalArgumentException("If retrieving only a subset of elements in the document, the Avro Schema must be an ARRAY of UNION of those types, not an Array of " + avroSchema.getElementType().getType());
+        throw new IllegalArgumentException(
+            "If retrieving only a subset of elements in the document, the Avro"
+            + " Schema must be an ARRAY of UNION of those types, not an ARRAY"
+            + " of "
+            + avroSchema.getElementType().getType());
       }
 
       // Confirm all of the elements in the UNION are either RECORDs or MAPs.
@@ -111,7 +117,10 @@ final class AvroSchemaApplier {
       unionOfValidElementsStack.add( Schema.createUnion(union) );
 
     } else {
-      throw new IllegalArgumentException("The Avro Schema must be one of the following types: RECORD, MAP, UNION of RECORDs/MAPs, or ARRAY of UNION of RECORDs/MAPs.");
+      throw new IllegalArgumentException(
+          "The Avro Schema must be one of the following types: RECORD, MAP,"
+          + " UNION of RECORDs/MAPs, or ARRAY of UNION of RECORDs/MAPs.");
+      
     }
   }
 
@@ -140,7 +149,10 @@ final class AvroSchemaApplier {
       // Ignored
       break;
     default:
-      throw new IllegalArgumentException("Document node has an unrecognized type of " + docNode.getStateMachineNode().getNodeType() + '.');
+      throw new IllegalArgumentException(
+          "Document node has an unrecognized type of "
+          + docNode.getStateMachineNode().getNodeType()
+          + '.');
     }
   }
 
@@ -149,7 +161,9 @@ final class AvroSchemaApplier {
            .getStateMachineNode()
            .getNodeType()
            .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
-      throw new IllegalStateException("Attempted to process an element when the node type is " + doc.getStateMachineNode().getNodeType());
+      throw new IllegalStateException(
+          "Attempted to process an element when the node type is "
+          + doc.getStateMachineNode().getNodeType());
     }
 
     final XmlSchemaElement element = doc.getStateMachineNode().getElement();
@@ -180,7 +194,11 @@ final class AvroSchemaApplier {
                 ++mapSchemaIndex) {
               final Schema unionType = valueType.getTypes().get(mapSchemaIndex);
               if ( !unionType.getType().equals(Schema.Type.RECORD) ) {
-                throw new IllegalStateException("MAPs in Avro Schemas for XML documents must have a value type of either RECORD or UNION of RECORD, not UNION with " + unionType.getType());
+                throw new IllegalStateException(
+                    "MAPs in Avro Schemas for XML documents must have a value"
+                    + " type of either RECORD or UNION of RECORD, not UNION"
+                    + " with "
+                    + unionType.getType());
               }
               if (typeMatchesElement(unionType, element)) {
                 elemSchema = possibleSchema;
@@ -203,7 +221,10 @@ final class AvroSchemaApplier {
         }
 
         if ( !valueType.getType().equals(Schema.Type.RECORD) ) {
-          throw new IllegalStateException("RECORD, MAP of RECORD, and MAP of UNION of RECORD are allowed.  " + valueType.getType() + " cannot exist in any level of that hierarchy.");
+          throw new IllegalStateException(
+              "RECORD, MAP of RECORD, and MAP of UNION of RECORD are allowed. "
+              + valueType.getType()
+              + " cannot exist in any level of that hierarchy.");
         }
 
         /* If we reach here, we have not found the schema, and valueType is of
@@ -218,7 +239,11 @@ final class AvroSchemaApplier {
     }
 
     if (xmlIsWritten && (elemSchema == null)) {
-      throw new IllegalStateException("Element \"" + element.getQName() + "\" does not have a corresponding Avro schema.  One is needed when writing XML.");
+      throw new IllegalStateException(
+          "Element \""
+          + element.getQName()
+          + "\" does not have a corresponding Avro schema.  One is needed when"
+          + " writing XML.");
     }
 
     final XmlSchemaTypeInfo typeInfo =
@@ -260,7 +285,15 @@ final class AvroSchemaApplier {
        * been removed in order to be filtered out. 
        */
       if (xmlIsWritten && (childrenField == null)) {
-        throw new IllegalStateException("The children of " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName() + " must exist.  If there are no children, an Avro NULL placeholder is required.");
+        throw new IllegalStateException(
+            "The children of "
+            + element.getQName()
+            + " in Avro Schema {"
+            + elemSchema.getNamespace()
+            + "}"
+            + elemSchema.getName()
+            + " must exist.  If there are no children, an Avro NULL"
+            + " placeholder is required.");
       }
 
       if (childrenField != null) {
@@ -277,7 +310,16 @@ final class AvroSchemaApplier {
                     .getElementType()
                     .getType()
                     .equals(Schema.Type.UNION) ) {
-              throw new IllegalStateException("If the children of " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName() + " are in a group, the corresponding Avro Schema MUST BE an ARRAY of UNION of MAPs/RECORDs, not " + childrenSchema.getElementType().getType());
+              throw new IllegalStateException(
+                  "If the children of "
+                  + element.getQName()
+                  + " in Avro Schema {"
+                  + elemSchema.getNamespace()
+                  + "}"
+                  + elemSchema.getName()
+                  + " are in a group, the corresponding Avro Schema MUST BE an"
+                  + " ARRAY of UNION of MAPs/RECORDs, not "
+                  + childrenSchema.getElementType().getType());
             }
 
             verifyIsUnionOfMapsAndRecords( childrenSchema.getElementType() );
@@ -299,7 +341,17 @@ final class AvroSchemaApplier {
                     typeInfo,
                     element.getQName(),
                     childrenSchema) ) {
-              throw new IllegalStateException("Cannot convert between " + typeInfo + " and " + childrenSchema + " for simple content of " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName());
+              throw new IllegalStateException(
+                  "Cannot convert between "
+                  + typeInfo
+                  + " and "
+                  + childrenSchema
+                  + " for simple content of "
+                  + element.getQName()
+                  + " in Avro Schema {"
+                  + elemSchema.getNamespace()
+                  + "}"
+                  + elemSchema.getName());
             }
           }
           break;
@@ -314,7 +366,16 @@ final class AvroSchemaApplier {
             break;
           }
         default:
-          throw new IllegalStateException("Children of element " + element.getQName() + " in Avro Schema {" + elemSchema.getNamespace() + "}" + elemSchema.getName() + " must be either an ARRAY of UNION of MAP/RECORD or a primitive type, not " + childrenSchema.getType());
+          throw new IllegalStateException(
+              "Children of element "
+              + element.getQName()
+              + " in Avro Schema {"
+              + elemSchema.getNamespace()
+              + "}"
+              + elemSchema.getName()
+              + " must be either an ARRAY of UNION of MAP/RECORD or a"
+              + " primitive type, not "
+              + childrenSchema.getType());
         }
       }
 
@@ -384,7 +445,14 @@ final class AvroSchemaApplier {
         && (attrField == null)
         && !attribute.getUse().equals(XmlSchemaUse.OPTIONAL)
         && !attribute.getUse().equals(XmlSchemaUse.PROHIBITED)) {
-      throw new IllegalStateException("Element " + elementName + " has a " + attribute.getUse() + " attribute named " + attribute.getQName() + " - when writing to XML, a field in the Avro record must exist.");
+      throw new IllegalStateException(
+          "Element "
+          + elementName
+          + " has a "
+          + attribute.getUse()
+          + " attribute named "
+          + attribute.getQName()
+          + " - when writing to XML, a field in the Avro record must exist.");
     }
 
     if (attrField != null) {
@@ -416,7 +484,15 @@ final class AvroSchemaApplier {
           attributeType,
           attribute.getQName(),
           attrType)) {
-        throw new IllegalStateException("Cannot convert element " + elementName + " attribute " + attribute.getQName() + " types between " + attributeType.getBaseType() + " and " + attrField.schema());
+        throw new IllegalStateException(
+            "Cannot convert element "
+            + elementName
+            + " attribute "
+            + attribute.getQName()
+            + " types between "
+            + attributeType.getBaseType()
+            + " and "
+            + attrField.schema());
       }
     }
   }
@@ -447,7 +523,9 @@ final class AvroSchemaApplier {
       processChildren(doc);
       break;
     default:
-      throw new IllegalStateException("Attempted to process a group, but the document node is of type " + doc.getStateMachineNode().getNodeType());
+      throw new IllegalStateException(
+          "Attempted to process a group, but the document node is of type "
+          + doc.getStateMachineNode().getNodeType());
     }
   }
 
@@ -456,16 +534,29 @@ final class AvroSchemaApplier {
     for (Schema unionType : schema.getTypes()) {
       if (!unionType.getType().equals(Schema.Type.RECORD)
           && !unionType.getType().equals(Schema.Type.MAP)) {
-        throw new IllegalArgumentException("The Avro Schema may either be a UNION or an ARRAY of UNION, but only if all of the elements in the UNION are of either type RECORD or MAP, not " + unionType.getType());
+
+        throw new IllegalArgumentException(
+            "The Avro Schema may either be a UNION or an ARRAY of UNION, but"
+            + " only if all of the elements in the UNION are of either type"
+            + " RECORD or MAP, not "
+            + unionType.getType());
+
       } else if (unionType.getType().equals(Schema.Type.MAP)) {
         if ( unionType.getValueType().getType().equals(Schema.Type.UNION) ) {
           for (Schema mapUnionType : unionType.getValueType().getTypes()) {
             if ( !mapUnionType.getType().equals(Schema.Type.RECORD) ) {
-              throw new IllegalArgumentException("If using a UNION of MAP of UNION, all of the UNION types must be RECORD, not " + mapUnionType.getType());
+              throw new IllegalArgumentException(
+                  "If using a UNION of MAP of UNION, all of the UNION types"
+                  + " must be RECORD, not "
+                  + mapUnionType.getType());
             }
           }
         } else if ( !unionType.getValueType().getType().equals(Schema.Type.RECORD) ) {
-          throw new IllegalArgumentException("If the Avro Schema is a UNION of MAPs or an ARRAY of UNION of MAPs, all MAP value types must be RECORD or UNION of RECORD, not " + unionType.getValueType().getType());
+          throw new IllegalArgumentException(
+              "If the Avro Schema is a UNION of MAPs or an ARRAY of UNION of"
+              + " MAPs, all MAP value types must be RECORD or UNION of RECORD,"
+              + " not "
+              + unionType.getValueType().getType());
         }
       }
     }
@@ -486,7 +577,11 @@ final class AvroSchemaApplier {
             match = true;
           }
         } catch (URISyntaxException e) {
-          throw new IllegalStateException("Element \"" + element.getQName() + "\" has a namespace that is not a valid URI", e);
+          throw new IllegalStateException(
+              "Element \""
+              + element.getQName()
+              + "\" has a namespace that is not a valid URI.",
+              e);
         }
       } else {
         // There is no namespace; auto-match.
@@ -549,7 +644,9 @@ final class AvroSchemaApplier {
 
     if (readerType.getType().equals(Schema.Type.ARRAY)
         && (writerType.getType().equals(Schema.Type.ARRAY))) {
-      return confirmEquivalent(readerType.getElementType(), writerType.getElementType());
+      return confirmEquivalent(
+          readerType.getElementType(),
+          writerType.getElementType());
 
     } else if (readerType.getType().equals(Schema.Type.UNION)
         && writerType.getType().equals(Schema.Type.UNION)) {
@@ -619,7 +716,11 @@ final class AvroSchemaApplier {
       break;
 
     default:
-      throw new IllegalArgumentException("Cannot confirm the equivalency of a reader of type " + readerType.getType() + " and a writer of type " + writerType.getType());
+      throw new IllegalArgumentException(
+          "Cannot confirm the equivalency of a reader of type "
+          + readerType.getType()
+          + " and a writer of type "
+          + writerType.getType());
     }
 
     if ( !convertibleFrom.isEmpty() ) {
@@ -844,7 +945,12 @@ final class AvroSchemaApplier {
       case CONTENT:
         break;
       default:
-        throw new IllegalStateException("Path of " + path.getStateMachineNode() + " has an unrecognized direction of " + path.getDirection() + ".");
+        throw new IllegalStateException(
+            "Path of "
+            + path.getStateMachineNode()
+            + " has an unrecognized direction of "
+            + path.getDirection()
+            + ".");
       }
 
       path = path.getNext();
