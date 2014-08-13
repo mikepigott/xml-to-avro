@@ -27,13 +27,13 @@
   	<test:primitive>int</test:primitive>
   	away, the final Avro document should
   	<test:primitive>long</test:primitive>
+  	only contain this text.
+  	<test:nonNullPrimitive>string</test:nonNullPrimitive>
+  	(If I did it right.)
   	<test:list>
   		<test:record>
   			<test:primitive>float</test:primitive>
   		</test:record>
   	</test:list>
-  	only contain this text.
-  	<test:nonNullPrimitive>string</test:nonNullPrimitive>
-  	(If I did it right.)
   </avro:anyAndFriends>
 </avro:realRoot>
