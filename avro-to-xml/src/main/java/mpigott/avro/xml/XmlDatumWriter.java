@@ -112,20 +112,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         return;
       }
 
-      /* If the root node is a substitution group, we need to determine
-       * which of the children are the root node of this XML document.
-       */
-      boolean log =
-          stack.isEmpty()
-          && path.getStateMachineNode().getNodeType().equals(
-              XmlSchemaStateMachineNode.Type.SUBSTITUTION_GROUP);
-
       final QName elemName = new QName(uri, localName);
       walkToElement(elemName);
-
-      if (log) {
-        System.out.println("Root Node Union Index: " + currLocation.getDocumentNode().getUserDefinedContent().getUnionIndex() );
-      }
 
       if (!currLocation
             .getDirection()

@@ -294,30 +294,31 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
         }
       }
 
-      // Now, remove duplicate children.
-      HashSet<Schema> duplicates = new HashSet<Schema>();
-      if (indicesToRemove != null) {
-        indicesToRemove.clear();
-      }
-
-      for (int childIndex = 0; childIndex < children.size(); ++childIndex) {
-        Schema child = children.get(childIndex);
-        if ( duplicates.contains(child) ) {
-          if (indicesToRemove == null) {
-            indicesToRemove = new ArrayList<Integer>();
-          }
-          indicesToRemove.add(childIndex);
-        } else {
-          duplicates.add(child);
-        }
-      }
-
       if ((indicesToRemove != null) && !indicesToRemove.isEmpty()) {
         ListIterator<Integer> iter =
             indicesToRemove.listIterator(indicesToRemove.size());
 
         while ( iter.hasPrevious() ) {
           children.remove( iter.previous().intValue() );
+        }
+      }
+
+      // Now, remove duplicate children.
+      final HashSet<String> duplicates = new HashSet<String>();
+
+      if (indicesToRemove != null) {
+        indicesToRemove.clear();
+      }
+
+      for (int childIndex = 0; childIndex < children.size(); ++childIndex) {
+        Schema child = children.get(childIndex);
+        if ( duplicates.contains( child.getFullName() ) ) {
+          if (indicesToRemove == null) {
+            indicesToRemove = new ArrayList<Integer>();
+          }
+          indicesToRemove.add(childIndex);
+        } else {
+          duplicates.add( child.getFullName() );
         }
       }
     }
