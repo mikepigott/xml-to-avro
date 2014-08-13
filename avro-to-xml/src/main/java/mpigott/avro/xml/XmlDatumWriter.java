@@ -299,11 +299,20 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
         }
 
+        final XmlSchemaTypeInfo elemType =
+            doc.getStateMachineNode().getElementType();
+
+        boolean isComplexType = true;
+        if ( !elemType.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX) ) {
+          isComplexType = false;
+        }
+
         if (avroSchema
               .getField( elemName.getLocalPart() )
               .schema()
               .getType()
-              .equals(Schema.Type.ARRAY)) {
+              .equals(Schema.Type.ARRAY)
+            && isComplexType) {
           out.writeArrayStart();
 
           if (recordInfo.getNumChildren() > 0) {
@@ -427,6 +436,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               .getStateMachineNode()
               .getElement()
               .getQName();
+
+        if (elemQName.getLocalPart().equals("unsignedLongList")) {
+          System.out.println("Start debugger.");
+        }
 
         final Schema avroSchema =
            docNode

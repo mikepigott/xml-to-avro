@@ -723,8 +723,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
             } else if (
                 te.traversal.equals(TraversedElement.Traversal.CONTENT)) {
 
-              currentPath.getDocumentNode().setReceivedContent(true);
-
               final XmlSchemaPathNode contentPath =
                   pathMgr.addParentSiblingOrContentNodeToPath(
                       currentPath,
