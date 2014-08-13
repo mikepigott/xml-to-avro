@@ -21,6 +21,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -285,6 +286,33 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
             Schema.createMap( Schema.createUnion(mapUnion) ));
 
         // 2. Remove all other indices with MAPs in them.
+        ListIterator<Integer> iter =
+            indicesToRemove.listIterator(indicesToRemove.size());
+
+        while ( iter.hasPrevious() ) {
+          children.remove( iter.previous().intValue() );
+        }
+      }
+
+      // Now, remove duplicate children.
+      HashSet<Schema> duplicates = new HashSet<Schema>();
+      if (indicesToRemove != null) {
+        indicesToRemove.clear();
+      }
+
+      for (int childIndex = 0; childIndex < children.size(); ++childIndex) {
+        Schema child = children.get(childIndex);
+        if ( duplicates.contains(child) ) {
+          if (indicesToRemove == null) {
+            indicesToRemove = new ArrayList<Integer>();
+          }
+          indicesToRemove.add(childIndex);
+        } else {
+          duplicates.add(child);
+        }
+      }
+
+      if ((indicesToRemove != null) && !indicesToRemove.isEmpty()) {
         ListIterator<Integer> iter =
             indicesToRemove.listIterator(indicesToRemove.size());
 

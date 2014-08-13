@@ -56,7 +56,8 @@ final class XmlSchemaWalker {
    */
   XmlSchemaWalker(XmlSchemaCollection xmlSchemas) {
     if (xmlSchemas == null) {
-      throw new IllegalArgumentException("Input XmlSchemaCollection cannot be null.");
+      throw new IllegalArgumentException(
+          "Input XmlSchemaCollection cannot be null.");
     }
 
     schemas = xmlSchemas;
@@ -143,99 +144,113 @@ final class XmlSchemaWalker {
     XmlSchemaType schemaType = element.getSchemaType();
     if (schemaType == null) {
       final QName typeQName = element.getSchemaTypeName();
-      XmlSchema schema = schemasByNamespace.get( typeQName.getNamespaceURI() );
-      schemaType = schema.getTypeByName(typeQName);
-    }
-
-    XmlSchemaScope scope = null;
-    if ((schemaType.getQName() != null)
-        && scopeCache.containsKey( schemaType.getQName())) {
-      scope = scopeCache.get(schemaType.getQName());
-    } else {
-      scope =
-          new XmlSchemaScope(
-              schemaType,
-              schemasByNamespace,
-              scopeCache,
-              userRecognizedTypes);
-      if (schemaType.getQName() != null) {
-        scopeCache.put(schemaType.getQName(), scope);
+      if (typeQName != null) {
+        XmlSchema schema =
+            schemasByNamespace.get( typeQName.getNamespaceURI() );
+        schemaType = schema.getTypeByName(typeQName);
       }
     }
 
-    // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
-    final Collection<XmlSchemaAttribute> attrs = scope.getAttributesInScope();
-    final XmlSchemaTypeInfo typeInfo = scope.getTypeInfo();
+    if (schemaType != null) {
+      XmlSchemaScope scope = null;
+      if ((schemaType.getQName() != null)
+          && scopeCache.containsKey( schemaType.getQName())) {
+        scope = scopeCache.get(schemaType.getQName());
+      } else {
+        scope =
+            new XmlSchemaScope(
+                schemaType,
+                schemasByNamespace,
+                scopeCache,
+                userRecognizedTypes);
+        if (schemaType.getQName() != null) {
+          scopeCache.put(schemaType.getQName(), scope);
+        }
+      }
 
-    // 2. for each visitor, call visitor.startElement(element, type);
-    final boolean previouslyVisited =
-        (!element.isAnonymous()
-            && visitedElements.contains( element.getQName() ));
+      // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
+      final Collection<XmlSchemaAttribute> attrs =
+          scope.getAttributesInScope();
+      final XmlSchemaTypeInfo typeInfo = scope.getTypeInfo();
 
-    for (XmlSchemaVisitor visitor : visitors) {
-      visitor.onEnterElement(element, typeInfo, previouslyVisited);
-    }
+      // 2. for each visitor, call visitor.startElement(element, type);
+      final boolean previouslyVisited =
+          (!element.isAnonymous()
+              && visitedElements.contains( element.getQName() ));
 
-    if (!element.isAnonymous() && !previouslyVisited) {
-      visitedElements.add( element.getQName() );
-    }
+      for (XmlSchemaVisitor visitor : visitors) {
+        visitor.onEnterElement(element, typeInfo, previouslyVisited);
+      }
 
-    // If we have already visited this element, skip the attributes and child.
-    if (!previouslyVisited) {
+      if (!element.isAnonymous() && !previouslyVisited) {
+        visitedElements.add( element.getQName() );
+      }
 
-      // 3. Walk the attributes in the element, retrieving type information.
-      if (attrs != null) {
-        for (XmlSchemaAttribute attr : attrs) {
-          XmlSchemaType attrType = attr.getSchemaType();
-          XmlSchemaScope attrScope = null;
-          if ((attrType.getQName() != null)
-              && scopeCache.containsKey( attrType.getQName() )) {
-            attrScope = scopeCache.get( attrType.getQName() );
-          } else {
-            attrScope =
-                new XmlSchemaScope(
-                    attr.getSchemaType(),
-                    schemasByNamespace,
-                    scopeCache,
-                    userRecognizedTypes);
+      // If we already visited this element, skip the attributes and child.
+      if (!previouslyVisited) {
 
-            if (attrType.getName() != null) {
-              scopeCache.put(attrType.getQName(), attrScope);
+        // 3. Walk the attributes in the element, retrieving type information.
+        if (attrs != null) {
+          for (XmlSchemaAttribute attr : attrs) {
+            XmlSchemaType attrType = attr.getSchemaType();
+            XmlSchemaScope attrScope = null;
+            if ((attrType.getQName() != null)
+                && scopeCache.containsKey( attrType.getQName() )) {
+              attrScope = scopeCache.get( attrType.getQName() );
+            } else {
+              attrScope =
+                  new XmlSchemaScope(
+                      attr.getSchemaType(),
+                      schemasByNamespace,
+                      scopeCache,
+                      userRecognizedTypes);
+
+              if (attrType.getName() != null) {
+                scopeCache.put(attrType.getQName(), attrScope);
+              }
+            }
+    
+            final XmlSchemaTypeInfo attrTypeInfo = attrScope.getTypeInfo();
+      
+            for (XmlSchemaVisitor visitor : visitors) {
+              visitor.onVisitAttribute(element, attr, attrTypeInfo);
             }
           }
-  
-          final XmlSchemaTypeInfo attrTypeInfo = attrScope.getTypeInfo();
+        }
     
+        // 4. Visit the anyAttribute, if any.
+        if (scope.getAnyAttribute() != null) {
           for (XmlSchemaVisitor visitor : visitors) {
-            visitor.onVisitAttribute(element, attr, attrTypeInfo);
+            visitor.onVisitAnyAttribute(element, scope.getAnyAttribute());
           }
         }
-      }
-  
-      // 4. Visit the anyAttribute, if any.
-      if (scope.getAnyAttribute() != null) {
+
+        /* 5. Notify that we visited all of the
+         *    attributes (even if there weren't any).
+         */
         for (XmlSchemaVisitor visitor : visitors) {
-          visitor.onVisitAnyAttribute(element, scope.getAnyAttribute());
+          visitor.onEndAttributes(element, typeInfo);
+        }
+
+        // 6. Walk the child groups and elements (if any), depth-first.
+        final XmlSchemaParticle child = scope.getParticle();
+        if (child != null) {
+          walk(child);
         }
       }
 
-      /* 5. Notify that we visited all of the
-       *    attributes (even if there weren't any).
+      /* 7. On the way back up, call
+       * visitor.endElement(element, type, attributes);
        */
       for (XmlSchemaVisitor visitor : visitors) {
-        visitor.onEndAttributes(element, typeInfo);
+        visitor.onExitElement(element, typeInfo, previouslyVisited);
       }
 
-      // 6. Walk the child groups and elements (if any), depth-first.
-      final XmlSchemaParticle child = scope.getParticle();
-      if (child != null) {
-        walk(child);
-      }
-    }
-
-    // 7. On the way back up, call visitor.endElement(element, type, attributes);
-    for (XmlSchemaVisitor visitor : visitors) {
-      visitor.onExitElement(element, typeInfo, previouslyVisited);
+    } else if ( !element.isAbstract() ) {
+      throw new IllegalStateException(
+          "Element "
+          + element.getQName()
+          + " is not abstract and has no type.");
     }
 
     // 8. Now handle substitute elements, if any.
