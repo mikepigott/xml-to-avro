@@ -164,9 +164,14 @@
 	</element>
 	<element name="anyAndFriends">
 		<complexType mixed="true">
-			<choice minOccurs="1" maxOccurs="3">
-				<any minOccurs="1" maxOccurs="2" />
-			</choice>
+			<sequence>
+				<any />
+        <any namespace="##any"   />
+        <any namespace="##other" />
+        <any namespace="http://avro.apache.org/AvroTest" />
+        <any namespace="http://avro.apache.org/AvroTest urn:avro:complex_schema" />
+        <any namespace="##targetNamespace http://avro.apache.org/AvroTest" />
+			</sequence>
 		</complexType>
 	</element>
 </schema>

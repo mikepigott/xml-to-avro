@@ -252,27 +252,6 @@ public class Main {
     return elem;
   }
 
-  private static void walk(XmlSchemaWalker walker, GraphGenerationVisitor visitor, XmlSchemaElement elem, String outFileName) throws IOException {
-    walker.walk(elem);
-
-    FileWriter writer = null;
-    try {
-      writer = new FileWriter(outFileName);
-      writer.write( visitor.toString() );
-    } finally {
-      if (writer != null) {
-        try {
-          writer.close();
-        } catch (IOException ioe) {
-          ioe.printStackTrace();
-        }
-      }
-    }
-
-    visitor.clear();
-    walker.clear();
-  }
-
   private static void walk(XmlSchemaWalker walker, AvroSchemaGenerator visitor, XmlSchemaElement elem, String outFileName) throws IOException {
     walker.walk(elem);
     Schema schema = visitor.getSchema();

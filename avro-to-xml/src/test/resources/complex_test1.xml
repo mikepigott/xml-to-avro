@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <avro:realRoot day="---12" month="--08" xmlns:avro="urn:avro:complex_schema" xmlns:test="http://avro.apache.org/AvroTest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:avro:complex_schema complex_schema.xsd http://avro.apache.org/AvroTest test_schema.xsd"  year="2014">
   <avro:backtrack>
-    <avro:qName>avro:unsignedLongList</avro:qName>
+    <avro:qName xmlns:iso4217="http://www.xbrl.org/2003/iso4217">iso4217:USD</avro:qName>
     <avro:avroEnum>avro</avro:avroEnum>
     <avro:xmlEnum>thrift</avro:xmlEnum>
     <avro:xmlEnum>rest.li</avro:xmlEnum>
@@ -20,20 +20,20 @@
   </avro:prohibit>
   <avro:anyAndFriends>
     This is a mixed element
-  	<test:primitive>null</test:primitive>
-  	interspersed with wildcard elements.
-  	<test:primitive>boolean</test:primitive>
-  	Since the wildcard elements are filtered
-  	<test:primitive>int</test:primitive>
-  	away, the final Avro document should
-  	<test:primitive>long</test:primitive>
-  	only contain this text.
-  	<test:nonNullPrimitive>string</test:nonNullPrimitive>
-  	(If I did it right.)
   	<test:list>
   		<test:record>
   			<test:primitive>float</test:primitive>
   		</test:record>
   	</test:list>
+  	interspersed with wildcard elements.
+  	<test:primitive>null</test:primitive>
+  	Since the wildcard elements are filtered
+  	<test:primitive>boolean</test:primitive>
+  	away, the final Avro document should
+  	<test:primitive>int</test:primitive>
+  	only contain this text.
+  	<avro:xmlEnum>json</avro:xmlEnum>
+  	(If I did it right.)
+  	<avro:avroEnum>json</avro:avroEnum>
   </avro:anyAndFriends>
 </avro:realRoot>

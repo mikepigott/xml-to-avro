@@ -109,7 +109,7 @@ public class TestAvroToXmlAndBack {
     runTest(config, xmlFile);
   }
 
-  @Test @Ignore
+  @Test
   public void testComplex() throws Exception {
     final QName root = new QName("urn:avro:complex_schema", "root");
     final File complexSchemaFile = new File("src\\test\\resources\\complex_schema.xsd");
