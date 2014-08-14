@@ -383,9 +383,20 @@ public class XmlDatumReader implements DatumReader<Document> {
 	    throw new IllegalArgumentException("Input schema cannot be null.");
 	  }
 
-	  final JsonNode xmlSchemasNode = schema.getJsonProp("xmlSchemas");
+	  JsonNode xmlSchemasNode = schema.getJsonProp("xmlSchemas");
+
+	  if ((xmlSchemasNode == null)
+	      && schema.getType().equals(Schema.Type.UNION)) {
+	    /* The root node is a substitution group; the
+	     * xmlSchemasNode was stored with its first child. 
+	     */
+	    xmlSchemasNode = schema.getTypes().get(0).getJsonProp("xmlSchemas");
+	  }
+
 	  if (xmlSchemasNode == null) {
-	    throw new IllegalArgumentException("Avro schema must be created by XmlDatumWriter for it to be used with XmlDatumReader.");
+	    throw new IllegalArgumentException(
+	        "Avro schema must be created by XmlDatumWriter for it to be used"
+	        + " with XmlDatumReader.");
 	  }
 
     nsContext.clear();
@@ -559,7 +570,16 @@ public class XmlDatumReader implements DatumReader<Document> {
       throw new IOException("Unable to create the new document.", e);
     }
 
-    processElement(inputSchema, in);
+    /* If the root node is part of a substitution
+     * group, retrieve the corresponding schema.
+     */
+    Schema rootSchema = inputSchema;
+    if ( rootSchema.getType().equals(Schema.Type.UNION) ) {
+      final int unionIndex = in.readIndex();
+      rootSchema = rootSchema.getTypes().get(unionIndex);
+    }
+
+    processElement(rootSchema, in);
 
     try {
       for (ContentHandler contentHandler : contentHandlers) {
