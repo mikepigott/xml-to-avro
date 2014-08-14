@@ -241,7 +241,7 @@ final class DomBuilderFromSax extends DefaultHandler {
           final XmlSchemaElement schemaElem =
               schemas.getElementByQName(elemQName);
 
-          if ( schemaElem.isNillable() ) {
+          if ((schemaElem != null) && schemaElem.isNillable()) {
             currElem.setAttributeNS(XSI_NS, XSI_NIL, "true");
           }
         }

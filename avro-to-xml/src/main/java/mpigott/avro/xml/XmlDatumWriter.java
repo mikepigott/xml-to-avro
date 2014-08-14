@@ -130,7 +130,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             .equals(XmlSchemaStateMachineNode.Type.ANY)) {
 
         // This is an any element; we are not processing it.
-        System.out.println("Entering wildcard element " + elemName);
         currAnyElem = elemName;
         return;
       }
@@ -492,7 +491,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       if (currAnyElem != null) {
         if (currAnyElem.equals(elemName)) {
           // We are exiting an any element; prepare for the next one!
-          System.out.println(currAnyElem + " is exiting (" + elemName + "); back to your regularly-scheduled programming.");
           currAnyElem = null;
         }
         return;

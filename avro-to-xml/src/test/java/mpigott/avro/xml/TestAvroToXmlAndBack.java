@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
@@ -72,7 +73,7 @@ public class TestAvroToXmlAndBack {
     docBuilder = dbf.newDocumentBuilder();
   }
 
-  @Test @Ignore
+  @Test
   public void testRoot() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
@@ -84,7 +85,7 @@ public class TestAvroToXmlAndBack {
     runTest(config, xmlFile);
   }
 
-  @Test @Ignore
+  @Test
   public void testChildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
@@ -96,7 +97,7 @@ public class TestAvroToXmlAndBack {
     runTest(config, xmlFile);
   }
 
-  @Test @Ignore
+  @Test
   public void testGrandchildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
@@ -108,7 +109,7 @@ public class TestAvroToXmlAndBack {
     runTest(config, xmlFile);
   }
 
-  @Test //@Ignore
+  @Test @Ignore
   public void testComplex() throws Exception {
     final QName root = new QName("urn:avro:complex_schema", "root");
     final File complexSchemaFile = new File("src\\test\\resources\\complex_schema.xsd");
@@ -136,6 +137,15 @@ public class TestAvroToXmlAndBack {
     writer.write(xmlDoc, encoder);
 
     encoder.flush();
+
+    BufferedReader tempReader = new BufferedReader(new InputStreamReader( new ByteArrayInputStream( outStream.toByteArray() )  ));
+    PrintWriter tempWriter = new PrintWriter(new FileWriter("test.avro"));
+    String line = null;
+    while ((line = tempReader.readLine()) != null) {
+      tempWriter.println(line);
+    }
+    tempWriter.close();
+
 
     final ByteArrayInputStream inStream =
         new ByteArrayInputStream( outStream.toByteArray() );

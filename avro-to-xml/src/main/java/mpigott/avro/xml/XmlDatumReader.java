@@ -868,8 +868,8 @@ public class XmlDatumReader implements DatumReader<Document> {
                 readSimpleType(elemType, typeQName, xmlElemType, in));
             result.append(' ');
           }
-          result.delete(result.length() - 1, result.length());
         }
+        result.delete(result.length() - 1, result.length());
 
         return result.toString();
       }
