@@ -847,6 +847,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       switch ( schema.getType() ) {
       case ARRAY:
         {
+          if (data.startsWith("true false")) {
+            System.err.println("{Starting Debugger}");
+          }
+
           /* While unions of lists of different types are technically possible, 
            * supporting them here would be difficult, to say the least.  For
            * now, only one array type will be supported in a union.
@@ -1048,10 +1052,15 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         }
       case BOOLEAN:
         {
-          if (unionIndex >= 0) {
-            out.writeIndex(unionIndex);
+          if (data.equalsIgnoreCase("true")
+              || data.equalsIgnoreCase("false")) {
+            if (unionIndex >= 0) {
+              out.writeIndex(unionIndex);
+            }
+            out.writeBoolean( Boolean.parseBoolean(data) );
+          } else {
+            throw new IOException('"' + data + "\" is not a boolean.");
           }
-          out.writeBoolean( Boolean.parseBoolean(data) );
           break;
         }
       case RECORD:
