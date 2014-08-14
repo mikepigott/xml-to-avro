@@ -8,6 +8,7 @@
 				<element ref="avro:allTheThings"  />
 				<element ref="avro:prohibit"      />
 				<element ref="avro:anyAndFriends" />
+				<element name="simple" type="avro:derivedTypeWithAttributes" minOccurs="0" maxOccurs="1" />
 			</sequence>
 			<attribute name="year"  type="gYear"  fixed="2014"    />
 			<attribute name="month" type="gMonth" default="--08"  />
@@ -174,4 +175,36 @@
 			</sequence>
 		</complexType>
 	</element>
+  <simpleType name="baseUnion">
+    <union memberTypes="boolean negativeInteger" />
+  </simpleType>
+  <simpleType name="restriction">
+  	<restriction base="avro:baseUnion">
+  		<enumeration value="true"  />
+  		<enumeration value="false" />
+  		<enumeration value="-123"  />
+  	</restriction>
+  </simpleType>
+  <complexType name="simpleTypeWithAttributes">
+  	<simpleContent>
+  		<extension base="avro:restriction">
+  			<attributeGroup ref="avro:derivedAttrGroup" />
+	  	</extension>
+  	</simpleContent>
+  </complexType>
+  <attributeGroup name="baseAttrGroup">
+  	<attribute name="default" type="string"        default="hello" />
+  	<attribute name="fixed"   type="unsignedShort" fixed="65534"   />
+  </attributeGroup>
+  <attributeGroup name="derivedAttrGroup">
+  	<attributeGroup ref="avro:baseAttrGroup" />
+  	<anyAttribute namespace="##targetNamespace" />
+  </attributeGroup>
+  <complexType name="derivedTypeWithAttributes">
+  	<complexContent>
+  		<extension base="avro:simpleTypeWithAttributes">
+			<anyAttribute namespace="http://avro.apache.org/AvroTest" />
+  		</extension>
+  	</complexContent>
+  </complexType>
 </schema>
