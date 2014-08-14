@@ -204,7 +204,7 @@ public class TestUtils {
     assertNull( Utils.createJsonNodeFor(null, null) );
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testCreateJsonNodeBoolean() {
     final Schema schema = Schema.create(Schema.Type.BOOLEAN);
 
@@ -216,7 +216,11 @@ public class TestUtils {
     JsonNode falseBoolNode = Utils.createJsonNodeFor("false", schema);
     assertTrue(falseBoolNode instanceof BooleanNode);
     assertFalse(((BooleanNode) falseBoolNode).asBoolean());
+  }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testCreateInvalidJsonNodeBoolean() {
+    final Schema schema = Schema.create(Schema.Type.BOOLEAN);
     Utils.createJsonNodeFor("fail!", schema);
   }
 
@@ -251,7 +255,7 @@ public class TestUtils {
     assertEquals(value, stringNode.asText());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testCreateJsonNodeDouble() {
     double number = 12807.217;
     Schema schema = Schema.create(Schema.Type.DOUBLE);
@@ -261,11 +265,15 @@ public class TestUtils {
 
     assertTrue(numberNode instanceof NumericNode);
     assertEquals(number, numberNode.asDouble(), 0.001);
-
-    Utils.createJsonNodeFor("fail!", schema);
   }
 
   @Test(expected = IllegalArgumentException.class)
+  public void testCreateInvalidJsonNodeDouble() {
+    Schema schema = Schema.create(Schema.Type.DOUBLE);
+    Utils.createJsonNodeFor("fail!", schema);
+  }
+
+  @Test
   public void testCreateJsonNodeFloat() {
     float number = 12807.217f;
     Schema schema = Schema.create(Schema.Type.FLOAT);
@@ -275,11 +283,15 @@ public class TestUtils {
 
     assertTrue(numberNode instanceof NumericNode);
     assertEquals(number, numberNode.asDouble(), 0.001);
-
-    Utils.createJsonNodeFor("fail!", schema);
   }
 
   @Test(expected = IllegalArgumentException.class)
+  public void testCreateInvalidJsonNodeFloat() {
+    Schema schema = Schema.create(Schema.Type.FLOAT);
+    Utils.createJsonNodeFor("fail!", schema);
+  }
+
+  @Test
   public void testCreateJsonNodeInt() {
     int number = 820107;
     Schema schema = Schema.create(Schema.Type.INT);
@@ -289,11 +301,15 @@ public class TestUtils {
 
     assertTrue(numberNode instanceof NumericNode);
     assertEquals(number, numberNode.asInt());
-
-    Utils.createJsonNodeFor("fail!", schema);
   }
 
   @Test(expected = IllegalArgumentException.class)
+  public void testCreateInvalidJsonNodeInt() {
+    Schema schema = Schema.create(Schema.Type.INT);
+    Utils.createJsonNodeFor("fail!", schema);
+  }
+
+  @Test
   public void testCreateJsonNodeLong() {
     long number = 12319891255687L;
     Schema schema = Schema.create(Schema.Type.LONG);
@@ -304,10 +320,15 @@ public class TestUtils {
     assertTrue(numberNode instanceof NumericNode);
     assertEquals(number, numberNode.asLong());
 
-    Utils.createJsonNodeFor("fail!", schema);
   }
 
   @Test(expected = IllegalArgumentException.class)
+  public void testCreateInvalidJsonNodeLong() {
+    Schema schema = Schema.create(Schema.Type.LONG);
+    Utils.createJsonNodeFor("fail!", schema);
+  }
+
+  @Test
   public void testUnionWithoutStringOrBytes() {
     ArrayList<Schema> unionTypes = new ArrayList<Schema>(5);
     unionTypes.add( Schema.create(Schema.Type.INT) );
@@ -319,7 +340,18 @@ public class TestUtils {
     Schema schema = Schema.createUnion(unionTypes);
 
     checkBaseTypes(schema);
+  }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidUnionWithoutStringOrBytes() {
+    ArrayList<Schema> unionTypes = new ArrayList<Schema>(5);
+    unionTypes.add( Schema.create(Schema.Type.INT) );
+    unionTypes.add( Schema.create(Schema.Type.FLOAT) );
+    unionTypes.add( Schema.create(Schema.Type.DOUBLE) );
+    unionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
+    unionTypes.add( Schema.create(Schema.Type.LONG) );
+
+    Schema schema = Schema.createUnion(unionTypes);
     Utils.createJsonNodeFor("fail!", schema);
   }
 
@@ -496,7 +528,7 @@ public class TestUtils {
     assertFalse( iter.hasNext() );
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testArrayOfLongs() {
     String value = "12319891255687";
     long longVal = 12319891255687L;
@@ -530,12 +562,15 @@ public class TestUtils {
       assertEquals(longVal, next.asLong());
     }
     assertEquals(4, count);
-
-    // Non-numeric array - throws IllegalArgumentException.
-    Utils.createJsonNodeFor("fail!", schema);
   }
 
   @Test(expected = IllegalArgumentException.class)
+  public void testInvalidArrayOfLongs() {
+    Schema schema = Schema.createArray( Schema.create(Schema.Type.LONG) );
+    Utils.createJsonNodeFor("fail!", schema);
+  }
+
+  @Test
   public void testArrayOfBooleans() {
     String value = "true false false true";
 
@@ -553,6 +588,11 @@ public class TestUtils {
     assertTrue(  iter.next().asBoolean() );
     assertFalse( iter.hasNext() );
 
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidArrayOfBooleans() {
+    Schema schema = Schema.createArray( Schema.create(Schema.Type.BOOLEAN) );
     Utils.createJsonNodeFor("fail! fail! fail!", schema);
   }
 

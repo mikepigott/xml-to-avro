@@ -127,6 +127,12 @@ public class TestAvroToXmlAndBack {
     final XmlDatumWriter writer = new XmlDatumWriter(config);
     final Schema xmlToAvroSchema = writer.getSchema();
 
+    /*
+    FileWriter tempSchemaWriter = new FileWriter("test.avsc");
+    tempSchemaWriter.write( xmlToAvroSchema.toString(true) );
+    tempSchemaWriter.close();
+    */
+
     final Document xmlDoc = docBuilder.parse(xmlFile);
 
     final ByteArrayOutputStream outStream = new ByteArrayOutputStream();
@@ -137,6 +143,16 @@ public class TestAvroToXmlAndBack {
     writer.write(xmlDoc, encoder);
 
     encoder.flush();
+
+    /*
+    BufferedReader tempReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(outStream.toByteArray())));
+    PrintWriter tempWriter = new PrintWriter(new FileWriter("test.avro"));
+    String line = null;
+    while ((line = tempReader.readLine()) != null) {
+      tempWriter.println(line);
+    }
+    tempWriter.close();
+    */
 
     final ByteArrayInputStream inStream =
         new ByteArrayInputStream( outStream.toByteArray() );

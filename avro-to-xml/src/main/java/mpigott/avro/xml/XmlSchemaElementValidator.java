@@ -71,16 +71,25 @@ public final class XmlSchemaElementValidator {
 
     if ((state == null)
         || (attrs == null)
+        || (nsContext == null)
         || !state
               .getNodeType()
               .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
-      throw new ValidationException("Niether state nor attrs can be null, and state must be of an SchemaStateMachineNode.Type.ELEMENT node, not " + ((state == null) ? null : state.getNodeType()));
+      throw new ValidationException(
+          "None of state, attrs, or nsContext can be null, and state must"
+          + " be of an SchemaStateMachineNode.Type.ELEMENT node, not "
+          + ((state == null) ? null : state.getNodeType()));
     }
-
-    final QName elemQName = state.getElement().getQName();
 
     final List<XmlSchemaStateMachineNode.Attribute> attributes =
         state.getAttributes();
+
+    if ((attributes == null) || attributes.isEmpty()) {
+      // Nothing to validate.
+      return;
+    }
+
+    final QName elemQName = state.getElement().getQName();
 
     for (XmlSchemaStateMachineNode.Attribute attribute : attributes) {
       final XmlSchemaAttribute xmlSchemaAttr = attribute.getAttribute();
@@ -88,7 +97,9 @@ public final class XmlSchemaElementValidator {
       final XmlSchemaUse use = xmlSchemaAttr.getUse();
 
       String value =
-          attrs.getValue(attrQName.getNamespaceURI(), attrQName.getLocalPart());
+          attrs.getValue(
+              attrQName.getNamespaceURI(),
+              attrQName.getLocalPart());
 
       if (value == null) {
         // A namespace is not always available.
@@ -105,12 +116,22 @@ public final class XmlSchemaElementValidator {
         break;
       case PROHIBITED:
         if ((value != null) && !value.isEmpty()) {
-          throw new ValidationException("Attribute " + attrQName + " was declared 'prohibited' by " + elemQName + " and cannot have a value.");
+          throw new ValidationException(
+              "Attribute "
+              + attrQName
+              + " was declared 'prohibited' by "
+              + elemQName
+              + " and cannot have a value.");
         }
         break;
       case REQUIRED:
         if ((value == null) || value.isEmpty()) {
-          throw new ValidationException("Attribute " + attrQName + " was declared 'required' by " + elemQName + " and must have a value.");
+          throw new ValidationException(
+              "Attribute "
+              + attrQName
+              + " was declared 'required' by "
+              + elemQName
+              + " and must have a value.");
         }
         break;
       case NONE:
@@ -118,7 +139,14 @@ public final class XmlSchemaElementValidator {
          * was already taken care of by XmlSchemaWalker.
          */
       default:
-        throw new ValidationException("Attribute " + attrQName + " of element " + elemQName + " has an unrecognized usage of " + use + ".");
+        throw new ValidationException(
+            "Attribute "
+            + attrQName
+            + " of element "
+            + elemQName
+            + " has an unrecognized usage of "
+            + use
+            + ".");
       }
 
       /* If the value is null or empty there is no
@@ -128,8 +156,17 @@ public final class XmlSchemaElementValidator {
         continue;
       }
 
-      if ( attribute.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX) ) {
-        throw new ValidationException("Attribute " + attrQName + " of element " + elemQName + " cannot have a COMPLEX type.");
+      if (attribute
+            .getType()
+            .getType()
+            .equals(XmlSchemaTypeInfo.Type.COMPLEX) ) {
+
+        throw new ValidationException(
+            "Attribute "
+            + attrQName
+            + " of element "
+            + elemQName
+            + " cannot have a COMPLEX type.");
       }
 
       validateType(
@@ -146,10 +183,14 @@ public final class XmlSchemaElementValidator {
       NamespaceContext nsContext) throws ValidationException {
 
     if ((state == null)
+        || (nsContext == null)
         || !state
               .getNodeType()
               .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
-      throw new ValidationException("Niether state nor attrs can be null, and state must be of an SchemaStateMachineNode.Type.ELEMENT node, not " + ((state == null) ? null : state.getNodeType()));
+      throw new ValidationException(
+          "Niether state nor nsContext can be null, and state must be of an "
+          + "SchemaStateMachineNode.Type.ELEMENT node, not "
+          + ((state == null) ? null : state.getNodeType()));
     }
 
     final QName elemQName = state.getElement().getQName();
@@ -324,7 +365,12 @@ public final class XmlSchemaElementValidator {
       try {
         getDatatypeFactory().newDuration(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid duration.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid duration.",
+            iae);
       }
       break;
 
@@ -332,7 +378,12 @@ public final class XmlSchemaElementValidator {
       try {
         DatatypeConverter.parseDateTime(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid date-time.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid date-time.",
+            iae);
       }
       break;
 
@@ -340,7 +391,12 @@ public final class XmlSchemaElementValidator {
       try {
         DatatypeConverter.parseTime(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid time.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid time.",
+            iae);
       }
       break;
       
@@ -348,7 +404,12 @@ public final class XmlSchemaElementValidator {
       try {
         DatatypeConverter.parseDate(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid date.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid date.",
+            iae);
       }
       break;
 
@@ -356,7 +417,12 @@ public final class XmlSchemaElementValidator {
       try {
         getDatatypeFactory().newXMLGregorianCalendar(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid Year-Month.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid Year-Month.",
+            iae);
       }
       break;
 
@@ -364,7 +430,12 @@ public final class XmlSchemaElementValidator {
       try {
         getDatatypeFactory().newXMLGregorianCalendar(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid year.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid year.",
+            iae);
       }
       break;
 
@@ -372,7 +443,12 @@ public final class XmlSchemaElementValidator {
       try {
         getDatatypeFactory().newXMLGregorianCalendar(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid month-day.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid month-day.",
+            iae);
       }
       break;
 
@@ -380,7 +456,12 @@ public final class XmlSchemaElementValidator {
       try {
         getDatatypeFactory().newXMLGregorianCalendar(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid day.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid day.",
+            iae);
       }
       break;
 
@@ -388,16 +469,24 @@ public final class XmlSchemaElementValidator {
       try {
         getDatatypeFactory().newXMLGregorianCalendar(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid month.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid month.",
+            iae);
       }
       break;
 
       // Dates
     case BOOLEAN:
-      try {
-        DatatypeConverter.parseBoolean(value);
-      } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid boolean.", iae);
+      if (!value.equalsIgnoreCase("true")
+          && !value.equalsIgnoreCase("false")) {
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid boolean; must be \"true\" or \"false\".");
       }
       break;
 
@@ -405,7 +494,12 @@ public final class XmlSchemaElementValidator {
       try {
         DatatypeConverter.parseBase64Binary(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not valid base-64 binary.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not valid base-64 binary.",
+            iae);
       }
       break;
 
@@ -413,7 +507,12 @@ public final class XmlSchemaElementValidator {
       try {
         DatatypeConverter.parseHexBinary(value);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not valid hexadecimal binary.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not valid hexadecimal binary.",
+            iae);
       }
       break;
 
@@ -424,7 +523,12 @@ public final class XmlSchemaElementValidator {
             new BigDecimal( DatatypeConverter.parseFloat(value) ),
             facets);
       } catch (NumberFormatException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid float.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid float.",
+            iae);
       }
       break;
 
@@ -435,7 +539,12 @@ public final class XmlSchemaElementValidator {
             DatatypeConverter.parseDecimal(value),
             facets);
       } catch (NumberFormatException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid decimal.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid decimal.",
+            iae);
       }
       digitsFacetChecks(name, value, facets);
       break;
@@ -447,7 +556,12 @@ public final class XmlSchemaElementValidator {
             new BigDecimal( DatatypeConverter.parseDouble(value) ),
             facets);
       } catch (NumberFormatException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid double.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid double.",
+            iae);
       }
       break;
 
@@ -455,7 +569,12 @@ public final class XmlSchemaElementValidator {
       try {
         DatatypeConverter.parseQName(value, nsContext);
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid .", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid .",
+            iae);
       }
       break;
 
@@ -470,12 +589,20 @@ public final class XmlSchemaElementValidator {
         }
 
       } catch (IllegalArgumentException iae) {
-        throw new ValidationException(name + " value of \"" + value + "\" is not a valid series of QNames.", iae);
+        throw new ValidationException(
+            name
+            + " value of \""
+            + value
+            + "\" is not a valid series of QNames.",
+            iae);
       }
       break;
 
     default:
-      throw new ValidationException(name + " has an unrecognized base value type of " + typeInfo.getBaseType());
+      throw new ValidationException(
+          name
+          + " has an unrecognized base value type of "
+          + typeInfo.getBaseType());
     }
 
     checkEnumerationFacet(name, value, facets);
@@ -528,7 +655,8 @@ public final class XmlSchemaElementValidator {
           satisfied = (comparison <= 0);
           break;
         default:
-          throw new ValidationException("Cannot perform a range check of type " + rangeType);
+          throw new ValidationException(
+              "Cannot perform a range check of type " + rangeType);
         }
 
         if (!satisfied) {
@@ -538,7 +666,15 @@ public final class XmlSchemaElementValidator {
     }
 
     if (!satisfied) {
-      throw new ValidationException(name + " value \"" + value + "\" violates the " + rangeType + " restriction of " + compareTo + ".");
+      throw new ValidationException(
+          name
+          + " value \""
+          + value
+          + "\" violates the "
+          + rangeType
+          + " restriction of "
+          + compareTo
+          + ".");
     }
   }
 
@@ -560,6 +696,9 @@ public final class XmlSchemaElementValidator {
     } else if (numericValue instanceof Number) {
       newValue = new BigDecimal(((Number) numericValue).longValue());
 
+    } else if (numericValue instanceof String) {
+      newValue = new BigDecimal(numericValue.toString());
+
     } else {
       throw new IllegalArgumentException(numericValue.getClass().getName() + " is not a subclass of java.lang.Number.");
     }
@@ -578,8 +717,16 @@ public final class XmlSchemaElementValidator {
     }
 
     stringLengthCheck(name, value, facets, XmlSchemaRestriction.Type.LENGTH);
-    stringLengthCheck(name, value, facets, XmlSchemaRestriction.Type.LENGTH_MIN);
-    stringLengthCheck(name, value, facets, XmlSchemaRestriction.Type.LENGTH_MAX);
+
+    stringLengthCheck(name,
+                      value,
+                      facets,
+                      XmlSchemaRestriction.Type.LENGTH_MIN);
+
+    stringLengthCheck(name,
+                      value,
+                      facets,
+                      XmlSchemaRestriction.Type.LENGTH_MAX);
   }
 
   private static void stringLengthCheck(
