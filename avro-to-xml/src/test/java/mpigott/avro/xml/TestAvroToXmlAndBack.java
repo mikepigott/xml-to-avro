@@ -138,15 +138,6 @@ public class TestAvroToXmlAndBack {
 
     encoder.flush();
 
-    BufferedReader tempReader = new BufferedReader(new InputStreamReader( new ByteArrayInputStream( outStream.toByteArray() )  ));
-    PrintWriter tempWriter = new PrintWriter(new FileWriter("test.avro"));
-    String line = null;
-    while ((line = tempReader.readLine()) != null) {
-      tempWriter.println(line);
-    }
-    tempWriter.close();
-
-
     final ByteArrayInputStream inStream =
         new ByteArrayInputStream( outStream.toByteArray() );
 
