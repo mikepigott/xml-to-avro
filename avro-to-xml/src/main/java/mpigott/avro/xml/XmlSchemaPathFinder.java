@@ -832,10 +832,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
      */
 
     try {
-      if ( currentPath
-             .getStateMachineNode()
-             .getNodeType()
-             .equals(XmlSchemaStateMachineNode.Type.ANY) ) {
+      if (currentPath
+            .getStateMachineNode()
+            .getNodeType()
+            .equals(XmlSchemaStateMachineNode.Type.ANY)
+          && (anyStack != null) && !anyStack.isEmpty()) {
         /* If this represents a wildcard element, we don't
          * care - we won't be processing the content.
          */

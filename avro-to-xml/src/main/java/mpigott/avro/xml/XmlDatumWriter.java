@@ -130,6 +130,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             .equals(XmlSchemaStateMachineNode.Type.ANY)) {
 
         // This is an any element; we are not processing it.
+        System.out.println("Entering wildcard element " + elemName);
         currAnyElem = elemName;
         return;
       }
@@ -364,13 +365,17 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
       if (currAnyElem != null) {
-        // We do not process any elements.
+        // We do not process wildcard elements.
         return;
       }
 
       if (stack.isEmpty()) {
-        throw new SAXException("We are processing content, but the element stack is empty!");
+        throw new SAXException(
+            "We are processing content, but the element stack is empty!");
       }
+
+      final XmlSchemaDocumentNode<AvroRecordInfo> owningElem =
+          stack.get(stack.size() - 1).docNode;
 
       final XmlSchemaPathNode currPathNode = currLocation;
 
@@ -380,7 +385,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           || !currLocation
                 .getDirection()
                 .equals(XmlSchemaPathNode.Direction.CONTENT)) {
-        String str = new String(ch, start, length).trim();
+        final String str = new String(ch, start, length).trim();
+
         if (str.isEmpty()) {
           if (currLocation == null) {
             currLocation = currPathNode;
@@ -389,7 +395,25 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
           return;
         } else {
-          throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).docNode.getStateMachineNode().getElement().getQName() + " but the current direction is " + currLocation.getDirection() + " to " + currLocation.getStateMachineNode() + ", not CONTENT.");
+          XmlSchemaPathNode path = walkToContent(owningElem);
+
+          if (path == null) {
+            throw new SAXException(
+                "We are processing characters \""
+                + str
+                + "\" for "
+                + owningElem
+                    .getStateMachineNode()
+                    .getElement()
+                    .getQName()
+                + " but the current direction is "
+                + currLocation.getDirection()
+                + " to "
+                + currLocation.getStateMachineNode()
+                + ", not CONTENT.");
+          } else {
+            currLocation = path;
+          }
         }
 
       } else if (currLocation.getNext() == null) {
@@ -400,13 +424,13 @@ public class XmlDatumWriter implements DatumWriter<Document> {
        * all of them in the "content" StringBuilder, then process it all
        * once the last bit of content has been collected.
        *
+       * This includes where content is interspersed with any elements, which
+       * are skipped anyway.
+       *
        * If this is the last content node, we'll just write it all out here.
        */
       final boolean moreContentComing =
-          currLocation
-            .getNext()
-            .getDirection()
-            .equals(XmlSchemaPathNode.Direction.CONTENT);
+          hasMoreContent(currLocation.getNext(), owningElem);
 
       String result = null;
       if (moreContentComing
@@ -465,9 +489,12 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     {
       final QName elemName = new QName(uri, localName);
 
-      if ((currAnyElem != null) && currAnyElem.equals(elemName)) {
-        // We are exiting an any element; prepare for the next one!
-        currAnyElem = null;
+      if (currAnyElem != null) {
+        if (currAnyElem.equals(elemName)) {
+          // We are exiting an any element; prepare for the next one!
+          System.out.println(currAnyElem + " is exiting (" + elemName + "); back to your regularly-scheduled programming.");
+          currAnyElem = null;
+        }
         return;
       }
 
@@ -574,8 +601,15 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         while (currLocation != null) {
           if (!currLocation
                  .getDirection()
-                 .equals(XmlSchemaPathNode.Direction.PARENT)) {
-            throw new IllegalStateException("Reached the end of the document, but the path has more nodes: " + currLocation.getStateMachineNode());
+                 .equals(XmlSchemaPathNode.Direction.PARENT)
+              && !currLocation
+                    .getDirection()
+                    .equals(XmlSchemaPathNode.Direction.CONTENT)) {
+            throw new IllegalStateException(
+                "Path has more nodes after document end: "
+                + currLocation.getDirection()
+                + " | "
+                + currLocation.getStateMachineNode());
           }
           currLocation = currLocation.getNext();
         }
@@ -628,6 +662,73 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 .equals(elemName)) {
         throw new IllegalStateException("The next element in the path is " + currLocation.getStateMachineNode().getElement().getQName() + " (" + currLocation.getDirection() + "), not " + elemName + ".");
       }
+    }
+
+    private boolean hasMoreContent(
+        XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path,
+        XmlSchemaDocumentNode<AvroRecordInfo> owningElem) {
+
+      if (path == null) {
+        return false;
+      }
+
+      final XmlSchemaDocumentNode<AvroRecordInfo> parentElem =
+          owningElem.getParent();
+
+      while ((path != null)
+          && (path.getDocumentNode() != parentElem)
+          && !path
+                .getStateMachineNode()
+                .getNodeType()
+                .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+          && !path
+                .getDirection()
+                .equals(XmlSchemaPathNode.Direction.CONTENT) ) {
+        path = path.getNext();
+      }
+
+      if ((path != null)
+          && path
+               .getDirection()
+               .equals(XmlSchemaPathNode.Direction.CONTENT) ) {
+        return true;
+      }
+
+      return false;
+    }
+
+    private XmlSchemaPathNode walkToContent(
+        XmlSchemaDocumentNode<AvroRecordInfo> owningElem) {
+
+      if (currLocation == null) {
+        return null;
+      }
+
+      final XmlSchemaDocumentNode<AvroRecordInfo> parentElem =
+          owningElem.getParent();
+
+      XmlSchemaPathNode path = currLocation.getNext();
+
+      while ((path != null)
+          && (path.getDocumentNode() != parentElem)
+          && !path
+                .getStateMachineNode()
+                .getNodeType()
+                .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
+          && !path
+                .getDirection()
+                .equals(XmlSchemaPathNode.Direction.CONTENT) ) {
+        path = path.getNext();
+      }
+
+      if ((path != null)
+          && path
+               .getDirection()
+               .equals(XmlSchemaPathNode.Direction.CONTENT) ) {
+        return path;
+      }
+
+      return null;
     }
 
     private boolean isMapEnd() {
