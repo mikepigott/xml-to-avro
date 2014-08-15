@@ -305,7 +305,6 @@ final class XmlSchemaPathManager<U, V> {
     }
   }
 
-  // TODO: Can we include a parent's index argument?
   void recycleDocumentNode(XmlSchemaDocumentNode<U> node) {
     if (node.getParent() != null) {
       final Map<Integer, XmlSchemaDocumentNode> siblings =
