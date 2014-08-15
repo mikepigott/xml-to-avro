@@ -115,6 +115,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       final QName elemQName = new QName(uri, localName);
       walkToElement(elemQName);
 
+      if ( elemQName.getLocalPart().equals("anyAndFriends") ) {
+        //log = true;
+      }
+
       if (!currLocation
             .getDirection()
             .equals(XmlSchemaPathNode.Direction.CHILD)
@@ -378,24 +382,14 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
       final XmlSchemaPathNode currPathNode = currLocation;
 
-      currLocation = currLocation.getNext();
+      XmlSchemaPathNode path = walkToContent(owningElem);
 
-      if ((currLocation == null)
-          || !currLocation
-                .getDirection()
-                .equals(XmlSchemaPathNode.Direction.CONTENT)) {
+      if (path == null) {
         final String str = new String(ch, start, length).trim();
 
         if (str.isEmpty()) {
-          if (currLocation == null) {
-            currLocation = currPathNode;
-          } else {
-            currLocation = currLocation.getPrevious();
-          }
           return;
         } else {
-          XmlSchemaPathNode path = walkToContent(owningElem);
-
           if (path == null) {
             throw new SAXException(
                 "We are processing characters \""
@@ -410,13 +404,22 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 + " to "
                 + currLocation.getStateMachineNode()
                 + ", not CONTENT.");
-          } else {
-            currLocation = path;
           }
         }
 
-      } else if (currLocation.getNext() == null) {
-        throw new SAXException("We are processing characters for " + stack.get(stack.size() - 1).docNode.getStateMachineNode().getElement().getQName() + " but somehow the path ends here!");
+      } else {
+        currLocation = path;
+
+        if (currLocation.getNext() == null) {
+          throw new SAXException(
+              "We are processing characters for "
+              + stack.get(stack.size() - 1)
+                  .docNode
+                  .getStateMachineNode()
+                  .getElement()
+                  .getQName()
+              + " but somehow the path ends here!");
+        }
       }
 
       /* If characters() will be called multiple times, we want to collect
@@ -486,10 +489,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         String qName)
         throws SAXException
     {
-      final QName elemName = new QName(uri, localName);
+      final QName elemQName = new QName(uri, localName);
 
       if (currAnyElem != null) {
-        if (currAnyElem.equals(elemName)) {
+        if (currAnyElem.equals(elemQName)) {
           // We are exiting an any element; prepare for the next one!
           currAnyElem = null;
         }
@@ -529,20 +532,24 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         avroSchema = avroSchema.getField(localName).schema();
 
         try {
-          write(elemType, elemName, avroSchema, value);
+          write(elemType, elemQName, avroSchema, value);
         } catch (IOException e) {
-          throw new RuntimeException("Attempted to write a default value of \"" + value + "\" for " + elemName + " and failed.", e);
+          throw new RuntimeException("Attempted to write a default value of \"" + value + "\" for " + elemQName + " and failed.", e);
         }
       }
 
-      final QName stackElemName =
+      final QName stackElemQName =
           docNode
             .getStateMachineNode()
             .getElement()
             .getQName();
 
-      if (!stackElemName.equals(elemName)) {
-        throw new IllegalStateException("We are leaving " + elemName + " but the element on the stack is " + stackElemName + ".");
+      if (!stackElemQName.equals(elemQName)) {
+        throw new IllegalStateException(
+            "We are leaving "
+            + elemQName
+            + " but the element on the stack is "
+            + stackElemQName + ".");
       }
 
       Schema avroSchema =
@@ -569,7 +576,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
 
       if (avroSchema
-            .getField( elemName.getLocalPart() )
+            .getField( elemQName.getLocalPart() )
             .schema()
             .getType()
             .equals(Schema.Type.ARRAY)
@@ -578,7 +585,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           out.writeArrayEnd();
         } catch (Exception e) {
           throw new RuntimeException(
-              "Unable to end the array for " + elemName, e);
+              "Unable to end the array for " + elemQName, e);
         }
       }
 
@@ -594,15 +601,14 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     @Override
     public void endDocument() throws SAXException {
+      XmlSchemaPathNode tempPath = currLocation;
+
       if (currLocation.getNext() != null) {
         currLocation = currLocation.getNext();
         while (currLocation != null) {
           if (!currLocation
                  .getDirection()
-                 .equals(XmlSchemaPathNode.Direction.PARENT)
-              && !currLocation
-                    .getDirection()
-                    .equals(XmlSchemaPathNode.Direction.CONTENT)) {
+                 .equals(XmlSchemaPathNode.Direction.PARENT)) {
             throw new IllegalStateException(
                 "Path has more nodes after document end: "
                 + currLocation.getDirection()
@@ -662,6 +668,58 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
     }
 
+    /* For a path to be exiting a particular element's
+     * scope, it must be doing one of four things:
+     *
+     * 1. It is null, indicating the end of the document.
+     * 2. It is a PARENT path to the owning element's parent.
+     * 3. It is a CHILD path to the owning element's child (wildcard) element.
+     * 4. It is a SIBLING path to a new element instance.
+     */
+    private boolean pathExitsElementScope(
+        XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path,
+        XmlSchemaDocumentNode<AvroRecordInfo> owningElem,
+        boolean ignoreAny) {
+
+      // 1. This is the end of the path.
+      if (path == null) {
+        return true;
+      }
+
+      // 2. This is a PARENT path to the owning element's parent.
+      final XmlSchemaDocumentNode<AvroRecordInfo> parentElem =
+          owningElem.getParent();
+
+      if (path.getDirection().equals(XmlSchemaPathNode.Direction.PARENT)
+          && path.getDocumentNode() == parentElem) {
+        return true;
+      }
+
+      // 3. It is a CHILD path to the owning element's child.
+      final XmlSchemaStateMachineNode.Type nodeType =
+          path.getStateMachineNode().getNodeType();
+
+      final boolean isElement =
+          nodeType.equals(XmlSchemaStateMachineNode.Type.ELEMENT);
+
+      final boolean isAny =
+          nodeType.equals(XmlSchemaStateMachineNode.Type.ANY);
+
+      if (path.getDirection().equals(XmlSchemaPathNode.Direction.CHILD)
+          && (isElement || (isAny && !ignoreAny))) {
+        return true;
+      }
+
+      // 4. It is a SIBLING path to a new element instance.
+      if (path.getDirection().equals(XmlSchemaPathNode.Direction.SIBLING)
+          && (isElement || (isAny && !ignoreAny))) {
+        return true;
+      }
+
+      // It is none of these things; we are still in the scope.
+      return false;
+    }
+
     private boolean hasMoreContent(
         XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path,
         XmlSchemaDocumentNode<AvroRecordInfo> owningElem) {
@@ -670,18 +728,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         return false;
       }
 
-      final XmlSchemaDocumentNode<AvroRecordInfo> parentElem =
-          owningElem.getParent();
-
-      while ((path != null)
-          && (path.getDocumentNode() != parentElem)
-          && !path
-                .getStateMachineNode()
-                .getNodeType()
-                .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-          && !path
-                .getDirection()
-                .equals(XmlSchemaPathNode.Direction.CONTENT) ) {
+      while (!pathExitsElementScope(path, owningElem, true)
+             && !path
+                  .getDirection()
+                  .equals(XmlSchemaPathNode.Direction.CONTENT) ) {
         path = path.getNext();
       }
 
@@ -707,15 +757,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
       XmlSchemaPathNode path = currLocation.getNext();
 
-      while ((path != null)
-          && (path.getDocumentNode() != parentElem)
-          && !path
-                .getStateMachineNode()
-                .getNodeType()
-                .equals(XmlSchemaStateMachineNode.Type.ELEMENT)
-          && !path
-                .getDirection()
-                .equals(XmlSchemaPathNode.Direction.CONTENT) ) {
+      while (!pathExitsElementScope(path, owningElem, false)
+             && !path
+                  .getDirection()
+                  .equals(XmlSchemaPathNode.Direction.CONTENT) ) {
         path = path.getNext();
       }
 
