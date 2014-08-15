@@ -59,11 +59,15 @@ final class XmlSchemaPathManager<U, V> {
     case SIBLING:
     case CONTENT:
       if (position == null) {
-        throw new IllegalStateException("When calling addParentSiblingOrContentNodeToPath(), the startNode's document node (and its parent) cannot be null.");
+        throw new IllegalStateException(
+            "When calling addParentSiblingOrContentNodeToPath(), the "
+            + "startNode's document node (and its parent) cannot be null.");
       }
       break;
     default:
-      throw new IllegalStateException("This method cannot be called if following a child.  Use addChildNodeToPath(startNode, direction, stateIndex).");
+      throw new IllegalStateException(
+          "This method cannot be called if following a child.  Use "
+          + "addChildNodeToPath(startNode, direction, stateIndex).");
     }
 
     XmlSchemaPathNode<U, V> node = null;
@@ -92,9 +96,16 @@ final class XmlSchemaPathManager<U, V> {
         startNode.getStateMachineNode();
 
     if (stateMachine.getPossibleNextStates() == null) {
-      throw new IllegalStateException("Cannot follow the branch index; no possible next states.");
+      throw new IllegalStateException(
+          "Cannot follow the branch index; no possible next states.");
+
     } else if (stateMachine.getPossibleNextStates().size() <= branchIndex) {
-      throw new IllegalArgumentException("Cannot follow the branch index; branch " + branchIndex + " was requested when there are only " + stateMachine.getPossibleNextStates().size() + " branches to follow.");
+      throw new IllegalArgumentException(
+          "Cannot follow the branch index; branch "
+          + branchIndex
+          + " was requested when there are only "
+          + stateMachine.getPossibleNextStates().size()
+          + " branches to follow.");
     }
 
     final XmlSchemaPathNode<U, V> next =
@@ -104,11 +115,15 @@ final class XmlSchemaPathManager<U, V> {
             stateMachine.getPossibleNextStates().get(branchIndex));
 
     final XmlSchemaDocumentNode<U> docNode = startNode.getDocumentNode();
+
     if ((startNode.getDocumentNode() != null)
         && (docNode.getChildren(startNode.getIteration()) != null)
         && docNode.getChildren().containsKey(branchIndex)) {
-      next.setDocumentNode( docNode.getChildren(startNode.getIteration()).get(branchIndex) );
+
+      next.setDocumentNode(
+          docNode.getChildren(startNode.getIteration()).get(branchIndex) );
       next.setIteration(next.getDocIteration() + 1);
+
     } else {
       next.setIteration(1);
     }
@@ -161,8 +176,13 @@ final class XmlSchemaPathManager<U, V> {
              .getDirection()
              .equals(XmlSchemaPathNode.Direction.CHILD)) {
 
-        throw new IllegalStateException("The startNode may only have a null XmlSchemaDocumentNode if it represents the root node, and likewise its only valid direction is CHILD, not " + startNode.getDirection());
+        throw new IllegalStateException(
+            "The startNode may only have a null XmlSchemaDocumentNode if it "
+            + "represents the root node, and likewise its only valid "
+            + "direction is CHILD, not "
+            + startNode.getDirection());
       }
+
       // startNode is the root node.
       XmlSchemaDocumentNode rootDoc =
           createDocumentNode(null, startNode.getStateMachineNode());
@@ -175,7 +195,12 @@ final class XmlSchemaPathManager<U, V> {
     while (iter != null) {
       if (iter.getDocumentNode() == null) {
         if ( !iter.getDirection().equals(XmlSchemaPathNode.Direction.CHILD) ) {
-          throw new IllegalStateException("XmlSchemaPathNode has a direction of " + iter.getDirection() + " but it does not have an XmlSchemaDocumentNode to represent its state machine (" + iter.getStateMachineNode() + ").");
+          throw new IllegalStateException(
+              "XmlSchemaPathNode has a direction of "
+              + iter.getDirection()
+              + " but it does not have an XmlSchemaDocumentNode to represent"
+              + " its state machine ("
+              + iter.getStateMachineNode() + ").");
         }
 
         final XmlSchemaDocumentNode<U> newDocNode = 
@@ -189,7 +214,10 @@ final class XmlSchemaPathManager<U, V> {
             prev.getDocumentNode().getChildren();
 
         if (prev.getIndexOfNextNodeState() < 0) {
-          throw new IllegalStateException("Creating a new document node for a node represented by " + iter.getStateMachineNode() + " but its previous state does not know how to reach me.");
+          throw new IllegalStateException(
+              "Creating a new document node for a node represented by "
+              + iter.getStateMachineNode()
+              + " but its previous state does not know how to reach me.");
         }
 
         siblings.put(prev.getIndexOfNextNodeState(), iter.getDocumentNode());
@@ -204,7 +232,14 @@ final class XmlSchemaPathManager<U, V> {
       }
 
       if (iter.getIteration() != iter.getDocIteration()) {
-        throw new IllegalStateException("The current path node (representing " + iter.getStateMachineNode() + ") has an iteration of " + iter.getIteration() + ", which does not match the document node iteration of " + iter.getDocIteration() + '.');
+        throw new IllegalStateException(
+            "The current path node (representing "
+            + iter.getStateMachineNode()
+            + ") has an iteration of "
+            + iter.getIteration()
+            + ", which does not match the document node iteration of "
+            + iter.getDocIteration()
+            + '.');
       }
 
       prev = iter;
