@@ -112,8 +112,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         return;
       }
 
-      final QName elemName = new QName(uri, localName);
-      walkToElement(elemName);
+      final QName elemQName = new QName(uri, localName);
+      walkToElement(elemQName);
 
       if (!currLocation
             .getDirection()
@@ -130,7 +130,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             .equals(XmlSchemaStateMachineNode.Type.ANY)) {
 
         // This is an any element; we are not processing it.
-        currAnyElem = elemName;
+        currAnyElem = elemQName;
         return;
       }
 
@@ -178,7 +178,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           if (mapNode == null) {
             throw new IllegalStateException(
                 "Reached "
-                + elemName
+                + elemQName
                 + ", a MAP node, but there is no map information here.");
           }
 
@@ -232,14 +232,14 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                           field.name());
 
                   if (key == null) {
-                    throw new IllegalStateException("Attribute value for " + xsa.getQName() + " of element " + elemName + " is null.");
+                    throw new IllegalStateException("Attribute value for " + xsa.getQName() + " of element " + elemQName + " is null.");
                   }
                   break;
                 }
               }
 
               if (key == null) {
-                throw new IllegalStateException("Unable to find key for element " + elemName);
+                throw new IllegalStateException("Unable to find key for element " + elemQName);
               }
 
               out.writeString(key);
@@ -254,7 +254,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             }
           case MAP_END:
           default:
-            throw new IllegalStateException("Did not expect to find a map node of type " + mapNode.getType() + " when starting " + elemName + ".");
+            throw new IllegalStateException("Did not expect to find a map node of type " + mapNode.getType() + " when starting " + elemQName + ".");
           }
 
         } else {
@@ -270,7 +270,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             ++fieldIndex) {
 
           final Schema.Field field = avroSchema.getFields().get(fieldIndex);
-          if (field.name().equals(elemName.getLocalPart())) {
+          if (field.name().equals(elemQName.getLocalPart())) {
             // We reached the children field early ... not supposed to happen!
             throw new IllegalStateException("The children field is indexed at " + fieldIndex + " when it was expected to be the last element, or " + (avroSchema.getFields().size() - 1) + ".");
           }
@@ -298,7 +298,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           try {
             write(typeInfo, attrQName, field.schema(), value);
           } catch (Exception e) {
-            throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemName, e);
+            throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemQName, e);
           }
         }
 
@@ -311,7 +311,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         }
 
         if (avroSchema
-              .getField( elemName.getLocalPart() )
+              .getField( elemQName.getLocalPart() )
               .schema()
               .getType()
               .equals(Schema.Type.ARRAY)
@@ -330,7 +330,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           entry.receivedContent = true;
 
         } else if (avroSchema
-                     .getField( elemName.getLocalPart() )
+                     .getField( elemQName.getLocalPart() )
                      .schema()
                      .getType()
                      .equals(Schema.Type.NULL) ) {
@@ -347,8 +347,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               && Boolean.parseBoolean(atts.getValue(nilIndex))) {
 
             write(doc.getStateMachineNode().getElementType(),
-                  elemName,
-                  avroSchema.getField( elemName.getLocalPart() ).schema(),
+                  elemQName,
+                  avroSchema.getField( elemQName.getLocalPart() ).schema(),
                   null);
             entry.receivedContent = true;
           }
@@ -357,7 +357,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         stack.add(entry);
 
       } catch (Exception e) {
-        throw new RuntimeException("Unable to write " + elemName + " to the output stream.", e);
+        throw new RuntimeException("Unable to write " + elemQName + " to the output stream.", e);
       }
     }
 
