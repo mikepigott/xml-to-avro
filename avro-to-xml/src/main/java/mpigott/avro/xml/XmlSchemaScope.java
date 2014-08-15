@@ -579,19 +579,27 @@ final class XmlSchemaScope {
           : parentScope.getTypeInfo();
 
       if ((parentTypeInfo != null)
-          && !parentTypeInfo.equals(XmlSchemaTypeInfo.Type.COMPLEX)) {
+          && !parentTypeInfo
+                .getType()
+                .equals(XmlSchemaTypeInfo.Type.COMPLEX)) {
         typeInfo = parentScope.getTypeInfo();
       } else {
         typeInfo = new XmlSchemaTypeInfo(isMixed);
       }
 
     } else if (content instanceof XmlSchemaComplexContentRestriction) {
-      XmlSchemaComplexContentRestriction rstr = (XmlSchemaComplexContentRestriction) content;
-      XmlSchema schema = schemasByNamespace.get( rstr.getBaseTypeName().getNamespaceURI() );
-      XmlSchemaType baseType = schema.getTypeByName( rstr.getBaseTypeName() );
+      final XmlSchemaComplexContentRestriction rstr =
+          (XmlSchemaComplexContentRestriction) content;
 
+      final XmlSchema schema =
+          schemasByNamespace.get( rstr.getBaseTypeName().getNamespaceURI() );
+
+      final XmlSchemaType baseType =
+          schema.getTypeByName( rstr.getBaseTypeName() );
+
+      XmlSchemaScope parentScope = null;
       if (baseType != null) {
-        XmlSchemaScope parentScope = getScope(baseType);
+        parentScope = getScope(baseType);
 
         attributes =
             mergeAttributes(
@@ -616,7 +624,19 @@ final class XmlSchemaScope {
        */
       anyAttr = rstr.getAnyAttribute();
 
-      typeInfo = new XmlSchemaTypeInfo(isMixed);
+      final XmlSchemaTypeInfo parentTypeInfo =
+          (parentScope == null)
+          ? null
+          : parentScope.getTypeInfo();
+
+      if ((parentTypeInfo != null)
+          && !parentTypeInfo
+               .getType()
+               .equals(XmlSchemaTypeInfo.Type.COMPLEX)) {
+        typeInfo = parentTypeInfo;
+      } else {
+        typeInfo = new XmlSchemaTypeInfo(isMixed);
+      }
 
     } else if (content instanceof XmlSchemaSimpleContentExtension) {
       XmlSchemaSimpleContentExtension ext =
