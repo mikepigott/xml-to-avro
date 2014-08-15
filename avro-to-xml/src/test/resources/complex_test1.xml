@@ -18,6 +18,12 @@
   <avro:prohibit>
     <avro:fixed>100</avro:fixed>
   </avro:prohibit>
+  <!--  <avro:simpleExtension default="named">true</avro:simpleExtension> -->
+  <avro:simpleRestriction>false</avro:simpleRestriction>
+  <avro:complexExtension>
+  	<avro:fixed>100</avro:fixed>
+  	<avro:unsignedLongList>1 2 4 5 6</avro:unsignedLongList>
+  </avro:complexExtension>
   <avro:anyAndFriends>
     This is a mixed element
   	<test:list>

@@ -168,6 +168,49 @@ public class TestXmlSchemaNamespaceContext {
     assertEquality(expPrefixToNsMap, expNsToPrefixMap, nsContext);
   }
 
+  @Test(expected=IllegalArgumentException.class)
+  public void testNullPrefixForNamespace() {
+    XmlSchemaNamespaceContext nsContext = new XmlSchemaNamespaceContext();
+    nsContext.getNamespaceURI(null);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testNullNamespaceForPrefix() {
+    XmlSchemaNamespaceContext nsContext = new XmlSchemaNamespaceContext();
+    nsContext.getPrefix(null);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testAddNullNamespaceAndPrefix() {
+    XmlSchemaNamespaceContext nsContext = new XmlSchemaNamespaceContext();
+    nsContext.addNamespace(null, null);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testAddNullNamespaceWithPrefix() {
+    XmlSchemaNamespaceContext nsContext = new XmlSchemaNamespaceContext();
+    nsContext.addNamespace("avro", null);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testAddEmptyNamespaceWithPrefix() {
+    XmlSchemaNamespaceContext nsContext = new XmlSchemaNamespaceContext();
+    nsContext.addNamespace("avro", "");
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testGetPrefixesWithNullNamespace() {
+    XmlSchemaNamespaceContext nsContext = new XmlSchemaNamespaceContext();
+    nsContext.getPrefixes(null);
+  }
+
+  @Test
+  public void testNamespaceNotFound() {
+    XmlSchemaNamespaceContext nsContext = new XmlSchemaNamespaceContext();
+    assertNull( nsContext.getPrefix("urn:avro:test") );
+    assertEquals(Constants.NULL_NS_URI, nsContext.getNamespaceURI("avro"));
+  }
+
   static void assertEquality(
       Map<String, String> expPrefixToNamespace,
       Map<String, String[]> expNsToPrefix,

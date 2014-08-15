@@ -7,8 +7,10 @@
 				<element ref="avro:backtrack"     />
 				<element ref="avro:allTheThings"  />
 				<element ref="avro:prohibit"      />
+				<element name="simpleExtension"   type="avro:grandchildType"           minOccurs="0" maxOccurs="1" />
+				<element name="simpleRestriction" type="avro:simpleContentRestriction" minOccurs="0" maxOccurs="1" />
+				<element name="complexExtension"  type="avro:complexExtension"         minOccurs="0" maxOccurs="1" />
 				<element ref="avro:anyAndFriends" />
-				<element name="simple" type="avro:derivedTypeWithAttributes" minOccurs="0" maxOccurs="1" />
 			</sequence>
 			<attribute name="year"  type="gYear"  fixed="2014"    />
 			<attribute name="month" type="gMonth" default="--08"  />
@@ -150,6 +152,7 @@
 			<element name="fixed" type="integer" fixed="100" />
 		</sequence>
 		<attribute name="optional" type="string" use="optional" />
+		<anyAttribute namespace="##targetNamespace" />
 	</complexType>
 	<element name="prohibit">
 		<complexType>
@@ -198,12 +201,37 @@
   </attributeGroup>
   <attributeGroup name="derivedAttrGroup">
   	<attributeGroup ref="avro:baseAttrGroup" />
-  	<anyAttribute namespace="##targetNamespace" />
   </attributeGroup>
   <complexType name="derivedTypeWithAttributes">
   	<complexContent>
   		<extension base="avro:simpleTypeWithAttributes">
 			<anyAttribute namespace="http://avro.apache.org/AvroTest" />
+  		</extension>
+  	</complexContent>
+  </complexType>
+  <complexType name="grandchildType">
+  	<complexContent>
+  		<extension base="avro:derivedTypeWithAttributes">
+			<anyAttribute namespace="##targetNamespace" />
+  		</extension>
+  	</complexContent>
+  </complexType>
+  <complexType name="simpleContentRestriction">
+  	<simpleContent>
+  		<restriction base="avro:simpleTypeWithAttributes">
+	  		<enumeration value="true"  />
+  			<enumeration value="false" />
+  		</restriction>
+  	</simpleContent>
+  </complexType>
+  <complexType name="complexExtension">
+  	<complexContent>
+  		<extension base="avro:baseType">
+  			<choice>
+  				<element ref="avro:listOfUnion" />
+  				<element ref="avro:unsignedLongList" />
+  			</choice>
+  			<attribute name="defaulted" type="normalizedString" default="hello" />
   		</extension>
   	</complexContent>
   </complexType>
