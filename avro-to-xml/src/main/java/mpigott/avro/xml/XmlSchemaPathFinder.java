@@ -892,6 +892,8 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
         if (elemExpectsContent
             && !state.getElement().isNillable()
+            && (state.getElement().getDefaultValue() == null)
+            && (state.getElement().getFixedValue() == null)
             && !currentPath.getDocumentNode().getReceivedContent()) {
           throw new IllegalStateException(
               "We are ending element "
