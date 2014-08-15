@@ -501,7 +501,7 @@ final class XmlSchemaScope {
          * straight add.
          */
         parentScope = getScope(baseType);
-        Collection<XmlSchemaAttribute> parentAttrs =
+        final Collection<XmlSchemaAttribute> parentAttrs =
             parentScope.getAttributesInScope();
 
         attributes = createAttributeMap( ext.getAttributes() );
@@ -650,6 +650,17 @@ final class XmlSchemaScope {
       if (baseType != null) {
         final XmlSchemaScope parentScope = getScope(baseType);
         typeInfo = parentScope.getTypeInfo();
+
+        final Collection<XmlSchemaAttribute> parentAttrs =
+            parentScope.getAttributesInScope();
+
+        if (attributes == null) {
+          attributes = createAttributeMap(parentAttrs);
+        } else if (parentAttrs != null) {
+          for (XmlSchemaAttribute parentAttr : parentAttrs) {
+            attributes.put(parentAttr.getQName(), parentAttr);
+          }
+        }
       }
 
       anyAttr = ext.getAnyAttribute();
