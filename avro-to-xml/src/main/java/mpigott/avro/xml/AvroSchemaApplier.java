@@ -94,7 +94,7 @@ final class AvroSchemaApplier {
       }
 
       // Confirm all of the elements in the UNION are either RECORDs or MAPs.
-      verifyIsUnionOfMapsAndRecords( avroSchema.getElementType() );
+      verifyIsUnionOfMapsAndRecords(avroSchema.getElementType(), true);
 
       unionOfValidElementsStack.add(avroSchema.getElementType());
 
@@ -105,7 +105,7 @@ final class AvroSchemaApplier {
        *
        * This can only be valid if the schema is a union of records.
        */
-      verifyIsUnionOfMapsAndRecords(avroSchema);
+      verifyIsUnionOfMapsAndRecords(avroSchema, true);
 
       unionOfValidElementsStack.add(avroSchema);
 
@@ -322,7 +322,7 @@ final class AvroSchemaApplier {
                   + childrenSchema.getElementType().getType());
             }
 
-            verifyIsUnionOfMapsAndRecords( childrenSchema.getElementType() );
+            verifyIsUnionOfMapsAndRecords(childrenSchema.getElementType(), typeInfo.isMixed());
 
             unionOfChildrenTypes = childrenSchema.getElementType();
           }
@@ -537,10 +537,11 @@ final class AvroSchemaApplier {
   }
 
   // Confirms the root-level Schema is a UNION of MAPs, RECORDs, or both.
-  private final void verifyIsUnionOfMapsAndRecords(Schema schema) {
+  private final void verifyIsUnionOfMapsAndRecords(Schema schema, boolean isMixed) {
     for (Schema unionType : schema.getTypes()) {
       if (!unionType.getType().equals(Schema.Type.RECORD)
-          && !unionType.getType().equals(Schema.Type.MAP)) {
+          && !unionType.getType().equals(Schema.Type.MAP)
+          && !(isMixed && unionType.getType().equals(Schema.Type.STRING))) {
 
         throw new IllegalArgumentException(
             "The Avro Schema may either be a UNION or an ARRAY of UNION, but"

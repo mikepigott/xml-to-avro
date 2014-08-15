@@ -7,10 +7,11 @@
 				<element ref="avro:backtrack"     />
 				<element ref="avro:allTheThings"  />
 				<element ref="avro:prohibit"      />
+				<element ref="avro:anyAndFriends" />
 				<element name="simpleExtension"   type="avro:grandchildType"           minOccurs="0" maxOccurs="1" />
 				<element name="simpleRestriction" type="avro:simpleContentRestriction" minOccurs="0" maxOccurs="1" />
 				<element name="complexExtension"  type="avro:complexExtension"         minOccurs="0" maxOccurs="1" />
-				<element ref="avro:anyAndFriends" />
+				<element ref="avro:mixedType" minOccurs="0" maxOccurs="1" />
 			</sequence>
 			<attribute name="year"  type="gYear"  fixed="2014"    />
 			<attribute name="month" type="gMonth" default="--08"  />
@@ -235,4 +236,12 @@
   		</extension>
   	</complexContent>
   </complexType>
+  <element name="mixedType">
+  	<complexType mixed="true">
+  		<sequence>
+  			<element ref="avro:listOfUnion" />
+  			<element ref="avro:unsignedLongList" />
+  		</sequence>
+  	</complexType>
+  </element>
 </schema>
