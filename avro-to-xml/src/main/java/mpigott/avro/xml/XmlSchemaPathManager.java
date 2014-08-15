@@ -45,18 +45,6 @@ final class XmlSchemaPathManager<U, V> {
     return createPathNode(direction, null, state);
   }
 
-  XmlSchemaPathNode<U, V> createStartPathNode(
-      XmlSchemaPathNode.Direction direction,
-      XmlSchemaDocumentNode<U> documentNode) {
-
-    XmlSchemaPathNode<U, V> node =
-        createStartPathNode(direction, documentNode.getStateMachineNode());
-    node.setDocumentNode(documentNode);
-    node.setIteration(documentNode.getIteration());
-
-    return node;
-  }
-
   XmlSchemaPathNode<U, V> addParentSiblingOrContentNodeToPath(
       XmlSchemaPathNode<U, V> startNode,
       XmlSchemaPathNode.Direction direction) {
