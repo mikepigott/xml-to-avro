@@ -292,6 +292,8 @@ final class XmlSchemaPathManager<U, V> {
         }
       }
     }
+
+    unusedDocNodes.add(node);
   }
 
   private ArrayList<XmlSchemaPathNode<U, V>> unusedPathNodes;
