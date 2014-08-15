@@ -674,6 +674,8 @@ final class XmlSchemaScope {
                 mergeFacets(
                     parentScope.getTypeInfo().getFacets(),
                     rstr.getFacets()));
+
+        attributes = mergeAttributes(parentScope.attributes, attributes);
       }
 
       anyAttr = rstr.getAnyAttribute();
