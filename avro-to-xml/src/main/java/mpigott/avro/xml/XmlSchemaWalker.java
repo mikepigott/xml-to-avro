@@ -71,7 +71,8 @@ final class XmlSchemaWalker {
 
       for (XmlSchemaElement elem : schema.getElements().values()) {
         if (elem.getSubstitutionGroup() != null) {
-          List<XmlSchemaElement> elems = elemsBySubstGroup.get( elem.getSubstitutionGroup() );
+          List<XmlSchemaElement> elems =
+              elemsBySubstGroup.get( elem.getSubstitutionGroup() );
           if (elems == null) {
             elems = new ArrayList<XmlSchemaElement>();
             elemsBySubstGroup.put(elem.getSubstitutionGroup(), elems);

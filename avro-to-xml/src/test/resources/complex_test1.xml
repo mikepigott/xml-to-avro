@@ -18,7 +18,7 @@
   <avro:prohibit>
     <avro:fixed>100</avro:fixed>
   </avro:prohibit>
-  <!--  <avro:simpleExtension default="named">true</avro:simpleExtension> -->
+  <avro:simpleExtension default="named">true</avro:simpleExtension>
   <avro:simpleRestriction>false</avro:simpleRestriction>
   <avro:complexExtension>
   	<avro:fixed>100</avro:fixed>

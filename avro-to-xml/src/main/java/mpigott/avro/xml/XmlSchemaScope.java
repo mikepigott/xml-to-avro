@@ -492,6 +492,7 @@ final class XmlSchemaScope {
 
       XmlSchemaParticle baseParticle = null;
       XmlSchemaAnyAttribute baseAnyAttr = null;
+      XmlSchemaScope parentScope = null;
 
       if (baseType != null) {
         /* Complex content extensions add attributes and elements
@@ -499,7 +500,7 @@ final class XmlSchemaScope {
          * there will be no collisions, it is safe to perform a
          * straight add.
          */
-        XmlSchemaScope parentScope = getScope(baseType);
+        parentScope = getScope(baseType);
         Collection<XmlSchemaAttribute> parentAttrs =
             parentScope.getAttributesInScope();
 
@@ -572,7 +573,17 @@ final class XmlSchemaScope {
         anyAttr.setUnhandledAttributes( ext.getUnhandledAttributes() );
       }
 
-      typeInfo = new XmlSchemaTypeInfo(isMixed);
+      final XmlSchemaTypeInfo parentTypeInfo =
+          (parentScope == null)
+          ? null
+          : parentScope.getTypeInfo();
+
+      if ((parentTypeInfo != null)
+          && !parentTypeInfo.equals(XmlSchemaTypeInfo.Type.COMPLEX)) {
+        typeInfo = parentScope.getTypeInfo();
+      } else {
+        typeInfo = new XmlSchemaTypeInfo(isMixed);
+      }
 
     } else if (content instanceof XmlSchemaComplexContentRestriction) {
       XmlSchemaComplexContentRestriction rstr = (XmlSchemaComplexContentRestriction) content;
