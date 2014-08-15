@@ -60,70 +60,6 @@ final class XmlSchemaPathNode<U, V> {
     update(dir, previous, stateMachine);
   }
 
-  /**
-   * Generates a hash code to represent this <code>DocumentPathNode</code>.
-   * This does not perform a deep search, as that would be expensive for long
-   * paths.  This only checks the hash codes of the local data members of its
-   * neighbors.
-   *
-   * @see java.lang.Object#hashCode()
-   */
-  @Override
-  public int hashCode() {
-    final int prime = 31;
-    int result = localHashCode(prime);
-
-    result =
-        prime * result
-        + ((prevNode == null) ? 0 : prevNode.localHashCode(prime));
-
-    result =
-        prime * result
-        + ((nextNode == null) ? 0 : nextNode.localHashCode(prime));
-
-    return result;
-  }
-
-  /**
-   * Compares this to another <code>DocumentPathNode</code> for equality.
-   * This does not perform a deep equality check, as that would be expensive
-   * for long paths.  This only checks the equality of local data members of
-   * its neighbors.
-   *
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (!(obj instanceof XmlSchemaPathNode)) {
-      return false;
-    }
-    final XmlSchemaPathNode other = (XmlSchemaPathNode) obj;
-    if (!localEquals(other)) {
-      return false;
-    }
-    if (prevNode == null) {
-      if (other.prevNode != null) {
-        return false;
-      }
-    } else if (!prevNode.localEquals(other.prevNode)) {
-      return false;
-    }
-    if (nextNode == null) {
-      if (other.nextNode != null) {
-        return false;
-      }
-    } else if (!nextNode.localEquals(other.nextNode)) {
-      return false;
-    }
-    return true;
-  }
-
   XmlSchemaDocumentNode<U> getDocumentNode() {
     return documentNode;
   }
@@ -178,16 +114,32 @@ final class XmlSchemaPathNode<U, V> {
 
   void setIteration(int newIteration) {
     if (newIteration < 1) {
-      throw new IllegalArgumentException("The new iteration must be at least one, not " + newIteration + '.');
+      throw new IllegalArgumentException(
+          "The new iteration must be at least one, not "
+          + newIteration
+          + '.');
+
     } else if (stateMachineNode.getMaxOccurs() < newIteration) {
-      throw new IllegalStateException("The new iteration for " + stateMachineNode + " of " + newIteration + " is greater than the maximum of " + stateMachineNode.getMaxOccurs());
+      throw new IllegalStateException(
+          "The new iteration for "
+          + stateMachineNode
+          + " of "
+          + newIteration
+          + " is greater than the maximum of "
+          + stateMachineNode.getMaxOccurs()
+          + '.');
     }
     iterationNum = newIteration;
   }
 
   void setDocumentNode(XmlSchemaDocumentNode<U> docNode) {
     if (docNode.getStateMachineNode() != stateMachineNode) {
-      throw new IllegalArgumentException("The document node's state machine (" + docNode.getStateMachineNode() + ") must use the same state machine node as this path node (" + stateMachineNode + ")");
+      throw new IllegalArgumentException(
+          "The document node's state machine ("
+          + docNode.getStateMachineNode()
+          + ") must use the same state machine node as this path node ("
+          + stateMachineNode
+          + ").");
     }
     documentNode = docNode;
   }
@@ -213,7 +165,12 @@ final class XmlSchemaPathNode<U, V> {
                 || (nextNodeIndex
                     >= stateMachineNode
                          .getPossibleNextStates().size())) {
-      throw new IllegalArgumentException("The node index (" + nextNodeIndex + ") is not within the range of " + documentNode.getStateMachineNode().getPossibleNextStates().size() + " possible next states.");
+      throw new IllegalArgumentException(
+          "The node index ("
+          + nextNodeIndex
+          + ") is not within the range of "
+          + documentNode.getStateMachineNode().getPossibleNextStates().size()
+          + " possible next states.");
 
     } else if (newNext == null) {
       throw new IllegalArgumentException("The next node must be defined.");
@@ -223,7 +180,10 @@ final class XmlSchemaPathNode<U, V> {
                    .get(nextNodeIndex)
                    .equals( newNext.getStateMachineNode() ) ) {
 
-      throw new IllegalArgumentException("The next possible state at index " + nextNodeIndex + " does not match the state defined in the newNext.");
+      throw new IllegalArgumentException(
+          "The next possible state at index "
+          + nextNodeIndex
+          + " does not match the state defined in the newNext.");
     }
 
     nextNodeStateIndex = nextNodeIndex;
@@ -286,45 +246,6 @@ final class XmlSchemaPathNode<U, V> {
 
   void setUserDefinedContent(V content) {
     userDefinedContent = content;
-  }
-
-  private int localHashCode(int prime) {
-    int result = 1;
-    result = prime * result + iterationNum;
-    result = prime * result + nextNodeStateIndex;
-    result = prime * result + ((direction == null) ? 0 : direction.hashCode());
-    result = prime * result
-        + ((documentNode == null) ? 0 : documentNode.hashCode());
-    result = prime * result
-        + ((stateMachineNode == null) ? 0 : stateMachineNode.hashCode());
-    return result;
-  }
-
-  private boolean localEquals(XmlSchemaPathNode other) {
-    if (direction != other.direction) {
-      return false;
-    }
-    if (iterationNum != other.iterationNum) {
-      return false;
-    }
-    if (nextNodeStateIndex != other.nextNodeStateIndex) {
-      return false;
-    }
-    if (documentNode == null) {
-      if (other.documentNode != null) {
-        return false;
-      }
-    } else if (!documentNode.equals(other.documentNode)) {
-      return false;
-    }
-    if (stateMachineNode == null) {
-      if (other.stateMachineNode != null) {
-        return false;
-      }
-    } else if (!stateMachineNode.equals(other.stateMachineNode)) {
-      return false;
-    }
-    return true;
   }
 
   private Direction direction;
