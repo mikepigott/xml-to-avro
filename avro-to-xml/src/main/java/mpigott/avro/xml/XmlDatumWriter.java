@@ -257,6 +257,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               break;
             }
           case MAP_END:
+          case CONTENT:
           default:
             throw new IllegalStateException("Did not expect to find a map node of type " + mapNode.getType() + " when starting " + elemQName + ".");
           }
@@ -479,14 +480,27 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
           if ((contentPathNode != null)
               && contentPathNode.getType().equals(AvroPathNode.Type.CONTENT)) {
-            System.out.println("Writing a content index of " + contentPathNode.getContentUnionIndex() + " to the stream.");
-            out.writeIndex(contentPathNode.getContentUnionIndex());
-          }
 
-          write(elemType, elemQName, avroSchema, result);
+            out.startItem();
+            out.writeIndex(contentPathNode.getContentUnionIndex());
+
+            write(
+                XML_MIXED_CONTENT_TYPE,
+                elemQName,
+                AVRO_MIXED_CONTENT_SCHEMA,
+                result);
+
+          } else {
+            write(elemType, elemQName, avroSchema, result);
+          }
           entry.receivedContent = true;
-        } catch (Exception ioe) {
-          throw new RuntimeException("Unable to write the content \"" + result + "\" for " + elemQName + "", ioe);
+        } catch (Exception e) {
+          throw new RuntimeException(
+              "Unable to write the content \""
+              + result
+              + "\" for "
+              + elemQName,
+              e);
         }
       }
     }
@@ -786,11 +800,18 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     private boolean isMapEnd() {
       XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> position = currLocation;
+      AvroPathNode pathInfo = null;
 
       do {
         position = position.getNext();
+        if (position != null) {
+          pathInfo = position.getUserDefinedContent();
+        }
       } while ((position != null)
-                && (position.getUserDefinedContent() == null));
+                && ((pathInfo == null)
+                    || ((pathInfo != null)
+                         && pathInfo.getType().equals(
+                             AvroPathNode.Type.CONTENT))));
 
       return ((position != null)
               && position
@@ -1144,6 +1165,12 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         throw new IOException("Cannot write data of type " + schema.getType());
       }
     }
+
+    private static final XmlSchemaTypeInfo XML_MIXED_CONTENT_TYPE =
+        new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.STRING);
+
+    private static final Schema AVRO_MIXED_CONTENT_SCHEMA =
+        Schema.create(Schema.Type.STRING);
 
     private XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> currLocation;
     private StringBuilder content;
