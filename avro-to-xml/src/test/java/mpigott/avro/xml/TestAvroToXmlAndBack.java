@@ -73,7 +73,7 @@ public class TestAvroToXmlAndBack {
     docBuilder = dbf.newDocumentBuilder();
   }
 
-  @Test
+  @Test @Ignore
   public void testRoot() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
@@ -85,7 +85,7 @@ public class TestAvroToXmlAndBack {
     runTest(config, xmlFile);
   }
 
-  @Test
+  @Test @Ignore
   public void testChildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
@@ -97,7 +97,7 @@ public class TestAvroToXmlAndBack {
     runTest(config, xmlFile);
   }
 
-  @Test
+  @Test @Ignore
   public void testGrandchildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
@@ -127,11 +127,9 @@ public class TestAvroToXmlAndBack {
     final XmlDatumWriter writer = new XmlDatumWriter(config);
     final Schema xmlToAvroSchema = writer.getSchema();
 
-    /*
     FileWriter tempSchemaWriter = new FileWriter("test.avsc");
     tempSchemaWriter.write( xmlToAvroSchema.toString(true) );
     tempSchemaWriter.close();
-    */
 
     final Document xmlDoc = docBuilder.parse(xmlFile);
 

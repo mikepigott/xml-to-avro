@@ -1109,8 +1109,6 @@ final class AvroSchemaApplier {
               schema.getField(elem.getQName().getLocalPart());
 
           if (elemType.isMixed() && (childField != null)) {
-            System.out.println(elem.getQName() + " is a mixed type.");
-
             schema = childField.schema();
             int unionIdx = -1;
             if (schema.getType().equals(Schema.Type.ARRAY)

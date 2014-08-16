@@ -44,7 +44,7 @@ import org.junit.Test;
 public class TestAvroSchemaGenerator {
 
   @Test
-  public void test() throws Exception {
+  public void testSchema() throws Exception {
     File file = new File("src\\test\\resources\\test_schema.xsd");
     ArrayList<File> schemaFiles = new ArrayList<File>(1);
     schemaFiles.add(file);
@@ -80,159 +80,45 @@ public class TestAvroSchemaGenerator {
     visitor.clear();
     walker.clear();
 
-    assertEquals(Schema.Type.RECORD, schema.getType());
-    assertEquals("org.apache.avro.AvroTest", schema.getNamespace());
-
-    checkOptionalPrimitiveField(schema.getField("anySimpleType"),    Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("duration"),         Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("dateTime"),         Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("date"),             Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("time"),             Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("gYearMonth"),       Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("gYear"),            Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("gMonthDay"),        Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("gDay"),             Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("gMonth"),           Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("anyURI"),           Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("qname"),            Schema.Type.RECORD, null);
-    checkOptionalPrimitiveField(schema.getField("string"),           Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("normalizedString"), Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("token"),            Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("language"),         Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("nmtoken"),          Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("name"),             Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("ncName"),           Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("id"),               Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("idref"),            Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("entity"),           Schema.Type.STRING, null);
-    checkOptionalPrimitiveField(schema.getField("nmtokens"),         Schema.Type.ARRAY,  Schema.Type.STRING);
-    checkOptionalPrimitiveField(schema.getField("idrefs"),           Schema.Type.ARRAY,  Schema.Type.STRING);
-    checkOptionalPrimitiveField(schema.getField("entities"),         Schema.Type.ARRAY,  Schema.Type.STRING);
-
-    checkOptionalPrimitiveField(schema.getField("integer"),            Schema.Type.DOUBLE, null);
-    checkOptionalPrimitiveField(schema.getField("nonPositiveInteger"), Schema.Type.DOUBLE, null);
-    checkOptionalPrimitiveField(schema.getField("negativeInteger"),    Schema.Type.DOUBLE, null);
-    checkOptionalPrimitiveField(schema.getField("long"),               Schema.Type.LONG,   null);
-    checkOptionalPrimitiveField(schema.getField("int"),                Schema.Type.INT,    null);
-    checkOptionalPrimitiveField(schema.getField("short"),              Schema.Type.INT,    null);
-    checkOptionalPrimitiveField(schema.getField("byte"),               Schema.Type.INT,    null);
-    checkOptionalPrimitiveField(schema.getField("nonNegativeInteger"), Schema.Type.DOUBLE, null);
-    checkOptionalPrimitiveField(schema.getField("positiveInteger"),    Schema.Type.DOUBLE, null);
-    checkOptionalPrimitiveField(schema.getField("unsignedLong"),       Schema.Type.DOUBLE, null);
-    checkOptionalPrimitiveField(schema.getField("unsignedInt"),        Schema.Type.LONG,   null);
-    checkOptionalPrimitiveField(schema.getField("unsignedShort"),      Schema.Type.INT,    null);
-    checkOptionalPrimitiveField(schema.getField("unsignedByte"),       Schema.Type.INT,    null);
-
-    List<Schema> rootSchemas = schema.getField("root").schema().getElementType().getTypes();
-    assertNotNull(rootSchemas);
-
-    Map<String, Schema> rootSchemasByName = new HashMap<String, Schema>();
-    for (Schema rootSchema : rootSchemas) {
-      rootSchemasByName.put(rootSchema.getName(), rootSchema);
-    }
-
-    checkPrimitiveField(rootSchemasByName.get("primitive").getField("primitive"),               Schema.Type.ENUM, null);
-    checkPrimitiveField(rootSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"), Schema.Type.ENUM, null);
-
-    List<Schema> recordSchemas = rootSchemasByName.get("record").getField("record").schema().getElementType().getTypes();
-    Map<String, Schema> recordSchemasByName = new HashMap<String, Schema>();
-    for (Schema recordSchema : recordSchemas) {
-      recordSchemasByName.put(recordSchema.getName(), recordSchema);
-    }
-
-    assertTrue( rootSchemasByName.get("map").getType().equals(Schema.Type.MAP) );
-
-    checkPrimitiveField(rootSchemasByName.get("map").getValueType().getField("id"), Type.STRING, null);
-    checkOptionalPrimitiveField(rootSchemasByName.get("list").getField("size"), Type.DOUBLE, null);
-
-    assertNotNull( rootSchemasByName.get("record").getField("record") );
-    assertNotNull( rootSchemasByName.get("list").getField("list") );
-    assertNotNull( rootSchemasByName.get("tuple").getField("tuple") );
-    assertNotNull( rootSchemasByName.get("map").getValueType().getField("map") );
-
-    assertEquals(rootSchemasByName.get("primitive").getField("primitive"),               recordSchemasByName.get("primitive").getField("primitive"));
-    assertEquals(rootSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"), recordSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"));
-    assertEquals(rootSchemasByName.get("record").getField("record"),                     recordSchemasByName.get("record").getField("record"));
-    assertEquals(rootSchemasByName.get("map").getValueType().getField("map"),            recordSchemasByName.get("map").getValueType().getField("map"));
-    assertEquals(rootSchemasByName.get("map").getValueType().getField("id"),             recordSchemasByName.get("map").getValueType().getField("id"));
-    assertEquals(rootSchemasByName.get("list").getField("list"),                         recordSchemasByName.get("list").getField("list"));
-    assertEquals(rootSchemasByName.get("list").getField("size"),                         recordSchemasByName.get("list").getField("size"));
-    assertEquals(rootSchemasByName.get("tuple").getField("tuple"),                       recordSchemasByName.get("tuple").getField("tuple"));
-
-    List<Schema> listSchemas = rootSchemasByName.get("list").getField("list").schema().getElementType().getTypes();
-    Map<String, Schema> listSchemasByName = new HashMap<String, Schema>();
-    for (Schema listSchema : listSchemas) {
-      listSchemasByName.put(listSchema.getName(), listSchema);
-    }
-
-    assertEquals(rootSchemasByName.get("primitive").getField("primitive"),    listSchemasByName.get("primitive").getField("primitive"));
-    assertEquals(rootSchemasByName.get("record").getField("record"),          listSchemasByName.get("record").getField("record"));
-    assertEquals(rootSchemasByName.get("map").getValueType().getField("map"), listSchemasByName.get("map").getValueType().getField("map"));
-    assertEquals(rootSchemasByName.get("map").getValueType().getField("id"),  listSchemasByName.get("map").getValueType().getField("id"));
-
-    List<Schema> mapSchemas = rootSchemasByName.get("map").getValueType().getField("map").schema().getElementType().getTypes();
-    Map<String, Schema> mapSchemasByName = new HashMap<String, Schema>();
-    for (Schema mapSchema : mapSchemas) {
-      mapSchemasByName.put(mapSchema.getName(), mapSchema);
-    }
-
-    assertEquals(rootSchemasByName.get("primitive").getField("primitive"),               mapSchemasByName.get("primitive").getField("primitive"));
-    assertEquals(rootSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"), mapSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"));
-    assertEquals(rootSchemasByName.get("record").getField("record"),                     mapSchemasByName.get("record").getField("record"));
-    assertEquals(rootSchemasByName.get("map").getValueType().getField("map"),            mapSchemasByName.get("map").getValueType().getField("map"));
-    assertEquals(rootSchemasByName.get("map").getValueType().getField("id"),             mapSchemasByName.get("map").getValueType().getField("id"));
-    assertEquals(rootSchemasByName.get("list").getField("list"),                         mapSchemasByName.get("list").getField("list"));
-    assertEquals(rootSchemasByName.get("list").getField("size"),                         mapSchemasByName.get("list").getField("size"));
-    assertEquals(rootSchemasByName.get("tuple").getField("tuple"),                       mapSchemasByName.get("tuple").getField("tuple"));
-
-    List<Schema> tupleSchemas = rootSchemasByName.get("tuple").getField("tuple").schema().getElementType().getTypes();
-    Map<String, Schema> tupleSchemasByName = new HashMap<String, Schema>();
-    for (Schema tupleSchema : tupleSchemas) {
-      tupleSchemasByName.put(tupleSchema.getName(), tupleSchema);
-    }
-
-    assertEquals(rootSchemasByName.get("primitive").getField("primitive"),               tupleSchemasByName.get("primitive").getField("primitive"));
-    assertEquals(rootSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"), tupleSchemasByName.get("nonNullPrimitive").getField("nonNullPrimitive"));
-    assertEquals(rootSchemasByName.get("record").getField("record"),                     tupleSchemasByName.get("record").getField("record"));
-    assertEquals(rootSchemasByName.get("map").getValueType().getField("map"),            tupleSchemasByName.get("map").getValueType().getField("map"));
-    assertEquals(rootSchemasByName.get("map").getValueType().getField("id"),             tupleSchemasByName.get("map").getValueType().getField("id"));
-    assertEquals(rootSchemasByName.get("list").getField("list"),                         tupleSchemasByName.get("list").getField("list"));
-    assertEquals(rootSchemasByName.get("list").getField("size"),                         tupleSchemasByName.get("list").getField("size"));
-
-    // TODO: Confirm the XML-Schema-info encoded in JSON is also correct.
-    // TODO: Also test default values.
+    DocumentComparer.assertEquivalent(getExpectedTestSchema(), schema);
   }
 
-  private void checkPrimitiveField(Schema.Field field, Schema.Type type, Schema.Type subType) {
-    assertNotNull(field);
-    assertEquals(type, field.schema().getType());
-    if (type.equals(Schema.Type.ARRAY)) {
-      assertEquals(subType, field.schema().getElementType().getType());
-    }
-  }
+  @Test
+  public void testComplexSchema() throws Exception {
+    File file = new File("src\\test\\resources\\complex_schema.xsd");
+    ArrayList<File> schemaFiles = new ArrayList<File>(1);
+    schemaFiles.add(file);
 
-  private void checkOptionalPrimitiveField(Schema.Field field, Schema.Type type, Schema.Type subType) {
-    assertNotNull(field);
-    assertEquals(Schema.Type.UNION, field.schema().getType());
-    assertEquals(2, field.schema().getTypes().size());
+    XmlSchemaCollection collection = null;
+    FileReader fileReader = null;
+    AvroSchemaGenerator visitor =
+        new AvroSchemaGenerator(null, null, schemaFiles);
+    try {
+      fileReader = new FileReader(file);
 
-    boolean foundNullType = false;
-    Schema realType = null;
+      collection = new XmlSchemaCollection();
+      collection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
+      collection.read(new StreamSource(fileReader, file.getAbsolutePath()));
 
-    for (Schema schema : field.schema().getTypes()) {
-      if (schema.getType().equals(Schema.Type.NULL)) {
-        foundNullType = true;
-      } else if (schema.getType().equals(type)) {
-        realType = schema;
+    } finally {
+      if (fileReader != null) {
+        try {
+          fileReader.close();
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
       }
     }
 
-    assertTrue(foundNullType);
-    assertNotNull(realType);
+    XmlSchemaElement elem = getElementOf(collection, "root");
+    XmlSchemaWalker walker = new XmlSchemaWalker(collection, visitor);
+    walker.setUserRecognizedTypes( Utils.getAvroRecognizedTypes() );
+    walker.walk(elem);
 
-    if ( type.equals(Schema.Type.ARRAY) ) {
-      assertEquals(subType, realType.getElementType().getType());
-    }
+    Schema schema = visitor.getSchema();
+
+    visitor.clear();
+    walker.clear();
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
@@ -244,5 +130,365 @@ public class TestAvroSchemaGenerator {
       }
     }
     return elem;
+  }
+
+  private static Schema getExpectedTestSchema() {
+    final String namespace = "org.apache.avro.AvroTest";
+
+    List<Schema> optionalStringTypes = new ArrayList<Schema>(2);
+    optionalStringTypes.add( Schema.create(Schema.Type.STRING) );
+    optionalStringTypes.add( Schema.create(Schema.Type.NULL) );
+    Schema optionalStringSchema = Schema.createUnion(optionalStringTypes);
+
+    List<Schema> optionalStringArrayTypes = new ArrayList<Schema>(2);
+    optionalStringArrayTypes.add(
+        Schema.createArray(Schema.create(Schema.Type.STRING)));
+    optionalStringArrayTypes.add( Schema.create(Schema.Type.NULL) );
+    Schema optionalStringArraySchema =
+        Schema.createUnion(optionalStringArrayTypes);
+
+    List<Schema> optionalDoubleTypes = new ArrayList<Schema>(2);
+    optionalDoubleTypes.add( Schema.create(Schema.Type.DOUBLE) );
+    optionalDoubleTypes.add( Schema.create(Schema.Type.NULL) );
+    Schema optionalDoubleSchema = Schema.createUnion(optionalDoubleTypes);
+
+    List<Schema> optionalLongTypes = new ArrayList<Schema>(2);
+    optionalLongTypes.add( Schema.create(Schema.Type.LONG) );
+    optionalLongTypes.add( Schema.create(Schema.Type.NULL) );
+    Schema optionalLongSchema = Schema.createUnion(optionalLongTypes);
+
+    List<Schema> optionalIntTypes = new ArrayList<Schema>(2);
+    optionalIntTypes.add( Schema.create(Schema.Type.INT) );
+    optionalIntTypes.add( Schema.create(Schema.Type.NULL) );
+    Schema optionalIntSchema = Schema.createUnion(optionalIntTypes);
+
+    List<Schema> optionalBooleanTypes = new ArrayList<Schema>(2);
+    optionalBooleanTypes.add( Schema.create(Schema.Type.BOOLEAN) );
+    optionalBooleanTypes.add( Schema.create(Schema.Type.NULL) );
+    Schema optionalBooleanSchema = Schema.createUnion(optionalBooleanTypes);
+
+    List<Schema> optionalBinaryTypes = new ArrayList<Schema>(2);
+    optionalBinaryTypes.add( Schema.create(Schema.Type.BYTES) );
+    optionalBinaryTypes.add( Schema.create(Schema.Type.NULL) );
+    Schema optionalBinarySchema = Schema.createUnion(optionalBinaryTypes);
+
+    List<Schema> optionalFloatTypes = new ArrayList<Schema>(2);
+    optionalFloatTypes.add( Schema.create(Schema.Type.FLOAT) );
+    optionalFloatTypes.add( Schema.create(Schema.Type.NULL) );
+    Schema optionalFloatSchema = Schema.createUnion(optionalFloatTypes);
+
+    Schema qNameSchema =
+        Schema.createRecord(
+            "qName",
+            "Qualified Name",
+            "org.w3.www.2001.XMLSchema",
+            false);
+
+    List<Schema.Field> qNameFields = new ArrayList<Schema.Field>(2);
+    qNameFields.add(
+        new Schema.Field(
+            "namespace",
+            Schema.create(Schema.Type.STRING),
+            "The namespace of this qualified name.",
+            null));
+    qNameFields.add(
+        new Schema.Field(
+            "localPart",
+            Schema.create(Schema.Type.STRING),
+            "The local part of this qualified name.",
+            null));
+    qNameSchema.setFields(qNameFields);
+
+    List<Schema> optionalQNameTypes = new ArrayList<Schema>(2);
+    optionalQNameTypes.add(qNameSchema);
+    optionalQNameTypes.add(Schema.create(Schema.Type.NULL));
+    Schema optionalQNameSchema = Schema.createUnion(optionalQNameTypes);
+
+    List<Schema.Field> rootFields = new ArrayList<Schema.Field>();
+    rootFields.add(
+        new Schema.Field("anySimpleType", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("duration", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("dateTime", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("date", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("time", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("gYearMonth", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("gYear", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("gMonthDay", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("gDay", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("gMonth", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("anyURI", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("qname", optionalQNameSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("string", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("normalizedString", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("token", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("language", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("nmtoken", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("name", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("ncName", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("id", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("idref", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("entity", optionalStringSchema, null, null) );
+    rootFields.add(
+        new Schema.Field("nmtokens", optionalStringArraySchema, null, null));
+    rootFields.add(
+        new Schema.Field("idrefs", optionalStringArraySchema, null, null));
+    rootFields.add(
+        new Schema.Field("entities", optionalStringArraySchema, null, null));
+    rootFields.add(
+        new Schema.Field("integer", optionalDoubleSchema, null, null));
+    rootFields.add(
+        new Schema.Field("negativeInteger", optionalDoubleSchema, null, null));
+    rootFields.add(
+        new Schema.Field("positiveInteger", optionalDoubleSchema, null, null));
+    rootFields.add(
+        new Schema.Field("unsignedLong", optionalDoubleSchema, null, null));
+    rootFields.add(
+        new Schema.Field("long", optionalLongSchema, null, null));
+    rootFields.add(
+        new Schema.Field("unsignedInt", optionalLongSchema, null, null));
+    rootFields.add(
+        new Schema.Field("int", optionalIntSchema, null, null));
+    rootFields.add(
+        new Schema.Field("short", optionalIntSchema, null, null));
+    rootFields.add(
+        new Schema.Field("byte", optionalIntSchema, null, null));
+    rootFields.add(
+        new Schema.Field("unsignedShort", optionalIntSchema, null, null));
+    rootFields.add(
+        new Schema.Field("unsignedByte", optionalIntSchema, null, null));
+    rootFields.add(
+        new Schema.Field("boolean", optionalBooleanSchema, null, null));
+    rootFields.add(
+        new Schema.Field("base64Binary", optionalBinarySchema, null, null));
+    rootFields.add(
+        new Schema.Field("hexBinary", optionalBinarySchema, null, null));
+    rootFields.add(
+        new Schema.Field("decimal", optionalDoubleSchema, null, null));
+    rootFields.add(
+        new Schema.Field("float", optionalFloatSchema, null, null));
+    rootFields.add(
+        new Schema.Field("double", optionalDoubleSchema, null, null));
+
+    rootFields.add(
+        new Schema.Field(
+            "nonPositiveInteger",
+            optionalDoubleSchema,
+            null,
+            null));
+
+    rootFields.add(
+        new Schema.Field(
+            "nonNegativeInteger",
+            optionalDoubleSchema,
+            null,
+            null));
+
+    ArrayList<String> nonNullPrimitiveEnumSymbols = new ArrayList<String>();
+    nonNullPrimitiveEnumSymbols.add("boolean");
+    nonNullPrimitiveEnumSymbols.add("int");
+    nonNullPrimitiveEnumSymbols.add("long");
+    nonNullPrimitiveEnumSymbols.add("float");
+    nonNullPrimitiveEnumSymbols.add("double");
+    nonNullPrimitiveEnumSymbols.add("decimal");
+    nonNullPrimitiveEnumSymbols.add("bytes");
+    nonNullPrimitiveEnumSymbols.add("string");
+
+    Schema nonNullPrimitiveEnumSchema =
+        Schema.createEnum(
+            "nonNullPrimitive",
+            "Enumeration of symbols in "
+            + "{http://avro.apache.org/AvroTest}nonNullPrimitive",
+            namespace + ".enums",
+            nonNullPrimitiveEnumSymbols);
+
+    Schema.Field nonNullPrimitiveEnumField =
+        new Schema.Field(
+            "nonNullPrimitive",
+            nonNullPrimitiveEnumSchema,
+            "Simple type {http://www.w3.org/2001/XMLSchema}anyType",
+            null);
+
+    Schema nonNullPrimitiveRecord =
+        Schema.createRecord(
+            "nonNullPrimitive",
+            null,
+            namespace,
+            false);
+
+    List<Schema.Field> nonNullPrimitiveFields = new ArrayList<Schema.Field>();
+    nonNullPrimitiveFields.add(nonNullPrimitiveEnumField);
+    nonNullPrimitiveRecord.setFields(nonNullPrimitiveFields);
+
+    ArrayList<String> primitiveEnumSymbols =
+        (ArrayList<String>) nonNullPrimitiveEnumSymbols.clone();
+    primitiveEnumSymbols.add("null");
+
+    Schema primitiveEnumSchema =
+        Schema.createEnum(
+            "primitive",
+            "Enumeration of symbols in "
+            + "{http://avro.apache.org/AvroTest}primitive",
+            namespace + ".enums",
+            primitiveEnumSymbols);
+
+    Schema.Field primitiveEnumField =
+        new Schema.Field(
+            "primitive",
+            primitiveEnumSchema,
+            "Simple type {http://www.w3.org/2001/XMLSchema}anyType",
+            null);
+
+    Schema primitiveRecord =
+        Schema.createRecord(
+            "primitive",
+            null,
+            namespace,
+            false);
+
+    ArrayList<Schema.Field> primitiveFields = new ArrayList<Schema.Field>(1);
+    primitiveFields.add(primitiveEnumField);
+    primitiveRecord.setFields(primitiveFields);
+
+    Schema recordSchema =
+        Schema.createRecord("record", null, namespace, false);
+
+    Schema.Field recordField =
+        new Schema.Field("record", recordSchema, null, null);
+
+    Schema mapRecordSchema =
+        Schema.createRecord("map", null, namespace, false);
+
+    Schema mapSchema =
+        Schema.createMap(mapRecordSchema);
+
+    Schema listSchema =
+        Schema.createRecord("list", null, namespace, false);
+
+    List<Schema> listChildren =
+        new ArrayList<Schema>();
+    listChildren.add(recordSchema);
+    listChildren.add(mapSchema);
+    listChildren.add(primitiveRecord);
+
+    Schema listChildSchema =
+        Schema.createArray(Schema.createUnion(listChildren));
+
+    List<Schema.Field> listFields = new ArrayList<Schema.Field>();
+    listFields.add(
+        new Schema.Field(
+            "list",
+            listChildSchema,
+            "Children of {http://avro.apache.org/AvroTest}list",
+            null));
+    listFields.add(
+        new Schema.Field("size", optionalDoubleSchema, null, null));
+
+    listSchema.setFields(listFields);
+
+    Schema tupleSchema =
+        Schema.createRecord("tuple", null, namespace, false);
+
+    List<Schema> tupleChildren =
+        new ArrayList<Schema>();
+    tupleChildren.add(primitiveRecord);
+    tupleChildren.add(nonNullPrimitiveRecord);
+    tupleChildren.add(recordSchema);
+    tupleChildren.add(mapSchema);
+    tupleChildren.add(listSchema);
+
+    Schema tupleChildSchema =
+        Schema.createArray(Schema.createUnion(tupleChildren));
+
+    List<Schema.Field> tupleChildrenFields =
+        new ArrayList<Schema.Field>();
+
+    tupleChildrenFields.add(
+        new Schema.Field(
+            "tuple",
+            tupleChildSchema,
+            "Children of {http://avro.apache.org/AvroTest}tuple",
+            null));
+
+    tupleSchema.setFields(tupleChildrenFields);
+
+    List<Schema> recordChildSchemas = new ArrayList<Schema>();
+    recordChildSchemas.add(primitiveRecord);
+    recordChildSchemas.add(nonNullPrimitiveRecord);
+    recordChildSchemas.add(recordSchema);
+    recordChildSchemas.add(listSchema);
+    recordChildSchemas.add(tupleSchema);
+    recordChildSchemas.add(mapSchema);
+
+    Schema recordChildSchema =
+        Schema.createArray(Schema.createUnion(recordChildSchemas));
+
+    ArrayList<Schema.Field> recordFields = new ArrayList<Schema.Field>(); 
+    recordFields.add(
+        new Schema.Field(
+            "record",
+            recordChildSchema,
+            "Children of {http://avro.apache.org/AvroTest}record",
+            null));
+
+    recordSchema.setFields(recordFields);
+
+    List<Schema> mapChildSchemas = new ArrayList<Schema>();
+    mapChildSchemas.add(primitiveRecord);
+    mapChildSchemas.add(nonNullPrimitiveRecord);
+    mapChildSchemas.add(recordSchema);
+    mapChildSchemas.add(listSchema);
+    mapChildSchemas.add(tupleSchema);
+    mapChildSchemas.add(mapSchema);
+
+    Schema mapChildSchema =
+        Schema.createArray(Schema.createUnion(mapChildSchemas));
+
+    List<Schema.Field> mapFields = new ArrayList<Schema.Field>();
+    mapFields.add(
+        new Schema.Field("id", Schema.create(Schema.Type.STRING), null, null));
+    mapFields.add(
+        new Schema.Field(
+            "map",
+            mapChildSchema,
+            "Children of {http://avro.apache.org/AvroTest}map",
+            null));
+
+    mapRecordSchema.setFields(mapFields);
+
+    Schema rootChildSchema =
+        Schema.createArray(Schema.createUnion(mapChildSchemas));
+
+    rootFields.add(
+        new Schema.Field(
+            "root",
+            rootChildSchema,
+            "Children of {http://avro.apache.org/AvroTest}root",
+            null) );
+
+    Schema rootSchema = Schema.createRecord("root", null, namespace, false);
+    rootSchema.setFields(rootFields);
+
+    return rootSchema;
   }
 }
