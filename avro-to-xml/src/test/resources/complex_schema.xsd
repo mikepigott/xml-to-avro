@@ -129,7 +129,7 @@
 					</complexType>
 				</element>
 				<element name="secondMap">
-					<complexType mixed="true">
+					<complexType>
 						<attribute name="id" type="ID" use="required" />
 						<attribute name="value" type="string" use="required" />
 					</complexType>

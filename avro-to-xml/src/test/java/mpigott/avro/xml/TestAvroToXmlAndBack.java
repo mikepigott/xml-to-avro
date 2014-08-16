@@ -127,9 +127,11 @@ public class TestAvroToXmlAndBack {
     final XmlDatumWriter writer = new XmlDatumWriter(config);
     final Schema xmlToAvroSchema = writer.getSchema();
 
+    /*
     FileWriter tempSchemaWriter = new FileWriter("test.avsc");
     tempSchemaWriter.write( xmlToAvroSchema.toString(true) );
     tempSchemaWriter.close();
+    */
 
     final Document xmlDoc = docBuilder.parse(xmlFile);
 

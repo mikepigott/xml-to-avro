@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,6 +120,8 @@ public class TestAvroSchemaGenerator {
 
     visitor.clear();
     walker.clear();
+
+    DocumentComparer.assertEquivalent(getExpectedComplexSchema(), schema);
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
@@ -135,10 +138,7 @@ public class TestAvroSchemaGenerator {
   private static Schema getExpectedTestSchema() {
     final String namespace = "org.apache.avro.AvroTest";
 
-    List<Schema> optionalStringTypes = new ArrayList<Schema>(2);
-    optionalStringTypes.add( Schema.create(Schema.Type.STRING) );
-    optionalStringTypes.add( Schema.create(Schema.Type.NULL) );
-    Schema optionalStringSchema = Schema.createUnion(optionalStringTypes);
+    Schema optionalStringSchema = getOptionalStringSchema();
 
     List<Schema> optionalStringArrayTypes = new ArrayList<Schema>(2);
     optionalStringArrayTypes.add(
@@ -147,25 +147,16 @@ public class TestAvroSchemaGenerator {
     Schema optionalStringArraySchema =
         Schema.createUnion(optionalStringArrayTypes);
 
-    List<Schema> optionalDoubleTypes = new ArrayList<Schema>(2);
-    optionalDoubleTypes.add( Schema.create(Schema.Type.DOUBLE) );
-    optionalDoubleTypes.add( Schema.create(Schema.Type.NULL) );
-    Schema optionalDoubleSchema = Schema.createUnion(optionalDoubleTypes);
+    Schema optionalDoubleSchema = getOptionalDoubleSchema();
 
     List<Schema> optionalLongTypes = new ArrayList<Schema>(2);
     optionalLongTypes.add( Schema.create(Schema.Type.LONG) );
     optionalLongTypes.add( Schema.create(Schema.Type.NULL) );
     Schema optionalLongSchema = Schema.createUnion(optionalLongTypes);
 
-    List<Schema> optionalIntTypes = new ArrayList<Schema>(2);
-    optionalIntTypes.add( Schema.create(Schema.Type.INT) );
-    optionalIntTypes.add( Schema.create(Schema.Type.NULL) );
-    Schema optionalIntSchema = Schema.createUnion(optionalIntTypes);
+    Schema optionalIntSchema = getOptionalIntSchema();
 
-    List<Schema> optionalBooleanTypes = new ArrayList<Schema>(2);
-    optionalBooleanTypes.add( Schema.create(Schema.Type.BOOLEAN) );
-    optionalBooleanTypes.add( Schema.create(Schema.Type.NULL) );
-    Schema optionalBooleanSchema = Schema.createUnion(optionalBooleanTypes);
+    Schema optionalBooleanSchema = getOptionalBooleanSchema();
 
     List<Schema> optionalBinaryTypes = new ArrayList<Schema>(2);
     optionalBinaryTypes.add( Schema.create(Schema.Type.BYTES) );
@@ -177,30 +168,8 @@ public class TestAvroSchemaGenerator {
     optionalFloatTypes.add( Schema.create(Schema.Type.NULL) );
     Schema optionalFloatSchema = Schema.createUnion(optionalFloatTypes);
 
-    Schema qNameSchema =
-        Schema.createRecord(
-            "qName",
-            "Qualified Name",
-            "org.w3.www.2001.XMLSchema",
-            false);
-
-    List<Schema.Field> qNameFields = new ArrayList<Schema.Field>(2);
-    qNameFields.add(
-        new Schema.Field(
-            "namespace",
-            Schema.create(Schema.Type.STRING),
-            "The namespace of this qualified name.",
-            null));
-    qNameFields.add(
-        new Schema.Field(
-            "localPart",
-            Schema.create(Schema.Type.STRING),
-            "The local part of this qualified name.",
-            null));
-    qNameSchema.setFields(qNameFields);
-
     List<Schema> optionalQNameTypes = new ArrayList<Schema>(2);
-    optionalQNameTypes.add(qNameSchema);
+    optionalQNameTypes.add( getQNameSchema() );
     optionalQNameTypes.add(Schema.create(Schema.Type.NULL));
     Schema optionalQNameSchema = Schema.createUnion(optionalQNameTypes);
 
@@ -490,5 +459,502 @@ public class TestAvroSchemaGenerator {
     rootSchema.setFields(rootFields);
 
     return rootSchema;
+  }
+
+  private static Schema getExpectedComplexSchema() {
+    final String namespace = "avro.complex_schema";
+
+    Schema optionalStringSchema = getOptionalStringSchema();
+
+    Schema firstMapValue = Schema.createRecord("value", null, namespace, false);
+
+    // simpleRestriction
+    List<Schema.Field> simpleRestrictionFields = new ArrayList<Schema.Field>();
+    simpleRestrictionFields.add(
+        new Schema.Field(
+            "default",
+            optionalStringSchema,
+            null,
+            Utils.createJsonNodeFor("hello",
+                                    Schema.create(Schema.Type.STRING))));
+
+    simpleRestrictionFields.add(
+        new Schema.Field(
+            "fixed",
+            getOptionalIntSchema(),
+            null,
+            Utils.createJsonNodeFor("65534", Schema.create(Schema.Type.INT))));
+
+    List<Schema> simpleRestrictionTypes = new ArrayList<Schema>(2);
+    simpleRestrictionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
+    simpleRestrictionTypes.add( Schema.create(Schema.Type.DOUBLE) );
+
+    simpleRestrictionFields.add(
+        new Schema.Field(
+            "simpleRestriction",
+            Schema.createUnion(simpleRestrictionTypes),
+            "Simple type null",
+            null));
+
+    Schema simpleRestrictionSchema =
+        Schema.createRecord("simpleRestriction", null, namespace, false);
+    simpleRestrictionSchema.setFields(simpleRestrictionFields);
+
+    // simpleExtension
+    List<Schema.Field> simpleExtensionFields = new ArrayList<Schema.Field>();
+    simpleExtensionFields.add(
+        new Schema.Field(
+            "default",
+            optionalStringSchema,
+            null,
+            Utils.createJsonNodeFor("hello",
+                                    Schema.create(Schema.Type.STRING))));
+
+    simpleExtensionFields.add(
+        new Schema.Field(
+            "fixed",
+            getOptionalIntSchema(),
+            null,
+            Utils.createJsonNodeFor("65534", Schema.create(Schema.Type.INT))));
+
+    List<Schema> simpleExtensionTypes = new ArrayList<Schema>();
+    simpleExtensionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
+    simpleExtensionTypes.add( Schema.create(Schema.Type.DOUBLE) );
+
+    simpleExtensionFields.add(
+        new Schema.Field(
+            "simpleExtension",
+            Schema.createUnion(simpleExtensionTypes),
+            "Simple type null",
+            null));
+
+    Schema simpleExtensionSchema =
+        Schema.createRecord("simpleExtension", null, namespace, false);
+    simpleExtensionSchema.setFields(simpleExtensionFields);
+
+    // anyAndFriends
+    List<Schema.Field> anyAndFriendsFields = new ArrayList<Schema.Field>();
+    anyAndFriendsFields.add(
+        new Schema.Field(
+            "anyAndFriends",
+            Schema.create(Schema.Type.STRING),
+            "Simple type null",
+            null));
+
+    Schema anyAndFriendsSchema =
+        Schema.createRecord("anyAndFriends", null, namespace, false);
+    anyAndFriendsSchema.setFields(anyAndFriendsFields);
+
+    // prohibit and children
+    List<Schema.Field> fixedSchemaFields = new ArrayList<Schema.Field>();
+    fixedSchemaFields.add(
+        new Schema.Field(
+            "fixed",
+            Schema.create(Schema.Type.DOUBLE),
+            "Simple type {http://www.w3.org/2001/XMLSchema}decimal",
+            Utils.createJsonNodeFor("100",
+                                    Schema.create(Schema.Type.DOUBLE))));
+
+    Schema fixedSchema = Schema.createRecord("fixed", null, namespace, false);
+    fixedSchema.setFields(fixedSchemaFields);
+
+    List<Schema.Field> prohibitFields = new ArrayList<Schema.Field>();
+    prohibitFields.add(
+        new Schema.Field(
+            "prohibit",
+            Schema.createArray(
+                Schema.createUnion(
+                    Collections.singletonList(fixedSchema))),
+            "Children of {urn:avro:complex_schema}prohibit",
+            null));
+
+    Schema prohibitSchema =
+        Schema.createRecord("prohibit", null, namespace, false);
+    prohibitSchema.setFields(prohibitFields);
+
+    // allTheThings and children
+    List<Schema.Field> firstMapValueFields = new ArrayList<Schema.Field>();
+    firstMapValueFields.add(
+        new Schema.Field(
+            "value",
+            getOptionalDoubleSchema(),
+            "Simple type {http://www.w3.org/2001/XMLSchema}decimal",
+            Utils.createJsonNodeFor("1234567.0",
+                                    Schema.create(Schema.Type.DOUBLE))));
+    firstMapValue.setFields(firstMapValueFields);
+
+    List<Schema> firstMapChildren = new ArrayList<Schema>();
+    firstMapChildren.add(firstMapValue);
+
+    List<Schema.Field> firstMapFields = new ArrayList<Schema.Field>();
+    firstMapFields.add(
+        new Schema.Field(
+            "firstMap",
+            Schema.createArray(Schema.createUnion(firstMapChildren)),
+            "Children of {urn:avro:complex_schema}firstMap",
+            null));
+
+    firstMapFields.add(
+        new Schema.Field("id", Schema.create(Schema.Type.STRING), null, null));
+
+    Schema firstMapRecord =
+        Schema.createRecord(
+            "firstMap",
+            null,
+            namespace,
+            false);
+    firstMapRecord.setFields(firstMapFields);
+
+    List<Schema.Field> secondMapFields = new ArrayList<Schema.Field>();
+    secondMapFields.add(
+        new Schema.Field("id", Schema.create(Schema.Type.STRING), null, null));
+    secondMapFields.add(
+        new Schema.Field(
+            "value",
+            Schema.create(Schema.Type.STRING),
+            null,
+            null));
+    secondMapFields.add(
+        new Schema.Field(
+            "secondMap",
+            Schema.create(Schema.Type.NULL),
+            "This element contains no attributes and no children.",
+            null));
+
+    Schema secondMapRecord =
+        Schema.createRecord("secondMap", null, namespace, false);
+    secondMapRecord.setFields(secondMapFields);
+
+    List<Schema> unionOfMaps = new ArrayList<Schema>();
+    unionOfMaps.add(firstMapRecord);
+    unionOfMaps.add(secondMapRecord);
+
+    Schema mapUnionOfMaps =
+        Schema.createMap( Schema.createUnion(unionOfMaps) );
+
+    List<Schema.Field> allTheThingsFields = new ArrayList<Schema.Field>();
+    allTheThingsFields.add(
+        new Schema.Field(
+            "id",
+            Schema.create(Schema.Type.STRING),
+            null,
+            null));
+
+    allTheThingsFields.add(
+        new Schema.Field(
+            "truth",
+            getOptionalBooleanSchema(),
+            null,
+            Utils.createJsonNodeFor("true",
+                                    Schema.create(Schema.Type.BOOLEAN))));
+
+    List<Schema> listOfNumbersTypes = new ArrayList<Schema>(2);
+    listOfNumbersTypes.add( Schema.create(Schema.Type.INT) );
+    listOfNumbersTypes.add( Schema.create(Schema.Type.DOUBLE) );
+    Schema listOfNumbersSchema =
+        Schema.createArray(Schema.createUnion(listOfNumbersTypes));
+
+    List<Schema> optionalListOfNumbersTypes = new ArrayList<Schema>(2);
+    optionalListOfNumbersTypes.add(listOfNumbersSchema);
+    optionalListOfNumbersTypes.add( Schema.create(Schema.Type.NULL) );
+    Schema optionalListOfNumbersSchema =
+        Schema.createUnion(optionalListOfNumbersTypes);
+
+    allTheThingsFields.add(
+        new Schema.Field(
+            "listOfNumbers",
+            optionalListOfNumbersSchema,
+            null,
+            Utils.createJsonNodeFor(
+                "127 -32768 1.8446744073709552E19 -1.8446744073709552E19",
+                listOfNumbersSchema)));
+
+    allTheThingsFields.add(
+        new Schema.Field(
+            "allTheThings",
+            Schema.createArray(
+                Schema.createUnion(
+                    Collections.singletonList(mapUnionOfMaps))),
+            "Children of {urn:avro:complex_schema}allTheThings",
+            null));
+
+    Schema allTheThingsRecord =
+        Schema.createRecord("allTheThings", null, namespace, false);
+    allTheThingsRecord.setFields(allTheThingsFields);
+
+    Schema allTheThingsSchema =
+        Schema.createMap(allTheThingsRecord);
+
+    // Backtrack and children
+    List<String> avroEnumSymbols = new ArrayList<String>(6);
+    avroEnumSymbols.add("avro");
+    avroEnumSymbols.add("json");
+    avroEnumSymbols.add("xml");
+    avroEnumSymbols.add("thrift");
+    avroEnumSymbols.add("rest_li");
+    avroEnumSymbols.add("protobuf");
+
+    Schema avroEnumSchema =
+        Schema.createEnum(
+            "avroEnum",
+            "Enumeration of symbols in {urn:avro:complex_schema}avroEnum",
+            namespace + ".enums",
+            avroEnumSymbols);
+
+    Schema avroEnumRecord =
+        Schema.createRecord(
+            "avroEnum",
+            null,
+            namespace,
+            false);
+
+    ArrayList<Schema.Field> avroEnumFields = new ArrayList<Schema.Field>();
+    avroEnumFields.add(
+        new Schema.Field(
+            "avroEnum",
+            avroEnumSchema,
+            "Simple type {http://www.w3.org/2001/XMLSchema}anyType",
+            null));
+    avroEnumRecord.setFields(avroEnumFields);
+
+    Schema xmlEnumRecord = Schema.createRecord("xmlEnum", null, namespace, false);
+
+    List<Schema.Field> xmlEnumFields = new ArrayList<Schema.Field>();
+    xmlEnumFields.add(
+        new Schema.Field(
+            "xmlEnum",
+            Schema.create(Schema.Type.STRING),
+            "Simple type {http://www.w3.org/2001/XMLSchema}anyType",
+            null));
+
+    xmlEnumRecord.setFields(xmlEnumFields);
+
+    Schema unsignedLongList =
+        Schema.createRecord("unsignedLongList", null, namespace, false);
+
+    List<Schema.Field> unsignedLongListFields = new ArrayList<Schema.Field>();
+    unsignedLongListFields.add(
+        new Schema.Field(
+            "unsignedLongList",
+            Schema.createArray(Schema.create(Schema.Type.DOUBLE)),
+            "Simple type null",
+            null));
+    unsignedLongList.setFields(unsignedLongListFields);
+
+    Schema listOfUnion =
+        Schema.createRecord("listOfUnion", null, namespace, false);
+
+    List<Schema> listOfUnionTypes = new ArrayList<Schema>();
+    listOfUnionTypes.add( Schema.create(Schema.Type.DOUBLE) );
+    listOfUnionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
+    listOfUnionTypes.add( Schema.create(Schema.Type.INT) );
+    listOfUnionTypes.add( Schema.create(Schema.Type.STRING) );
+
+    List<Schema.Field> listOfUnionFields = new ArrayList<Schema.Field>();
+    listOfUnionFields.add(
+        new Schema.Field(
+            "listOfUnion",
+            Schema.createArray( Schema.createUnion(listOfUnionTypes) ),
+            "Simple type null",
+            null));
+    listOfUnion.setFields(listOfUnionFields);
+
+    List<Schema.Field> qNameFields = new ArrayList<Schema.Field>();
+    qNameFields.add(
+        new Schema.Field(
+            "qName",
+            getQNameSchema(),
+            "Simple type {http://www.w3.org/2001/XMLSchema}QName",
+            null));
+    Schema qNameSchema =
+        Schema.createRecord("qName", null, namespace, false);
+    qNameSchema.setFields(qNameFields);
+
+    Schema backtrackSchema =
+        Schema.createRecord(
+            "backtrack",
+            " This forces backtracking through the different schema options. "
+            + "Consider the following elements: <backtrack> "
+            + "<qName>avro:qName</qName> <avroEnum>avro</avroEnum> "
+            + "<xmlEnum>rest.li</xmlEnum> <xmlEnum>xml</xmlEnum> "
+            + "<unsignedLongList>18446744073709551615 1844674407370955 "
+            + "12579</unsignedLongList> <listOfUnion>true 18446744073709551616"
+            + " false -2147483648 -1234.567 avro</listOfUnion> </backtrack> "
+            + "The first four elements in the list can match either the first "
+            + "choice group or the second sequence group, and by default the "
+            + "first branch will be taken. It is not until the last child "
+            + "element, <listOfUnion>, is reached, that it becomes clear the "
+            + "choice group should not be followed. ",
+            namespace,
+            false);
+
+    List<Schema> backtrackChildren = new ArrayList<Schema>();
+    backtrackChildren.add(qNameSchema);
+    backtrackChildren.add(avroEnumRecord);
+    backtrackChildren.add(xmlEnumRecord);
+    backtrackChildren.add(unsignedLongList);
+    backtrackChildren.add(listOfUnion);
+
+    List<Schema.Field> backtrackFields = new ArrayList<Schema.Field>();
+    backtrackFields.add(
+        new Schema.Field(
+            "backtrack",
+            Schema.createArray(Schema.createUnion(backtrackChildren)),
+            "Children of {urn:avro:complex_schema}backtrack",
+            null) );
+
+    backtrackSchema.setFields(backtrackFields);
+
+    // complexExtension
+    List<Schema.Field> complexExtensionFields = new ArrayList<Schema.Field>();
+
+    complexExtensionFields.add(
+        new Schema.Field("optional", optionalStringSchema, null, null));
+
+    complexExtensionFields.add(
+        new Schema.Field(
+            "defaulted",
+            optionalStringSchema,
+            null,
+            Utils.createJsonNodeFor("hello",
+                                    Schema.create(Schema.Type.STRING))));
+
+    List<Schema> complexExtensionChildren = new ArrayList<Schema>(3);
+    complexExtensionChildren.add(unsignedLongList);
+    complexExtensionChildren.add(listOfUnion);
+    complexExtensionChildren.add(fixedSchema);
+
+    complexExtensionFields.add(
+        new Schema.Field(
+            "complexExtension",
+            Schema.createArray(Schema.createUnion(complexExtensionChildren)),
+            "Children of {urn:avro:complex_schema}complexExtension",
+            null));
+
+    Schema complexExtensionSchema =
+        Schema.createRecord("complexExtension", null, namespace, false);
+    complexExtensionSchema.setFields(complexExtensionFields);
+
+    // mixedType
+    List<Schema> mixedTypeTypes = new ArrayList<Schema>();
+    mixedTypeTypes.add( Schema.create(Schema.Type.STRING) );
+    mixedTypeTypes.add(listOfUnion);
+    mixedTypeTypes.add(unsignedLongList);
+
+    List<Schema.Field> mixedTypeFields = new ArrayList<Schema.Field>();
+    mixedTypeFields.add(
+        new Schema.Field(
+            "mixedType",
+            Schema.createArray(Schema.createUnion(mixedTypeTypes)),
+            "Children of {urn:avro:complex_schema}mixedType",
+            null));
+
+    Schema mixedTypeSchema =
+        Schema.createRecord("mixedType", null, namespace, false);
+    mixedTypeSchema.setFields(mixedTypeFields);
+
+    // realRoot
+    Schema realRootSchema = Schema.createRecord("realRoot", null, namespace, false);
+
+    List<Schema.Field> realRootSchemaFields = new ArrayList<Schema.Field>();
+    realRootSchemaFields.add(
+        new Schema.Field(
+            "month",
+            optionalStringSchema,
+            null,
+            Utils.createJsonNodeFor("--08",
+                                    Schema.create(Schema.Type.STRING))));
+
+    realRootSchemaFields.add(
+        new Schema.Field(
+          "year",
+          optionalStringSchema,
+          null,
+          Utils.createJsonNodeFor("2014",
+                                  Schema.create(Schema.Type.STRING))));
+
+    realRootSchemaFields.add(
+        new Schema.Field(
+            "day",
+            optionalStringSchema,
+            null,
+            Utils.createJsonNodeFor("---12",
+                                    Schema.create(Schema.Type.STRING))));
+
+    List<Schema> realRootChildren = new ArrayList<Schema>();
+    realRootChildren.add(backtrackSchema);
+    realRootChildren.add(allTheThingsSchema);
+    realRootChildren.add(prohibitSchema);
+    realRootChildren.add(anyAndFriendsSchema);
+    realRootChildren.add(simpleExtensionSchema);
+    realRootChildren.add(simpleRestrictionSchema);
+    realRootChildren.add(complexExtensionSchema);
+    realRootChildren.add(mixedTypeSchema);
+
+    realRootSchemaFields.add(
+        new Schema.Field(
+            "realRoot",
+            Schema.createArray(Schema.createUnion(realRootChildren)),
+            "Children of {urn:avro:complex_schema}realRoot",
+            null));
+
+    realRootSchema.setFields(realRootSchemaFields);
+
+    Schema rootSchema = Schema.createUnion( Collections.singletonList(realRootSchema));
+    return rootSchema;
+  }
+
+  private static Schema getOptionalStringSchema() {
+    List<Schema> optionalStringTypes = new ArrayList<Schema>(2);
+    optionalStringTypes.add( Schema.create(Schema.Type.STRING) );
+    optionalStringTypes.add( Schema.create(Schema.Type.NULL) );
+    return Schema.createUnion(optionalStringTypes);
+  }
+
+  private static Schema getQNameSchema() {
+    Schema qNameSchema =
+        Schema.createRecord(
+            "qName",
+            "Qualified Name",
+            "org.w3.www.2001.XMLSchema",
+            false);
+
+    List<Schema.Field> qNameFields = new ArrayList<Schema.Field>(2);
+    qNameFields.add(
+        new Schema.Field(
+            "namespace",
+            Schema.create(Schema.Type.STRING),
+            "The namespace of this qualified name.",
+            null));
+    qNameFields.add(
+        new Schema.Field(
+            "localPart",
+            Schema.create(Schema.Type.STRING),
+            "The local part of this qualified name.",
+            null));
+    qNameSchema.setFields(qNameFields);
+
+    return qNameSchema;
+  }
+
+  private static Schema getOptionalDoubleSchema() {
+    List<Schema> optionalDoubleTypes = new ArrayList<Schema>(2);
+    optionalDoubleTypes.add( Schema.create(Schema.Type.DOUBLE) );
+    optionalDoubleTypes.add( Schema.create(Schema.Type.NULL) );
+    return Schema.createUnion(optionalDoubleTypes);
+  }
+
+  private static Schema getOptionalBooleanSchema() {
+    List<Schema> optionalBooleanTypes = new ArrayList<Schema>(2);
+    optionalBooleanTypes.add( Schema.create(Schema.Type.BOOLEAN) );
+    optionalBooleanTypes.add( Schema.create(Schema.Type.NULL) );
+    return Schema.createUnion(optionalBooleanTypes);
+  }
+
+  private static Schema getOptionalIntSchema() {
+    List<Schema> optionalIntTypes = new ArrayList<Schema>(2);
+    optionalIntTypes.add( Schema.create(Schema.Type.INT) );
+    optionalIntTypes.add( Schema.create(Schema.Type.NULL) );
+    return Schema.createUnion(optionalIntTypes);
   }
 }

@@ -90,6 +90,7 @@ final class DocumentComparer {
           Schema expSchema = expFullNames.remove( actualSchema.getFullName() );
           assertEquivalent(expSchema, actualSchema, recordsSeen);
         }
+        assertTrue( expFullNames.isEmpty() );
         break;
       }
     case FIXED:
