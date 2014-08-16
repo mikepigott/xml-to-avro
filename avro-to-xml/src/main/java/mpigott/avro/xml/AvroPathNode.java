@@ -23,16 +23,17 @@ import javax.xml.namespace.QName;
  *
  * @author  Mike Pigott
  */
-final class AvroMapNode {
+final class AvroPathNode {
 
   enum Type {
     MAP_START,
     ITEM_START,
-    MAP_END
+    MAP_END,
+    CONTENT
   }
 
-  AvroMapNode(
-      XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> pathNode,
+  AvroPathNode(
+      XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> pathNode,
       int pathIndex,
       Type type,
       QName qName,
@@ -44,14 +45,26 @@ final class AvroMapNode {
     this.type = type;
     this.occurrence = occurrence;
     this.mapSize = -1;
+    this.contentUnionIndex = -1;
   }
 
-  AvroMapNode(
-      XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> pathNode,
+  AvroPathNode(
+      XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> pathNode,
       int pathIndex,
       Type type) {
 
     this(pathNode, pathIndex, type, null, 0);
+  }
+
+  AvroPathNode(int unionIndex) {
+    this.type = Type.CONTENT;
+    this.contentUnionIndex = unionIndex;
+
+    this.pathNode = null;
+    this.pathIndex = -1;
+    this.qName = null;
+    this.occurrence = -1;
+    this.mapSize = -1;
   }
 
   QName getQName() {
@@ -67,7 +80,7 @@ final class AvroMapNode {
     }
   }
 
-  XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> getPathNode() {
+  XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> getPathNode() {
     return pathNode;
   }
 
@@ -91,6 +104,10 @@ final class AvroMapNode {
     this.mapSize = mapSize;
   }
 
+  int getContentUnionIndex() {
+    return contentUnionIndex;
+  }
+
   @Override
   public String toString() {
     StringBuilder str = new StringBuilder("[");
@@ -101,11 +118,12 @@ final class AvroMapNode {
     return str.toString();
   }
 
-  private final XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> pathNode;
+  private final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> pathNode;
   private final int pathIndex;
   private final QName qName;
   private final int occurrence;
   private final Type type;
+  private final int contentUnionIndex;
 
   private int mapSize;
 }

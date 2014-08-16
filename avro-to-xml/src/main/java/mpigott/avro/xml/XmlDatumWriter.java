@@ -69,7 +69,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
   private static class Writer extends DefaultHandler {
     Writer(
-        XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path,
+        XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path,
         Encoder out) {
 
       this.path = path;
@@ -178,7 +178,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           }
 
         } else if ( avroSchema.getType().equals(Schema.Type.MAP) ) {
-          final AvroMapNode mapNode = currLocation.getUserDefinedContent();
+          final AvroPathNode mapNode = currLocation.getUserDefinedContent();
           if (mapNode == null) {
             throw new IllegalStateException(
                 "Reached "
@@ -474,6 +474,15 @@ public class XmlDatumWriter implements DatumWriter<Document> {
              .schema();
 
         try {
+          final AvroPathNode contentPathNode =
+              currLocation.getUserDefinedContent();
+
+          if ((contentPathNode != null)
+              && contentPathNode.getType().equals(AvroPathNode.Type.CONTENT)) {
+            System.out.println("Writing a content index of " + contentPathNode.getContentUnionIndex() + " to the stream.");
+            out.writeIndex(contentPathNode.getContentUnionIndex());
+          }
+
           write(elemType, elemQName, avroSchema, result);
           entry.receivedContent = true;
         } catch (Exception ioe) {
@@ -668,7 +677,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
     }
 
-    /* For a path to be exiting a particular element's
+    /**
+     * For a path to be exiting a particular element's
      * scope, it must be doing one of four things:
      *
      * 1. It is null, indicating the end of the document.
@@ -676,8 +686,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
      * 3. It is a CHILD path to the owning element's child (wildcard) element.
      * 4. It is a SIBLING path to a new element instance.
      */
-    private boolean pathExitsElementScope(
-        XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path,
+    private static boolean pathExitsElementScope(
+        XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path,
         XmlSchemaDocumentNode<AvroRecordInfo> owningElem,
         boolean ignoreAny) {
 
@@ -721,7 +731,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     }
 
     private boolean hasMoreContent(
-        XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path,
+        XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path,
         XmlSchemaDocumentNode<AvroRecordInfo> owningElem) {
 
       if (path == null) {
@@ -775,7 +785,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     }
 
     private boolean isMapEnd() {
-      XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> position = currLocation;
+      XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> position = currLocation;
 
       do {
         position = position.getNext();
@@ -786,7 +796,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               && position
                    .getUserDefinedContent()
                    .getType()
-                   .equals(AvroMapNode.Type.MAP_END));
+                   .equals(AvroPathNode.Type.MAP_END));
     }
 
     private String getAttrValue(Attributes atts, String namespaceUri, String name) {
@@ -1135,13 +1145,13 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
     }
 
-    private XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> currLocation;
+    private XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> currLocation;
     private StringBuilder content;
     private QName currAnyElem;
     private ArrayList<StackEntry> stack;
     private int priorMapCount;
 
-    private final XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path;
+    private final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path;
     private final Encoder out;
     private final XmlSchemaNamespaceContext nsContext;
   }
@@ -1239,7 +1249,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     } catch (Exception se) {
       throw new IOException("Unable to parse the document.", se);
     }
-    final XmlSchemaPathNode<AvroRecordInfo, AvroMapNode> path =
+    final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path =
         pathFinder.getXmlSchemaDocumentPath();
 
     // 2. Apply Avro schema metadata on top of the document. 
