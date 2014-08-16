@@ -443,7 +443,9 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     boolean isOptional = false;
 
     // Optional types are unions of the real type and null.
-    if ( attribute.getUse().equals(XmlSchemaUse.OPTIONAL) ) {
+    if (attribute.getUse().equals(XmlSchemaUse.OPTIONAL)
+        && (attribute.getDefaultValue() == null)
+        && (attribute.getFixedValue() == null)) {
       isOptional = true;
     }
 

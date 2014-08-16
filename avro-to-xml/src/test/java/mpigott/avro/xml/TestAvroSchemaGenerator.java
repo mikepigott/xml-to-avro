@@ -31,6 +31,7 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Type;
+import org.apache.avro.SchemaCompatibility.SchemaCompatibilityType;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
@@ -464,8 +465,6 @@ public class TestAvroSchemaGenerator {
   private static Schema getExpectedComplexSchema() {
     final String namespace = "avro.complex_schema";
 
-    Schema optionalStringSchema = getOptionalStringSchema();
-
     Schema firstMapValue = Schema.createRecord("value", null, namespace, false);
 
     // simpleRestriction
@@ -473,7 +472,7 @@ public class TestAvroSchemaGenerator {
     simpleRestrictionFields.add(
         new Schema.Field(
             "default",
-            optionalStringSchema,
+            Schema.create(Schema.Type.STRING),
             null,
             Utils.createJsonNodeFor("hello",
                                     Schema.create(Schema.Type.STRING))));
@@ -481,7 +480,7 @@ public class TestAvroSchemaGenerator {
     simpleRestrictionFields.add(
         new Schema.Field(
             "fixed",
-            getOptionalIntSchema(),
+            Schema.create(Schema.Type.INT),
             null,
             Utils.createJsonNodeFor("65534", Schema.create(Schema.Type.INT))));
 
@@ -505,7 +504,7 @@ public class TestAvroSchemaGenerator {
     simpleExtensionFields.add(
         new Schema.Field(
             "default",
-            optionalStringSchema,
+            Schema.create(Schema.Type.STRING),
             null,
             Utils.createJsonNodeFor("hello",
                                     Schema.create(Schema.Type.STRING))));
@@ -513,7 +512,7 @@ public class TestAvroSchemaGenerator {
     simpleExtensionFields.add(
         new Schema.Field(
             "fixed",
-            getOptionalIntSchema(),
+            Schema.create(Schema.Type.INT),
             null,
             Utils.createJsonNodeFor("65534", Schema.create(Schema.Type.INT))));
 
@@ -643,7 +642,7 @@ public class TestAvroSchemaGenerator {
     allTheThingsFields.add(
         new Schema.Field(
             "truth",
-            getOptionalBooleanSchema(),
+            Schema.create(Schema.Type.BOOLEAN),
             null,
             Utils.createJsonNodeFor("true",
                                     Schema.create(Schema.Type.BOOLEAN))));
@@ -654,16 +653,10 @@ public class TestAvroSchemaGenerator {
     Schema listOfNumbersSchema =
         Schema.createArray(Schema.createUnion(listOfNumbersTypes));
 
-    List<Schema> optionalListOfNumbersTypes = new ArrayList<Schema>(2);
-    optionalListOfNumbersTypes.add(listOfNumbersSchema);
-    optionalListOfNumbersTypes.add( Schema.create(Schema.Type.NULL) );
-    Schema optionalListOfNumbersSchema =
-        Schema.createUnion(optionalListOfNumbersTypes);
-
     allTheThingsFields.add(
         new Schema.Field(
             "listOfNumbers",
-            optionalListOfNumbersSchema,
+            listOfNumbersSchema,
             null,
             Utils.createJsonNodeFor(
                 "127 -32768 1.8446744073709552E19 -1.8446744073709552E19",
@@ -809,12 +802,12 @@ public class TestAvroSchemaGenerator {
     List<Schema.Field> complexExtensionFields = new ArrayList<Schema.Field>();
 
     complexExtensionFields.add(
-        new Schema.Field("optional", optionalStringSchema, null, null));
+        new Schema.Field("optional", getOptionalStringSchema(), null, null));
 
     complexExtensionFields.add(
         new Schema.Field(
             "defaulted",
-            optionalStringSchema,
+            Schema.create(Schema.Type.STRING),
             null,
             Utils.createJsonNodeFor("hello",
                                     Schema.create(Schema.Type.STRING))));
@@ -860,7 +853,7 @@ public class TestAvroSchemaGenerator {
     realRootSchemaFields.add(
         new Schema.Field(
             "month",
-            optionalStringSchema,
+            Schema.create(Schema.Type.STRING),
             null,
             Utils.createJsonNodeFor("--08",
                                     Schema.create(Schema.Type.STRING))));
@@ -868,7 +861,7 @@ public class TestAvroSchemaGenerator {
     realRootSchemaFields.add(
         new Schema.Field(
           "year",
-          optionalStringSchema,
+          Schema.create(Schema.Type.STRING),
           null,
           Utils.createJsonNodeFor("2014",
                                   Schema.create(Schema.Type.STRING))));
@@ -876,7 +869,7 @@ public class TestAvroSchemaGenerator {
     realRootSchemaFields.add(
         new Schema.Field(
             "day",
-            optionalStringSchema,
+            Schema.create(Schema.Type.STRING),
             null,
             Utils.createJsonNodeFor("---12",
                                     Schema.create(Schema.Type.STRING))));
