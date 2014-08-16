@@ -537,7 +537,10 @@ final class AvroSchemaApplier {
   }
 
   // Confirms the root-level Schema is a UNION of MAPs, RECORDs, or both.
-  private final void verifyIsUnionOfMapsAndRecords(Schema schema, boolean isMixed) {
+  private final void verifyIsUnionOfMapsAndRecords(
+      Schema schema,
+      boolean isMixed) {
+
     for (Schema unionType : schema.getTypes()) {
       if (!unionType.getType().equals(Schema.Type.RECORD)
           && !unionType.getType().equals(Schema.Type.MAP)
@@ -552,14 +555,18 @@ final class AvroSchemaApplier {
       } else if (unionType.getType().equals(Schema.Type.MAP)) {
         if ( unionType.getValueType().getType().equals(Schema.Type.UNION) ) {
           for (Schema mapUnionType : unionType.getValueType().getTypes()) {
-            if ( !mapUnionType.getType().equals(Schema.Type.RECORD) ) {
+            if (!mapUnionType.getType().equals(Schema.Type.RECORD)
+                && !(isMixed
+                     && mapUnionType.getType().equals(Schema.Type.STRING))) {
               throw new IllegalArgumentException(
                   "If using a UNION of MAP of UNION, all of the UNION types"
                   + " must be RECORD, not "
                   + mapUnionType.getType());
             }
           }
-        } else if ( !unionType.getValueType().getType().equals(Schema.Type.RECORD) ) {
+        } else if (!unionType.getValueType().getType().equals(Schema.Type.RECORD)
+                   && !(isMixed
+                        && unionType.getType().equals(Schema.Type.STRING))) {
           throw new IllegalArgumentException(
               "If the Avro Schema is a UNION of MAPs or an ARRAY of UNION of"
               + " MAPs, all MAP value types must be RECORD or UNION of RECORD,"
