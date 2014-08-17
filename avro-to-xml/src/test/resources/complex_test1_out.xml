@@ -12,7 +12,7 @@
     <ns0:secondMap id="idvalue2" value="Second Map Value"/>
     <ns0:firstMap id="idvalue1">
       <ns0:value>1234567</ns0:value>
-      <ns0:value/>
+      <ns0:value ns1:nil="true" />
     </ns0:firstMap>
   </ns0:allTheThings>
   <ns0:prohibit>

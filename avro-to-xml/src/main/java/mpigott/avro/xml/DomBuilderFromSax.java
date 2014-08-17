@@ -68,6 +68,7 @@ final class DomBuilderFromSax extends DefaultHandler {
     document = null;
     content = null;
     namespaceToLocationMapping = null;
+    elementsByQName = null;
     schemas = xmlSchemaCollection;
   }
 
@@ -236,8 +237,15 @@ final class DomBuilderFromSax extends DefaultHandler {
           final QName elemQName =
               new QName(currElem.getNamespaceURI(), currElem.getLocalName());
 
-          final XmlSchemaElement schemaElem =
-              schemas.getElementByQName(elemQName);
+          XmlSchemaElement schemaElem = null;
+
+          if (elementsByQName != null) {
+            schemaElem = elementsByQName.get(elemQName);
+          }
+
+          if (schemaElem == null) {
+            schemaElem = schemas.getElementByQName(elemQName);
+          }
 
           if ((schemaElem != null) && schemaElem.isNillable()) {
             currElem.setAttributeNS(XSI_NS, XSI_NIL, "true");
@@ -271,6 +279,14 @@ final class DomBuilderFromSax extends DefaultHandler {
 
   void setNamespaceToLocationMapping(Map<String, String> nsToLocMapping) {
     namespaceToLocationMapping = nsToLocMapping;
+  }
+
+  Map<QName, XmlSchemaElement> getElementsByQName() {
+    return elementsByQName;
+  }
+
+  void setElementsByQName(Map<QName, XmlSchemaElement> elemsByQName) {
+    elementsByQName = elemsByQName;
   }
 
   private void addNamespaceLocationMappings(Element rootElement) {
@@ -316,6 +332,8 @@ final class DomBuilderFromSax extends DefaultHandler {
   private Map<String, String> namespaceToLocationMapping;
   private List<String> newPrefixes;
   private XmlSchemaNamespaceContext nsContext;
+
+  private Map<QName, XmlSchemaElement> elementsByQName;
 
   private final ArrayList<Element> elementStack;
   private final DocumentBuilder docBuilder;

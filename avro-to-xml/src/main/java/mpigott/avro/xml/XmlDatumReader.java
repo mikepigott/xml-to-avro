@@ -497,15 +497,20 @@ public class XmlDatumReader implements DatumReader<Document> {
     final XmlSchemaStateMachineNode stateMachine =
         stateMachineGen.getStartNode();
 
-    /* 7. Build an AvroRecordName -> XmlSchemaStateMachineNode mapping
-     *    along with a namespace prefix mapping.
+    /* 7. Build an AvroRecordName -> XmlSchemaStateMachineNode mapping, a
+     *    QName -> XmlSchemaElement mapping, and a namespace prefix mapping.
      */
     final Map<QName, XmlSchemaStateMachineNode> stateMachineNodesByQName =
         stateMachineGen.getStateMachineNodesByQName();
 
+    final Map<QName, XmlSchemaElement> elementsByQName =
+        new HashMap<QName, XmlSchemaElement>();
+
     stateByAvroName = new HashMap<AvroRecordName, XmlSchemaStateMachineNode>();
     for (Map.Entry<QName, XmlSchemaStateMachineNode> entry :
       stateMachineNodesByQName.entrySet()) {
+
+      elementsByQName.put(entry.getKey(), entry.getValue().getElement());
 
       try {
         stateByAvroName.put(new AvroRecordName(entry.getKey()), entry.getValue());
@@ -527,6 +532,8 @@ public class XmlDatumReader implements DatumReader<Document> {
         ++currNsNum;
       }
     }
+
+    domBuilder.setElementsByQName(elementsByQName);
 
     inputSchema = schema;
 
