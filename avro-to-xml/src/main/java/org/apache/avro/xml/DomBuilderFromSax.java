@@ -31,7 +31,6 @@ import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.constants.Constants;
 import org.w3c.dom.DOMException;
-import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.Attributes;
@@ -382,17 +381,5 @@ final class DomBuilderFromSax extends DefaultHandler {
     schemaList.delete(schemaList.length() - 1, schemaList.length());
 
     rootElement.setAttributeNS(XSI_NS, XSI_SCHEMALOC, schemaList.toString());
-  }
-
-  private static boolean urisMatch(String elemUri, String attrUri) {
-    if ((elemUri == null) && (attrUri == null)) {
-      return true;
-    } else if ((elemUri == null) && (attrUri != null)) {
-      return false;
-    } else if ((elemUri != null) && (attrUri == null)) {
-      return false;
-    } else {
-      return elemUri.equals(attrUri);
-    }
   }
 }

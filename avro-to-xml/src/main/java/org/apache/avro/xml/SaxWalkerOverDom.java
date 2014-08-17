@@ -24,8 +24,6 @@ import java.util.Map;
 import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.constants.Constants;
-import org.apache.ws.commons.schema.utils.NamespacePrefixList;
-import org.apache.ws.commons.schema.utils.PrefixCollector;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

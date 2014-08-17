@@ -16,24 +16,13 @@
 
 package org.apache.avro.xml;
 
-import static org.junit.Assert.*;
-
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
 import org.apache.avro.Schema;
 import org.apache.avro.io.DecoderFactory;
@@ -45,7 +34,6 @@ import org.apache.avro.xml.XmlDatumReader;
 import org.apache.avro.xml.XmlDatumWriter;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
@@ -179,7 +167,7 @@ public class TestAvroToXmlAndBack {
     UtilsForTests.assertEquivalent(expectedDoc, outDoc);
   }
 
-  private Document convertToAvroAndBack(
+  private static Document convertToAvroAndBack(
       XmlDatumConfig config,
       Document xmlDoc) throws Exception {
 

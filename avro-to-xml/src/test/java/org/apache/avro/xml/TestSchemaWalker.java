@@ -16,13 +16,10 @@
 
 package org.apache.avro.xml;
 
-import static org.junit.Assert.*;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,7 +32,6 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.junit.Assert;
 
-import org.apache.avro.Schema;
 import org.apache.avro.xml.XmlSchemaBaseSimpleType;
 import org.apache.avro.xml.XmlSchemaMultiBaseUriResolver;
 import org.apache.avro.xml.XmlSchemaRestriction;
@@ -645,7 +641,7 @@ public class TestSchemaWalker {
           "No anyAttribute types were expected in the schema.");
     }
 
-    private void checkMinAndMaxOccurs(
+    private static void checkMinAndMaxOccurs(
         StackEntry next,
         XmlSchemaParticle particle) {
 

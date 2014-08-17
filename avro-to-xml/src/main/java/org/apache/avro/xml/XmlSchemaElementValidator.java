@@ -18,9 +18,7 @@ package org.apache.avro.xml;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -31,16 +29,9 @@ import javax.xml.datatype.DatatypeFactory;
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.namespace.QName;
 
-import jregex.Matcher;
-import jregex.Pattern;
-import jregex.PatternSyntaxException;
-import jregex.REFlags;
-
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
-import org.apache.xerces.util.URI;
-import org.apache.xerces.util.URI.MalformedURIException;
 import org.xml.sax.Attributes;
 
 /**

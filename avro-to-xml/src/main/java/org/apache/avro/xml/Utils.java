@@ -15,7 +15,6 @@
  */
 package org.apache.avro.xml;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
@@ -23,26 +22,19 @@ import java.net.URISyntaxException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
 
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.constants.Constants;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.IntNode;
-import org.codehaus.jackson.node.JsonNodeFactory;
 import org.codehaus.jackson.node.NumericNode;
-import org.codehaus.jackson.node.ObjectNode;
 import org.codehaus.jackson.node.TextNode;
-import org.xml.sax.InputSource;
 
 /**
  * A set of utilities for encoding and

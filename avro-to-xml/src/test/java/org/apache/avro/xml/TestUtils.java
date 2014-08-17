@@ -23,20 +23,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Set;
 
-import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
 
 import org.apache.avro.Schema;
 import org.apache.avro.xml.Utils;
 import org.apache.ws.commons.schema.constants.Constants;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.BooleanNode;
-import org.codehaus.jackson.node.NumericNode;
-import org.codehaus.jackson.node.TextNode;
 import org.junit.BeforeClass;
 import org.junit.Test;
 

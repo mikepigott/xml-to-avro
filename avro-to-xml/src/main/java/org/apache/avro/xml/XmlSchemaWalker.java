@@ -517,7 +517,7 @@ final class XmlSchemaWalker {
     return copy;
   }
 
-  private QName getElementQName(XmlSchemaElement element) {
+  private static QName getElementQName(XmlSchemaElement element) {
     if ( element.isRef() ) {
       return element.getRefBase().getTargetQName();
     } else {

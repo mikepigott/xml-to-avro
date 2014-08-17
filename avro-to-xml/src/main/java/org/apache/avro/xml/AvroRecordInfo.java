@@ -16,8 +16,6 @@
 
 package org.apache.avro.xml;
 
-import java.util.ArrayList;
-
 import org.apache.avro.Schema;
 
 /**

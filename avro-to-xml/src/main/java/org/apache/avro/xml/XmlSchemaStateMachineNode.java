@@ -19,7 +19,6 @@ package org.apache.avro.xml;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;

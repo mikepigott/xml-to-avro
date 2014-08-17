@@ -20,11 +20,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 import javax.xml.namespace.QName;
-import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
 
 /**
@@ -151,7 +149,8 @@ public class XmlDatumConfig {
 	  schemaFiles.add(file);
 	}
 
-	List<StreamSource> getSources() throws IOException {
+	@SuppressWarnings("resource")
+  List<StreamSource> getSources() throws IOException {
     final ArrayList<StreamSource> sources =
         new ArrayList<StreamSource>( getArraySize() );
     try {

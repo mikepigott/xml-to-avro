@@ -16,8 +16,6 @@
 
 package org.apache.avro.xml;
 
-import static org.junit.Assert.*;
-
 import java.io.File;
 import java.io.FileReader;
 
@@ -25,10 +23,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.avro.xml.DomBuilderFromSax;
@@ -95,9 +89,14 @@ public class TestDomBuilderFromSax {
 
   private void runTest(File schemaFile, File xmlFile) throws Exception {
     XmlSchemaCollection xmlSchemas = new XmlSchemaCollection();
+
+    FileReader schemaFileReader = new FileReader(schemaFile);
+
     StreamSource schemaSource =
-        new StreamSource(new FileReader(schemaFile), schemaFile.getName());
+        new StreamSource(schemaFileReader, schemaFile.getName());
     xmlSchemas.read(schemaSource);
+
+    schemaFileReader.close();
 
     // Parse the document using a real DOM parser
     final Document expectedDoc = domParser.parse(xmlFile);

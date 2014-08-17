@@ -23,18 +23,14 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.avro.Schema;
-import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.io.JsonDecoder;
 import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.xml.XmlDatumConfig;
 import org.apache.avro.xml.XmlDatumWriter;
@@ -47,7 +43,6 @@ public class TestXmlDatumWriter {
 
   private static DocumentBuilderFactory dbf;
   private static EncoderFactory avroEncoderFactory;
-  private static DecoderFactory avroDecoderFactory;
 
   private DocumentBuilder docBuilder;
 
@@ -57,7 +52,6 @@ public class TestXmlDatumWriter {
     dbf.setNamespaceAware(true);
 
     avroEncoderFactory = EncoderFactory.get();
-    avroDecoderFactory = DecoderFactory.get();
   }
 
   @Before

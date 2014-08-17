@@ -22,7 +22,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
@@ -59,14 +58,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
   private static class StackEntry {
     XmlSchemaDocumentNode<AvroRecordInfo> docNode;
     boolean receivedContent;
-    int mapCount;
-    int mapInstance;
 
     StackEntry(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
       this.docNode = docNode;
       this.receivedContent = false;
-      this.mapCount = 0;
-      this.mapInstance = -1;
     }
   }
 
@@ -81,7 +76,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     private StringBuilder content;
     private QName currAnyElem;
     private ArrayList<StackEntry> stack;
-    private int priorMapCount;
 
     private final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path;
     private final Encoder out;
@@ -99,7 +93,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       currLocation = null;
       content = null;
       currAnyElem = null;
-      priorMapCount = 0;
     }
 
     @Override
@@ -189,9 +182,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         // If there are children, we want to start an array and end it later.
         final StackEntry entry =
             new StackEntry(currLocation.getDocumentNode());
-
-        entry.mapCount = 0;
-        entry.mapInstance = -1;
 
         if (avroSchema.getType().equals(Schema.Type.RECORD)) {
           if ( !stack.isEmpty() ) {
@@ -436,8 +426,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
       final XmlSchemaDocumentNode<AvroRecordInfo> owningElem =
           stack.get(stack.size() - 1).docNode;
-
-      final XmlSchemaPathNode currPathNode = currLocation;
 
       XmlSchemaPathNode path = walkToContent(owningElem);
 
@@ -686,8 +674,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
     @Override
     public void endDocument() throws SAXException {
-      XmlSchemaPathNode tempPath = currLocation;
-
       if (currLocation.getNext() != null) {
         currLocation = currLocation.getNext();
         while (currLocation != null) {
@@ -815,7 +801,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       return false;
     }
 
-    private boolean hasMoreContent(
+    private static boolean hasMoreContent(
         XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path,
         XmlSchemaDocumentNode<AvroRecordInfo> owningElem) {
 
@@ -846,9 +832,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       if (currLocation == null) {
         return null;
       }
-
-      final XmlSchemaDocumentNode<AvroRecordInfo> parentElem =
-          owningElem.getParent();
 
       XmlSchemaPathNode path = currLocation.getNext();
 
@@ -891,7 +874,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                    .equals(AvroPathNode.Type.MAP_END));
     }
 
-    private String getAttrValue(
+    private static String getAttrValue(
         Attributes atts,
         String namespaceUri,
         String name) {

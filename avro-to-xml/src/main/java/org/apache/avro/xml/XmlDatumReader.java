@@ -18,9 +18,6 @@ package org.apache.avro.xml;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.math.MathContext;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -41,12 +38,7 @@ import org.apache.avro.io.Decoder;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
-import org.apache.ws.commons.schema.constants.Constants;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.JsonNodeFactory;
-import org.codehaus.jackson.node.NumericNode;
-import org.codehaus.jackson.node.ObjectNode;
 import org.w3c.dom.Document;
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
@@ -361,9 +353,6 @@ public class XmlDatumReader implements DatumReader<Document> {
       }
     }
   }
-
-  private static final BigDecimal MAX_UNSIGNEDLONG =
-      new BigDecimal("18446744073709551615");
 
   /**
    * Creates an {@link XmlDatumReader} with the {@link XmlSchemaCollection}
@@ -845,16 +834,6 @@ public class XmlDatumReader implements DatumReader<Document> {
     }
 
     return attribute;
-  }
-
-  private void processContent(
-      Schema.Field field,
-      QName elemQName,
-      XmlSchemaTypeInfo xmlType,
-      Decoder in)
-      throws IOException {
-
-    processContent( readSimpleType(field.schema(), elemQName, xmlType, in) );
   }
 
   private void processContent(String content) throws IOException {

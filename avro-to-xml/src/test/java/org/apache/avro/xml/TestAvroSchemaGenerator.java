@@ -16,23 +16,17 @@
 
 package org.apache.avro.xml;
 
-import static org.junit.Assert.*;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.avro.Schema;
-import org.apache.avro.Schema.Type;
-import org.apache.avro.SchemaCompatibility.SchemaCompatibilityType;
 import org.apache.avro.xml.AvroSchemaGenerator;
 import org.apache.avro.xml.Utils;
 import org.apache.avro.xml.XmlSchemaMultiBaseUriResolver;
@@ -78,7 +72,7 @@ public class TestAvroSchemaGenerator {
     UtilsForTests.assertEquivalent(getExpectedComplexSchema(), schema);
   }
 
-  private Schema createSchemaOf(File file, String rootName) throws Exception {
+  private static Schema createSchemaOf(File file, String rootName) throws Exception {
     ArrayList<File> schemaFiles = new ArrayList<File>(1);
     schemaFiles.add(file);
 
@@ -338,9 +332,6 @@ public class TestAvroSchemaGenerator {
 
     Schema recordSchema =
         Schema.createRecord("record", null, namespace, false);
-
-    Schema.Field recordField =
-        new Schema.Field("record", recordSchema, null, null);
 
     Schema mapRecordSchema =
         Schema.createRecord("map", null, namespace, false);

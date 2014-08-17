@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.namespace.QName;
 
@@ -567,7 +566,7 @@ final class AvroSchemaApplier {
   }
 
   // Confirms the root-level Schema is a UNION of MAPs, RECORDs, or both.
-  private final void verifyIsUnionOfMapsAndRecords(
+  private static void verifyIsUnionOfMapsAndRecords(
       Schema schema,
       boolean isMixed) {
 
@@ -608,7 +607,7 @@ final class AvroSchemaApplier {
     }
   }
 
-  private boolean typeMatchesElement(Schema type, XmlSchemaElement element) {
+  private static boolean typeMatchesElement(Schema type, XmlSchemaElement element) {
     boolean match = false;
 
     if (type.getName().equals( element.getName() )) {
@@ -834,7 +833,7 @@ final class AvroSchemaApplier {
    *
    * @param path The path to check if is a map node.
    */
-  private void findMaps(
+  private static void findMaps(
       XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path) {
 
     Map<QName, List<List<AvroPathNode>>> occurrencesByName =
@@ -1020,7 +1019,7 @@ final class AvroSchemaApplier {
     }
   }
 
-  private void addEndNode(
+  private static void addEndNode(
       Map<QName, List<List<AvroPathNode>>> occurrencesByName,
       AvroPathNode mostRecentlyLeftMap) {
 
@@ -1035,7 +1034,7 @@ final class AvroSchemaApplier {
    * counted as part of the MAP's parent's children.  Likewise, each time we
    * find a new MAP, we only increment the parent's child count by one.
    */
-  private void incrementMapParentChildCount(
+  private static void incrementMapParentChildCount(
       XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path) {
 
     if (!path.getStateMachineNode()
@@ -1065,7 +1064,7 @@ final class AvroSchemaApplier {
     docNode.getUserDefinedContent().incrementChildCount();
   }
 
-  private void applyContent(
+  private static void applyContent(
       XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> startNode) {
 
     XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path = startNode;
@@ -1087,8 +1086,7 @@ final class AvroSchemaApplier {
            * This means we need to pop the previous element off
            * of the stack and start a new one.
            */
-          final StackEntry stackEntry =
-              docNodeStack.remove(docNodeStack.size() - 1);
+          docNodeStack.remove(docNodeStack.size() - 1);
         }
         /* falls through */
       case CHILD:

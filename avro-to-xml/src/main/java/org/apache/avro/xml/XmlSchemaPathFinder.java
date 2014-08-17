@@ -24,7 +24,6 @@ import javax.xml.bind.ValidationException;
 import javax.xml.namespace.QName;
 
 import org.apache.ws.commons.schema.XmlSchemaAny;
-import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -43,14 +42,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
    */
   private static final int MAX_DEPTH = 256;
 
-  private final XmlSchemaStateMachineNode rootNode;
   private final XmlSchemaNamespaceContext nsContext;
 
   private XmlSchemaPathNode rootPathNode;
 
   private XmlSchemaPathNode currentPath;
-
-  private List<PathSegment> unusedPathSegmentPool;
 
   private ArrayList<TraversedElement> traversedElements;
   private ArrayList<DecisionPoint> decisionPoints;
@@ -311,7 +307,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         XmlSchemaPathNode decisionPoint,
         List<PathSegment> choices,
         int traversedElementIndex,
-        QName elemQName,
         ArrayList<QName> elementStack,
         ArrayList<QName> anyStack) {
 
@@ -432,8 +427,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     pathMgr = new XmlSchemaPathManager();
     nsContext = new XmlSchemaNamespaceContext();
 
-    rootNode = root;
-
     rootPathNode =
         pathMgr.createStartPathNode(XmlSchemaPathNode.Direction.CHILD, root);
     rootPathNode.setIteration(1);
@@ -442,8 +435,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     elementStack = new ArrayList<QName>();
     currentPath = null;
     decisionPoints = null; // Hopefully there won't be any!
-
-    unusedPathSegmentPool = null;
   }
 
   @Override
@@ -523,7 +514,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                   currentPath,
                   possiblePaths,
                   traversedElements.size(),
-                  elemQName,
                   elementStack,
                   anyStack);
 
@@ -613,7 +603,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                         currentPath,
                         possiblePaths,
                         index,
-                        te.elemName,
                         elementStack,
                         anyStack);
                 decisionPoints.add(decisionPoint);
@@ -718,7 +707,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                     currentPath,
                     possiblePaths,
                     traversedElements.size(),
-                    elemQName,
                     elementStack,
                     anyStack);
             decisionPoints.add(decisionPoint);
@@ -996,10 +984,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
     pathMgr.clear();
 
-    if (unusedPathSegmentPool != null) {
-      unusedPathSegmentPool.clear();
-    }
-
     if (decisionPoints != null) {
       decisionPoints.clear();
     }
@@ -1009,7 +993,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     return rootPathNode;
   }
 
-  private Fulfillment isPositionFulfilled(
+  private static Fulfillment isPositionFulfilled(
       XmlSchemaPathNode currentPath,
       List<Integer> possiblePaths) {
 
@@ -1466,7 +1450,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
             && startNode.getIteration() <= state.getMaxOccurs()) {
 
           choices = new ArrayList<PathSegment>(1);
-          choices.add( createPathSegment(startNode) );
+          choices.add( new PathSegment(startNode) );
         }
       }
       break;
@@ -1629,7 +1613,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
         if (any.getNamespace() == null) {
           choices = new ArrayList<PathSegment>(1);
-          choices.add( createPathSegment(startNode) );
+          choices.add( new PathSegment(startNode) );
           break;
         }
 
@@ -1691,7 +1675,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
         if (matches) {
           choices = new ArrayList<PathSegment>(1);
-          choices.add( createPathSegment(startNode) );
+          choices.add( new PathSegment(startNode) );
         }
       }
       break;
@@ -1707,19 +1691,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       pathMgr.recyclePathNode(startNode);
     }
     return choices;
-  }
-
-  private PathSegment createPathSegment(XmlSchemaPathNode endPathNode) {
-    PathSegment segment = null;
-    if ((unusedPathSegmentPool != null) && !unusedPathSegmentPool.isEmpty()) {
-      segment =
-          unusedPathSegmentPool.remove(unusedPathSegmentPool.size() - 1);
-      segment.set(endPathNode);
-
-    } else {
-      segment = new PathSegment(endPathNode);
-    }
-    return segment;
   }
 
   /* Walks up the tree from the current element to the prior one.
@@ -1789,7 +1760,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
   private void walkUpToElement(QName element) {
     XmlSchemaDocumentNode iter = currentPath.getDocumentNode();
-    XmlSchemaPathNode path = currentPath;
 
     if (iter
           .getStateMachineNode()
@@ -1860,13 +1830,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     pathMgr.followPath(startNode);
 
     currentPath = path.getEnd();
-  }
-
-  private void recyclePathSegment(PathSegment segment) {
-    if (unusedPathSegmentPool == null) {
-      unusedPathSegmentPool = new ArrayList<PathSegment>();
-    }
-    unusedPathSegmentPool.add(segment);
   }
 
   /* Perhaps this would be better implemented as a bunch of starting and

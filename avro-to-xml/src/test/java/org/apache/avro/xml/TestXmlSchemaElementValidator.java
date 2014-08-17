@@ -20,7 +20,6 @@ import org.apache.avro.xml.XmlSchemaNamespaceContext;
 import org.apache.avro.xml.XmlSchemaRestriction;
 import org.apache.avro.xml.XmlSchemaStateMachineNode;
 import org.apache.avro.xml.XmlSchemaTypeInfo;
-import org.apache.avro.xml.XmlSchemaStateMachineNode.Attribute;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;

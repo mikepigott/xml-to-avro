@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Set;
 
 import javax.xml.namespace.QName;
 
@@ -38,13 +37,11 @@ import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
-import org.apache.ws.commons.schema.XmlSchemaContentType;
 import org.apache.ws.commons.schema.XmlSchemaDocumentation;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
 import org.apache.ws.commons.schema.XmlSchemaUse;
 import org.apache.ws.commons.schema.constants.Constants;
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
 import org.codehaus.jackson.node.ObjectNode;
@@ -789,7 +786,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     }
   }
 
-  private boolean isMap(final List<AttributeEntry> attributes) {
+  private static boolean isMap(final List<AttributeEntry> attributes) {
 
     int nonOptionalIdFieldCount = 0;
 

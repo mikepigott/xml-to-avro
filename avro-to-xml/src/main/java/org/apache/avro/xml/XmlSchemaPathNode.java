@@ -16,9 +16,6 @@
 
 package org.apache.avro.xml;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * This represents a node in the path when walking an XML or Avro document.
  * As {@link XmlSchemaPathFinder} walks through an XML document, it builds

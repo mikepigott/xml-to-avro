@@ -1,35 +1,22 @@
 package mpigott.avro.xml;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
 
 import org.apache.avro.Schema;
 import org.apache.avro.io.DecoderFactory;
@@ -39,12 +26,8 @@ import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.xml.XmlDatumConfig;
 import org.apache.avro.xml.XmlDatumReader;
 import org.apache.avro.xml.XmlDatumWriter;
-import org.apache.ws.commons.schema.XmlSchema;
-import org.apache.ws.commons.schema.XmlSchemaCollection;
-import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.custommonkey.xmlunit.DetailedDiff;
 import org.custommonkey.xmlunit.XMLUnit;
-import org.junit.Assert;
 import org.w3c.dom.Document;
 
 public class Main {
@@ -63,7 +46,7 @@ public class Main {
      return classpath.toString();
   }
 
-  public static void numericMain(String[] args) throws Exception {
+  public static void numericMain() throws Exception {
     BigInteger value = new BigInteger("123456789123456789123456789");
     BigDecimal decimal = new BigDecimal(value, Integer.MIN_VALUE);
     System.out.println(decimal);
@@ -121,7 +104,9 @@ public class Main {
     DOMSource source = new DOMSource(doc);
  
     // Output to console for testing
-    StreamResult result = new StreamResult(new FileOutputStream("new_xbrl.xml"));
+    FileOutputStream xbrlOutStream = new FileOutputStream("new_xbrl.xml");
+    StreamResult result = new StreamResult(xbrlOutStream);
+    xbrlOutStream.close();
 
     transformer.transform(source, result);
 

@@ -24,7 +24,6 @@ import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
@@ -34,8 +33,6 @@ import org.xml.sax.ContentHandler;
 import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-
-import static org.junit.Assert.*;
 
 import org.apache.avro.xml.SaxWalkerOverDom;
 import org.junit.Test;
@@ -501,7 +498,7 @@ public class TestSaxWalkerOverDom {
     runTest(xmlFile);
   }
 
-  private void runTest(File xmlFile) throws Exception {
+  private static void runTest(File xmlFile) throws Exception {
     StackBuilder stackBuilder = new StackBuilder();
 
     // Parse the document using a real SAX parser

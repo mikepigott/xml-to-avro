@@ -19,16 +19,8 @@ package org.apache.avro.xml;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.xml.namespace.QName;
-
-import org.apache.avro.Schema;
-import org.apache.ws.commons.schema.XmlSchemaContentType;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.JsonNodeFactory;
-import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * Represents an element's or attribute's type, meaning either a
