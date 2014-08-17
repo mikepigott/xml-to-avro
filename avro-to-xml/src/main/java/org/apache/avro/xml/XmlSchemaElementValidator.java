@@ -567,10 +567,9 @@ public final class XmlSchemaElementValidator {
 
     case DECIMAL:
       try {
-        rangeChecks(
-            name,
-            DatatypeConverter.parseDecimal(value),
-            facets);
+        final BigDecimal decimal = DatatypeConverter.parseDecimal(value);
+        rangeChecks(name, decimal, facets);
+        digitsFacetChecks(name, decimal, facets);
       } catch (NumberFormatException iae) {
         throw new ValidationException(
             name
@@ -579,7 +578,6 @@ public final class XmlSchemaElementValidator {
             + "\" is not a valid decimal.",
             iae);
       }
-      digitsFacetChecks(name, value, facets);
       break;
 
     case DOUBLE:
@@ -881,7 +879,7 @@ public final class XmlSchemaElementValidator {
 
   private static void digitsFacetChecks(
       String name,
-      String value,
+      BigDecimal value,
       Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets)
   throws ValidationException {
 
@@ -889,36 +887,22 @@ public final class XmlSchemaElementValidator {
       return;
     }
 
-    String[] numSplit = value.split("\\.");
-    if ((numSplit.length == 0) || (numSplit.length > 2)) {
-      throw new ValidationException(
-          name
-          + " value \""
-          + value
-          + "\" is expected to have one or two sections around the decimal"
-          + " point, not "
-          + numSplit.length
-          + ".");
-    }
-
-    if (numSplit.length > 1) {
-      digitsFacetCheck(
-          name,
-          numSplit,
-          facets,
-          XmlSchemaRestriction.Type.DIGITS_FRACTION);
-    }
+    digitsFacetCheck(
+        name,
+        value,
+        facets,
+        XmlSchemaRestriction.Type.DIGITS_FRACTION);
 
     digitsFacetCheck(
         name,
-        numSplit,
+        value,
         facets,
         XmlSchemaRestriction.Type.DIGITS_TOTAL);
   }
 
   private static void digitsFacetCheck(
       String name,
-      String[] value,
+      BigDecimal value,
       Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets,
       XmlSchemaRestriction.Type facetType)
   throws ValidationException {
@@ -932,15 +916,11 @@ public final class XmlSchemaElementValidator {
         numDigits = Integer.parseInt( digitsFacet.getValue().toString() );
         switch (facetType) {
         case DIGITS_FRACTION:
-          satisfied = (value[1].length() <= numDigits);
+          satisfied = (value.scale() <= numDigits);
           break;
         case DIGITS_TOTAL:
         {
-          int totalDigits = value[0].length();
-          if (value.length == 2) {
-            totalDigits += value[1].length();
-          }
-          satisfied = (totalDigits <= numDigits);
+          satisfied = (value.precision() <= numDigits);
           break;
         }
         default:
@@ -953,11 +933,8 @@ public final class XmlSchemaElementValidator {
 
     if (!satisfied) {
       StringBuilder errMsg = new StringBuilder(name);
-      errMsg.append(" value \"").append(value[0]);
-      if (value.length > 1) {
-        errMsg.append('.').append(value[1]);
-      }
-      errMsg.append(" does not meet the ").append(facetType);
+      errMsg.append(" value \"").append(value);
+      errMsg.append("\" does not meet the ").append(facetType);
       errMsg.append(" check of ").append(numDigits).append(" digits.");
 
       throw new ValidationException( errMsg.toString() );
