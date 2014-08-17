@@ -9,6 +9,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.MathContext;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -54,6 +57,13 @@ public class Main {
      }    
 
      return classpath.toString();
+  }
+
+  public static void numericMain(String[] args) throws Exception {
+    BigInteger value = new BigInteger("123456789123456789123456789");
+    BigDecimal decimal = new BigDecimal(value, Integer.MIN_VALUE);
+    System.out.println(decimal);
+    System.out.println( MathContext.DECIMAL128.getPrecision() );
   }
 
   public static void main(String[] args) throws Exception {
