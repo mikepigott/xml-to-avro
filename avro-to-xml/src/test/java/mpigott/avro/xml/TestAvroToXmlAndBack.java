@@ -97,7 +97,7 @@ public class TestAvroToXmlAndBack {
     runTest(config, xmlFile);
   }
 
-  @Test
+  @Test @Ignore
   public void testGrandchildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
@@ -109,7 +109,7 @@ public class TestAvroToXmlAndBack {
     runTest(config, xmlFile);
   }
 
-  @Test @Ignore
+  @Test
   public void testComplex() throws Exception {
     final QName root = new QName("urn:avro:complex_schema", "root");
     final File complexSchemaFile = new File("src\\test\\resources\\complex_schema.xsd");
@@ -120,10 +120,17 @@ public class TestAvroToXmlAndBack {
         new XmlDatumConfig(complexSchemaFile, "urn:avro:complex_schema", root);
     config.addSchemaFile(testSchemaFile);
 
-    runTest(config, xmlFile);
+    final Document xmlDoc = docBuilder.parse(xmlFile);
+
+    final Document outDoc = convertToAvroAndBack(config, xmlDoc);
+
+    final File expectedXml = new File("src\\test\\resources\\complex_test1_out.xml");
+    final Document expectedDoc = docBuilder.parse(expectedXml);
+
+    DocumentComparer.assertEquivalent(expectedDoc, outDoc);
   }
 
-  private void runTest(XmlDatumConfig config, File xmlFile) throws Exception {
+  private Document convertToAvroAndBack(XmlDatumConfig config, Document xmlDoc) throws Exception {
     final XmlDatumWriter writer = new XmlDatumWriter(config);
     final Schema xmlToAvroSchema = writer.getSchema();
 
@@ -132,8 +139,6 @@ public class TestAvroToXmlAndBack {
     tempSchemaWriter.write( xmlToAvroSchema.toString(true) );
     tempSchemaWriter.close();
     */
-
-    final Document xmlDoc = docBuilder.parse(xmlFile);
 
     final ByteArrayOutputStream outStream = new ByteArrayOutputStream();
 
@@ -144,13 +149,15 @@ public class TestAvroToXmlAndBack {
 
     encoder.flush();
 
+    /*
     BufferedReader tempReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(outStream.toByteArray())));
-    PrintWriter tempWriter = new PrintWriter(new FileWriter("src\\test\\resources\\test3_grandchildren.avro"));
+    PrintWriter tempWriter = new PrintWriter(new FileWriter("test.avro"));
     String line = null;
     while ((line = tempReader.readLine()) != null) {
       tempWriter.println(line);
     }
     tempWriter.close();
+    */
 
     final ByteArrayInputStream inStream =
         new ByteArrayInputStream( outStream.toByteArray() );
@@ -161,13 +168,20 @@ public class TestAvroToXmlAndBack {
     final XmlDatumReader reader = new XmlDatumReader();
     reader.setSchema(xmlToAvroSchema);
 
-    final Document outDoc = reader.read(null, decoder);
+    return reader.read(null, decoder);
+  }
+
+  private void runTest(XmlDatumConfig config, File xmlFile) throws Exception {
+
+    final Document xmlDoc = docBuilder.parse(xmlFile);
+
+    final Document outDoc = convertToAvroAndBack(config, xmlDoc);
 
     /*
     TransformerFactory transformerFactory = TransformerFactory.newInstance();
     Transformer transformer = transformerFactory.newTransformer();
     DOMSource source = new DOMSource(outDoc);
-    StreamResult result = new StreamResult(new File("test_out_doc.xml"));
+    StreamResult result = new StreamResult(new File("src\\test\\resources\\complex_test1_out.xml"));
  
     transformer.transform(source, result);
     */

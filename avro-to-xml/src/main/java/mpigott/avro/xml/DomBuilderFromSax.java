@@ -139,16 +139,14 @@ final class DomBuilderFromSax extends DefaultHandler {
         attrUri = null;
       }
 
-      String attrName = null;
-      if ( !elementStack.isEmpty() ) {
-        attrName = atts.getQName(attrIndex);
-      } else {
-        attrName = atts.getLocalName(attrIndex);
-      }
-
       final String attrValue = atts.getValue(attrIndex);
 
-      element.setAttributeNS(attrUri, attrName, attrValue);
+      if ( urisMatch(uri, atts.getURI(attrIndex)) ) {
+        element.setAttribute(atts.getLocalName(attrIndex), attrValue);
+      } else {
+        element.setAttributeNS(attrUri, atts.getQName(attrIndex), attrValue);
+      }
+
     }
 
     // Update the Parent Element
@@ -294,6 +292,18 @@ final class DomBuilderFromSax extends DefaultHandler {
     schemaList.delete(schemaList.length() - 1, schemaList.length());
 
     rootElement.setAttributeNS(XSI_NS, XSI_SCHEMALOC, schemaList.toString());
+  }
+
+  private static boolean urisMatch(String elemUri, String attrUri) {
+    if ((elemUri == null) && (attrUri == null)) {
+      return true;
+    } else if ((elemUri == null) && (attrUri != null)) {
+      return false;
+    } else if ((elemUri != null) && (attrUri == null)) {
+      return false;
+    } else {
+      return elemUri.equals(attrUri);
+    }
   }
 
   private static final String XSI_NS =

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns0:realRoot xmlns:ns0="urn:avro:complex_schema" day="---12" month="--08" xmlns:ns1="http://www.w3.org/2001/XMLSchema-instance" ns1:schemaLocation="urn:avro:complex_schema complex_schema.xsd http://avro.apache.org/AvroTest test_schema.xsd" year="2014">
+  <ns0:backtrack>
+    <ns0:qName xmlns:ns1="http://www.xbrl.org/2003/iso4217">ns1:USD</ns0:qName>
+    <ns0:avroEnum>avro</ns0:avroEnum>
+    <ns0:xmlEnum>thrift</ns0:xmlEnum>
+    <ns0:xmlEnum>rest.li</ns0:xmlEnum>
+    <ns0:unsignedLongList>1 2 345 67890 1234567890 12345678901234567168</ns0:unsignedLongList>
+    <ns0:listOfUnion>true false hello goodbye 1234567890 -2147483648 2147483649</ns0:listOfUnion>
+  </ns0:backtrack>
+  <ns0:allTheThings id="idvalue0" listOfNumbers="127 -32768 18446744073709551615 -18446744073709551616" truth="true">
+    <ns0:secondMap id="idvalue2" value="Second Map Value"/>
+    <ns0:firstMap id="idvalue1">
+      <ns0:value>1234567</ns0:value>
+      <ns0:value/>
+    </ns0:firstMap>
+  </ns0:allTheThings>
+  <ns0:prohibit>
+    <ns0:fixed>100</ns0:fixed>
+  </ns0:prohibit>
+  <ns0:anyAndFriends>
+    This is a mixed element
+  	
+  	interspersed with wildcard elements.
+  	
+  	Since the wildcard elements are filtered
+  	
+  	away, the final Avro document should
+  	
+  	only contain this text.
+  	
+  	
+  	(If I did it right.)
+  </ns0:anyAndFriends>
+  <ns0:simpleExtension default="named" fixed="65534">true</ns0:simpleExtension>
+  <ns0:simpleRestriction default="hello" fixed="65534">false</ns0:simpleRestriction>
+  <ns0:complexExtension defaulted="hello">
+    <ns0:fixed>100</ns0:fixed>
+    <ns0:unsignedLongList>1 2 4 5 6</ns0:unsignedLongList>
+  </ns0:complexExtension>
+  <ns0:mixedType>
+  	Hello, my name is
+  	<ns0:listOfUnion>Mike and I</ns0:listOfUnion>
+  	welcome you to this mixed element with
+  	<ns0:unsignedLongList>2</ns0:unsignedLongList>
+  	sub-elements.
+  </ns0:mixedType>
+</ns0:realRoot>
