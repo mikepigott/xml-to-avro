@@ -53,7 +53,9 @@ public class TestXmlSchemaPathCreator {
 
   @BeforeClass
   public static void createStateMachine() throws FileNotFoundException {
-    File file = new File("src\\test\\resources\\test_schema.xsd");
+    File file =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
     ArrayList<File> schemaFiles = new ArrayList<File>(1);
     schemaFiles.add(file);
 
@@ -111,7 +113,9 @@ public class TestXmlSchemaPathCreator {
 
   @Test
   public void testRoot() throws Exception {
-    final File xsdFile = new File("src\\test\\resources\\test1_root.xml");
+    final File xsdFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test1_root.xml");
+
     saxParser.parse(xsdFile, pathCreator);
 
     XmlSchemaPathNode rootPath =
@@ -155,7 +159,12 @@ public class TestXmlSchemaPathCreator {
 
   @Test
   public void testChildren() throws Exception {
-    final File xsdFile = new File("src\\test\\resources\\test2_children.xml");
+    final File xsdFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test2_children.xml");
 
     try {
       saxParser.parse(xsdFile, pathCreator);
@@ -234,7 +243,12 @@ public class TestXmlSchemaPathCreator {
 
   @Test
   public void testGrandchildren() throws Exception {
-    final File xsdFile = new File("src\\test\\resources\\test3_grandchildren.xml");
+    final File xsdFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test3_grandchildren.xml");
 
     try {
       saxParser.parse(xsdFile, pathCreator);

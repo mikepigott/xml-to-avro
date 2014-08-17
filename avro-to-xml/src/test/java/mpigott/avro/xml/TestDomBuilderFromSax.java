@@ -61,17 +61,31 @@ public class TestDomBuilderFromSax {
 
   @Test
   public void testRoot() throws Exception {
-    runTest(TEST_SCHEMA, new File("src\\test\\resources\\test1_root.xml"));
+    runTest(
+        TEST_SCHEMA,
+        UtilsForTests.buildFile("src", "test", "resources", "test1_root.xml"));
   }
 
   @Test
   public void testChildren() throws Exception {
-    runTest(TEST_SCHEMA, new File("src\\test\\resources\\test2_children.xml"));
+    runTest(
+        TEST_SCHEMA,
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test2_children.xml"));
   }
 
   @Test
   public void testGrandchildren() throws Exception {
-    runTest(TEST_SCHEMA, new File("src\\test\\resources\\test3_grandchildren.xml"));
+    runTest(
+        TEST_SCHEMA,
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test3_grandchildren.xml"));
   }
 
   private void runTest(File schemaFile, File xmlFile) throws Exception {
@@ -89,13 +103,14 @@ public class TestDomBuilderFromSax {
 
     final Document actualDoc = builder.getDocument();
 
-    DocumentComparer.assertEquivalent(expectedDoc, actualDoc);
+    UtilsForTests.assertEquivalent(expectedDoc, actualDoc);
   }
 
   private SAXParser saxParser;
   private DocumentBuilder domParser;
 
-  private static final File TEST_SCHEMA = new File("src\\test\\resources\\test_schema.xsd");
+  private static final File TEST_SCHEMA =
+      UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
 
   private static SAXParserFactory spf;
   private static DocumentBuilderFactory dbf;

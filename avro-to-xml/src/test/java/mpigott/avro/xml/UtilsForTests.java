@@ -18,6 +18,7 @@ package mpigott.avro.xml;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,7 +34,7 @@ import org.w3c.dom.Document;
  *
  * @author  Mike Pigott
  */
-final class DocumentComparer {
+final class UtilsForTests {
 
   static void assertEquivalent(Document expected, Document actual) {
     XMLUnit.setIgnoreWhitespace(true);
@@ -192,5 +193,19 @@ final class DocumentComparer {
     default:
       // All primitive types are equal if their types are.
     }
+  }
+
+  static File buildFile(String... parts) {
+    File file = null;
+
+    for (String part : parts) {
+      if (file == null) {
+        file = new File(part);
+      } else {
+        file = new File(file, part);
+      }
+    }
+
+    return file;
   }
 }

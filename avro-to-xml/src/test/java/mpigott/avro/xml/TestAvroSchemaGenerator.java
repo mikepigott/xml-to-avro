@@ -82,7 +82,7 @@ public class TestAvroSchemaGenerator {
     visitor.clear();
     walker.clear();
 
-    DocumentComparer.assertEquivalent(getExpectedTestSchema(), schema);
+    UtilsForTests.assertEquivalent(getExpectedTestSchema(), schema);
   }
 
   @Test
@@ -122,7 +122,7 @@ public class TestAvroSchemaGenerator {
     visitor.clear();
     walker.clear();
 
-    DocumentComparer.assertEquivalent(getExpectedComplexSchema(), schema);
+    UtilsForTests.assertEquivalent(getExpectedComplexSchema(), schema);
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {

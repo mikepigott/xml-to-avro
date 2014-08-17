@@ -61,24 +61,50 @@ public class TestXmlDatumWriter {
   @Test
   public void testRoot() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
-    final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
-    final File xmlFile = new File("src\\test\\resources\\test1_root.xml");
-    final File avroFile = new File("src\\test\\resources\\test1_root.avro");
+
+    final File schemaFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
+    final File xmlFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test1_root.xml");
+
+    final File avroFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test1_root.avro");
 
     final XmlDatumConfig config =
-        new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
+        new XmlDatumConfig(
+            schemaFile,
+            "http://avro.apache.org/AvroTest",
+            root);
 
     runTest(config, xmlFile, avroFile);
   }
 
   public void testChildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
-    final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
-    final File xmlFile = new File("src\\test\\resources\\test2_children.xml");
-    final File avroFile = new File("src\\test\\resources\\test2_children.avro");
+
+    final File schemaFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
+    final File xmlFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test2_children.xml");
+
+    final File avroFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test2_children.avro");
 
     final XmlDatumConfig config =
-        new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
+        new XmlDatumConfig(
+            schemaFile,
+            "http://avro.apache.org/AvroTest",
+            root);
 
     runTest(config, xmlFile, avroFile);
   }
@@ -86,12 +112,29 @@ public class TestXmlDatumWriter {
   @Test
   public void testGrandchildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
-    final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
-    final File xmlFile = new File("src\\test\\resources\\test3_grandchildren.xml");
-    final File avroFile = new File("src\\test\\resources\\test3_grandchildren.avro");
+
+    final File schemaFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
+    final File xmlFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test3_grandchildren.xml");
+
+    final File avroFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test3_grandchildren.avro");
 
     final XmlDatumConfig config =
-        new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
+        new XmlDatumConfig(
+            schemaFile,
+            "http://avro.apache.org/AvroTest",
+            root);
 
     runTest(config, xmlFile, avroFile);
   }
@@ -99,10 +142,30 @@ public class TestXmlDatumWriter {
   @Test
   public void testComplex() throws Exception {
     final QName root = new QName("urn:avro:complex_schema", "root");
-    final File complexSchemaFile = new File("src\\test\\resources\\complex_schema.xsd");
-    final File testSchemaFile = new File("src\\test\\resources\\test_schema.xsd");
-    final File xmlFile = new File("src\\test\\resources\\complex_test1.xml");
-    final File avroFile = new File("src\\test\\resources\\complex_test1.avro");
+
+    final File complexSchemaFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "complex_schema.xsd");
+
+    final File testSchemaFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
+    final File xmlFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "complex_test1.xml");
+
+    final File avroFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "complex_test1.avro");
 
     final XmlDatumConfig config =
         new XmlDatumConfig(complexSchemaFile, "urn:avro:complex_schema", root);

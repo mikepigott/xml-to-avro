@@ -54,11 +54,6 @@ import org.apache.ws.commons.schema.XmlSchemaUse;
 import org.apache.ws.commons.schema.XmlSchemaWhiteSpaceFacet;
 import org.junit.Test;
 
-/**
- * 
- *
- * @author  Mike Pigott
- */
 public class TestSchemaWalker {
 
   private static enum Type {
@@ -97,24 +92,48 @@ public class TestSchemaWalker {
       this.typeName = typeName;
     }
 
-    StackEntry(Type type, String name, String typeName, XmlSchemaBaseSimpleType baseType) {
+    StackEntry(
+        Type type,
+        String name,
+        String typeName,
+        XmlSchemaBaseSimpleType baseType) {
+
       this(type, name, typeName);
       this.baseType = baseType;
     }
 
-    StackEntry(Type type, String name, String typeName, long minOccurs, long maxOccurs) {
+    StackEntry(
+        Type type,
+        String name,
+        String typeName,
+        long minOccurs,
+        long maxOccurs) {
+
       this(type, name, typeName);
       this.minOccurs = minOccurs;
       this.maxOccurs = maxOccurs;
     }
 
-    StackEntry(Type type, String name, String typeName, XmlSchemaBaseSimpleType baseType, long minOccurs, long maxOccurs) {
+    StackEntry(
+        Type type,
+        String name,
+        String typeName,
+        XmlSchemaBaseSimpleType baseType,
+        long minOccurs,
+        long maxOccurs) {
+
       this(type, name, typeName, baseType);
       this.minOccurs = minOccurs;
       this.maxOccurs = maxOccurs;
     }
 
-    StackEntry(Type type, String name, String typeName, XmlSchemaBaseSimpleType baseType, Set<XmlSchemaRestriction> facets) {
+    StackEntry(
+        Type type,
+        String name,
+        String typeName,
+        XmlSchemaBaseSimpleType baseType,
+        Set<XmlSchemaRestriction> facets) {
+
       this(type, name, typeName, baseType);
       this.facets = facets;
     }
@@ -143,7 +162,12 @@ public class TestSchemaWalker {
   }
 
   private static class Attribute {
-    public Attribute(String name, String typeName, XmlSchemaTypeInfo.Type type, XmlSchemaBaseSimpleType baseType) {
+    public Attribute(
+        String name,
+        String typeName,
+        XmlSchemaTypeInfo.Type type,
+        XmlSchemaBaseSimpleType baseType) {
+
       this.name = name;
       this.typeName = typeName;
       this.isOptional = false;
@@ -151,17 +175,36 @@ public class TestSchemaWalker {
       this.baseType = baseType;
     }
 
-    public Attribute(String name, String typeName, XmlSchemaTypeInfo.Type type, XmlSchemaBaseSimpleType baseType, boolean isOptional) {
+    public Attribute(
+        String name,
+        String typeName,
+        XmlSchemaTypeInfo.Type type,
+        XmlSchemaBaseSimpleType baseType,
+        boolean isOptional) {
+
       this(name, typeName, type, baseType);
       this.isOptional = isOptional;
     }
 
-    public Attribute(String name, String typeName, XmlSchemaTypeInfo.Type type, XmlSchemaBaseSimpleType baseType, Set<XmlSchemaRestriction> facets) {
+    public Attribute(
+        String name,
+        String typeName,
+        XmlSchemaTypeInfo.Type type,
+        XmlSchemaBaseSimpleType baseType,
+        Set<XmlSchemaRestriction> facets) {
+
       this(name, typeName, type, baseType);
       this.facets = facets;
     }
 
-    public Attribute(String name, String typeName, XmlSchemaTypeInfo.Type type, XmlSchemaBaseSimpleType baseType, boolean isOptional, Set<XmlSchemaRestriction> facets) {
+    public Attribute(
+        String name,
+        String typeName,
+        XmlSchemaTypeInfo.Type type,
+        XmlSchemaBaseSimpleType baseType,
+        boolean isOptional,
+        Set<XmlSchemaRestriction> facets) {
+
       this(name, typeName, type, baseType, isOptional);
       this.facets = facets;
     }
@@ -176,7 +219,10 @@ public class TestSchemaWalker {
 
   private static class Visitor implements XmlSchemaVisitor {
 
-    Visitor(List<StackEntry> stack, HashMap<String, List<Attribute>> attributes) {
+    Visitor(
+        List<StackEntry> stack,
+        HashMap<String, List<Attribute>> attributes) {
+
       this.stack = stack;
       this.attributes = attributes;
     }
@@ -187,59 +233,143 @@ public class TestSchemaWalker {
 
       StackEntry next = pop();
       if (next.type != Type.ELEMENT) {
-        throw new IllegalStateException("Expected a " + next.type + " named \"" + next.name + "\" but received an element named \"" + element.getName() + "\".");
+        throw new IllegalStateException(
+            "Expected a "
+            + next.type
+            + " named \""
+            + next.name
+            + "\" but received an element named \""
+            + element.getName() + "\".");
 
       } else if (!next.name.equals( element.getName() )) {
-        throw new IllegalStateException("Expected an element named \"" + next.name + "\" but received an element named " + element.getName() + "\"");
+        throw new IllegalStateException(
+            "Expected an element named \""
+            + next.name
+            + "\" but received an element named "
+            + element.getName()
+            + "\"");
 
-      } else if ((next.typeName == null) && !element.getSchemaType().isAnonymous()) {
-        throw new IllegalStateException("Expected the element named \"" + next.name + "\" to carry an anonymous type, but the type was " + element.getSchemaType().getQName());
+      } else if ((next.typeName == null)
+                 && !element.getSchemaType().isAnonymous()) {
 
-      } else if ((next.typeName != null) && element.getSchemaType().isAnonymous()) {
-        throw new IllegalStateException("Expected the element named \"" + next.name + "\" to carry a type named \"" + next.typeName + "\"; but the type was anonymous instead.");
+        throw new IllegalStateException(
+            "Expected the element named \""
+            + next.name
+            + "\" to carry an anonymous type, but the type was "
+            + element.getSchemaType().getQName());
 
+      } else if ((next.typeName != null)
+                 && element.getSchemaType().isAnonymous()) {
+        throw new IllegalStateException(
+            "Expected the element named \""
+            + next.name
+            + "\" to carry a type named \""
+            + next.typeName
+            + "\"; but the type was anonymous instead.");
       }
 
       checkMinAndMaxOccurs(next, element);
 
       if (typeInfo != null) {
-        final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets = typeInfo.getFacets();
+        final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
+          facets = typeInfo.getFacets();
+
         if ((facets == null) && (next.facets != null)) {
-          throw new IllegalStateException("Expected " + next.facets.size() + " facets for element \"" + next.name + "\" but received null facets.");
-        } else if ((facets != null) && facets.isEmpty() && (next.facets != null) && !next.facets.isEmpty()) {
-          throw new IllegalStateException("Expected " + next.facets.size() + " facets for element \"" + next.name + "\" but found none.");
-        } else if ((facets != null) && !facets.isEmpty() && (next.facets != null) && next.facets.isEmpty()) {
-          throw new IllegalStateException("Element " + next.name + " has facets, but none were expected.");
+          throw new IllegalStateException(
+              "Expected "
+              + next.facets.size()
+              + " facets for element \""
+              + next.name
+              + "\" but received null facets.");
+
+        } else if ((facets != null)
+                   && facets.isEmpty()
+                   && (next.facets != null)
+                   && !next.facets.isEmpty()) {
+          throw new IllegalStateException(
+              "Expected "
+              + next.facets.size()
+              + " facets for element \""
+              + next.name
+              + "\" but found none.");
+
+        } else if ((facets != null)
+                   && !facets.isEmpty()
+                   && (next.facets != null)
+                   && next.facets.isEmpty()) {
+
+          throw new IllegalStateException(
+              "Element " + next.name + " has facets, but none were expected.");
         }
 
         if (facets != null) {
-          for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facetsForType : facets.entrySet()) {
+          for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
+               facetsForType : facets.entrySet()) {
+
             for (XmlSchemaRestriction facet : facetsForType.getValue()) {
               if (!next.facets.remove(facet)) {
-                throw new IllegalStateException("Element \"" + next.name + "\" has unexpected facet \"" + facet + "\".");
+                throw new IllegalStateException(
+                    "Element \""
+                    + next.name
+                    + "\" has unexpected facet \""
+                    + facet
+                    + "\".");
               }
             }
           }
         }
 
-        if ((next.baseType == null) && (typeInfo.getBaseType() != null) && !typeInfo.getBaseType().equals(XmlSchemaBaseSimpleType.ANYTYPE)) {
-          throw new IllegalStateException("Element \"" + next.name + "\" was not expected to have an Avro schema, but has a schema of " + typeInfo.getBaseType());
-        } else if ((next.baseType != null) && (typeInfo.getBaseType() == null)) {
-          throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.baseType + " but instead has no schema.");
-        } else if ((next.baseType != null) && !next.baseType.equals(typeInfo.getBaseType())) {
-          throw new IllegalStateException("Element \"" + next.name + "\" was expected to have a schema of " + next.baseType + " but instead has a schema of " + typeInfo.getBaseType());
+        if ((next.baseType == null)
+            && (typeInfo.getBaseType() != null)
+            && !typeInfo
+                  .getBaseType()
+                  .equals(XmlSchemaBaseSimpleType.ANYTYPE)) {
+
+          throw new IllegalStateException(
+              "Element \""
+              + next.name
+              + "\" was not expected to have an Avro schema,"
+              + " but has a schema of "
+              + typeInfo.getBaseType());
+
+        } else if ((next.baseType != null)
+                   && (typeInfo.getBaseType() == null)) {
+
+          throw new IllegalStateException(
+              "Element \""
+              + next.name
+              + "\" was expected to have a schema of "
+              + next.baseType
+              + " but instead has no schema.");
+
+        } else if ((next.baseType != null)
+                   && !next.baseType.equals(typeInfo.getBaseType())) {
+          throw new IllegalStateException(
+              "Element \""
+              + next.name
+              + "\" was expected to have a schema of "
+              + next.baseType
+              + " but instead has a schema of "
+              + typeInfo.getBaseType());
         }
 
       } else if (next.baseType != null) {
-        throw new IllegalStateException("Expected a schema of " + next.baseType + " but received none.");
+        throw new IllegalStateException(
+            "Expected a schema of "
+            + next.baseType
+            + " but received none.");
       }
 
       if ((next.facets != null) && !next.facets.isEmpty()) {
         StringBuilder errMsg = new StringBuilder("Element \"");
-        errMsg.append(next.name).append("\" was expected to have the following facets, but did not:");
+        errMsg.append(next.name);
+        errMsg.append("\" was expected to have the following facets, ");
+        errMsg.append("but did not:");
+
         for (XmlSchemaRestriction facet : next.facets) {
           errMsg.append(" \"").append(facet).append('\"');
         }
+
         throw new IllegalStateException( errMsg.toString() );
       }
     }
@@ -250,12 +380,13 @@ public class TestSchemaWalker {
         XmlSchemaTypeInfo typeInfo,
         boolean previouslyVisited) {
 
-      if ( !previouslyVisited && attributes.containsKey( element.getName() ) ) {
+      if (!previouslyVisited && attributes.containsKey( element.getName() )) {
         List<Attribute> remainingAttrs = attributes.get( element.getName() );
         if ( !remainingAttrs.isEmpty() ) {
           StringBuilder errMsg = new StringBuilder("Element \"");
           errMsg.append( element.getName() );
-          errMsg.append("\" did not have the expected attributes of the following names:");
+          errMsg.append("\" did not have the expected attributes ");
+          errMsg.append("of the following names:");
           for (Attribute attr : remainingAttrs) {
             errMsg.append(" \"").append( attr.name ).append('\"');
           }
@@ -269,7 +400,12 @@ public class TestSchemaWalker {
         XmlSchemaAttribute attribute, XmlSchemaTypeInfo attributeType) {
 
       if ( !attributes.containsKey( element.getName() ) ) {
-        throw new IllegalStateException("No attributes were expected for \"" + element.getName() + "\", but \"" + attribute.getQName() + "\" was found.");
+        throw new IllegalStateException(
+            "No attributes were expected for \""
+            + element.getName()
+            + "\", but \""
+            + attribute.getQName()
+            + "\" was found.");
       }
 
       List<Attribute> attrs = attributes.get( element.getName() );
@@ -279,29 +415,106 @@ public class TestSchemaWalker {
       for (; index < attrs.size(); ++index) {
         Attribute attr = attrs.get(index);
         if ( attr.name.equals( attribute.getName() ) ) {
-          if ((attr.typeName == null) && !attribute.getSchemaType().isAnonymous()) {
-            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose type was expected to be anonymous, but actually is named \"" + attribute.getSchemaType().getName() + "\"");
+          if ((attr.typeName == null)
+              && !attribute.getSchemaType().isAnonymous()) {
 
-          } else if ((attr.typeName != null) && attribute.getSchemaType().isAnonymous()) {
-            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose type was expected to be \"" + attr.typeName + "\"; but is anonymous instead.");
+            throw new IllegalStateException(
+                "Element \""
+                + element.getName()
+                + "\" has an attribute named \""
+                + attr.name
+                + "\" whose type was expected to be anonymous, "
+                + "but actually is named \""
+                + attribute.getSchemaType().getName()
+                + "\"");
 
-          } else if ((attr.typeName != null) && !attr.typeName.equals( attribute.getSchemaType().getName() )) {
-            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\"; its type was expected to be \"" + attr.typeName + "\" but instead was \"" + attribute.getSchemaType().getName() + "\"");
+          } else if ((attr.typeName != null)
+                     && attribute.getSchemaType().isAnonymous()) {
 
-          } else if (attr.isOptional && !attribute.getUse().equals(XmlSchemaUse.OPTIONAL)) {
-            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose usage was expected to be optional, but instead is " + attribute.getUse());
+            throw new IllegalStateException(
+                "Element \""
+                + element.getName()
+                + "\" has an attribute named \""
+                + attr.name
+                + "\" whose type was expected to be \""
+                + attr.typeName
+                + "\"; but is anonymous instead.");
 
-          } else if (!attr.isOptional && attribute.getUse().equals(XmlSchemaUse.OPTIONAL)) {
-            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose usage was expected to be required, but is actually optional.");
+          } else if ((attr.typeName != null)
+                     && !attr.typeName.equals(
+                         attribute.getSchemaType().getName())) {
+
+            throw new IllegalStateException(
+                "Element \""
+                + element.getName()
+                + "\" has an attribute named \""
+                + attr.name
+                + "\"; its type was expected to be \""
+                + attr.typeName
+                + "\" but instead was \""
+                + attribute.getSchemaType().getName()
+                + "\"");
+
+          } else if (attr.isOptional
+                     && !attribute.getUse().equals(XmlSchemaUse.OPTIONAL)) {
+
+            throw new IllegalStateException(
+                "Element \""
+                + element.getName()
+                + "\" has an attribute named \""
+                + attr.name
+                + "\" whose usage was expected to be optional, but instead is "
+                + attribute.getUse());
+
+          } else if (!attr.isOptional
+                     && attribute.getUse().equals(XmlSchemaUse.OPTIONAL)) {
+
+            throw new IllegalStateException(
+                "Element \""
+                + element.getName()
+                + "\" has an attribute named \""
+                + attr.name
+                + "\" whose usage was expected to be required,"
+                + " but is actually optional.");
 
           } else if (!attr.type.equals(attributeType.getType())) {
-            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose type was expected to be " + attr.type + " but actually was " + attributeType.getType());
+            throw new IllegalStateException(
+                "Element \""
+                + element.getName()
+                + "\" has an attribute named \""
+                + attr.name
+                + "\" whose type was expected to be "
+                + attr.type
+                + " but actually was "
+                + attributeType.getType());
 
           } else if (attr.type.equals(XmlSchemaTypeInfo.Type.ATOMIC) && !attr.baseType.equals(attributeType.getBaseType())) {
-            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" whose type was expected to be " + attr.baseType.name() + " but actually was " + attributeType.getBaseType());
 
-          } else if (attr.type.equals(XmlSchemaTypeInfo.Type.LIST) && !attr.baseType.equals( attributeType.getChildTypes().get(0).getBaseType() )) {
-            throw new IllegalStateException("Element \"" + element.getName() + "\" has an attribute named \"" + attr.name + "\" with a type of " + attr.type + " whose base type is expected to be " + attr.baseType + " but actually is " + attributeType.getChildTypes().get(0).getBaseType());
+            throw new IllegalStateException(
+                "Element \""
+                + element.getName()
+                + "\" has an attribute named \""
+                + attr.name
+                + "\" whose type was expected to be "
+                + attr.baseType.name()
+                + " but actually was "
+                + attributeType.getBaseType());
+
+          } else if (attr.type.equals(XmlSchemaTypeInfo.Type.LIST)
+                     && !attr.baseType.equals(
+                         attributeType.getChildTypes().get(0).getBaseType())) {
+
+            throw new IllegalStateException(
+                "Element \""
+                + element.getName()
+                + "\" has an attribute named \""
+                + attr.name
+                + "\" with a type of "
+                + attr.type
+                + " whose base type is expected to be "
+                + attr.baseType
+                + " but actually is "
+                + attributeType.getChildTypes().get(0).getBaseType());
 
           } else {
             found = true;
@@ -313,7 +526,12 @@ public class TestSchemaWalker {
       if (found) {
         attrs.remove(index);
       } else {
-        throw new IllegalStateException("Element \"" + element.getName() + "\" has unexpected attribute \"" + attribute.getName() + "\"");
+        throw new IllegalStateException(
+            "Element \""
+            + element.getName()
+            + "\" has unexpected attribute \""
+            + attribute.getName()
+            + "\"");
       }
     }
 
@@ -329,17 +547,38 @@ public class TestSchemaWalker {
       StackEntry next = pop();
 
       if (next.type != Type.SUBSTITUTION_GROUP) {
-        throw new IllegalStateException("Expected a " + next.type + " but instead found a substition group of \"" + base.getName() + "\"");
+        throw new IllegalStateException(
+            "Expected a "
+            + next.type
+            + " but instead found a substition group of \""
+            + base.getName()
+            + "\"");
 
       } else if (!next.name.equals( base.getName() )) {
-        throw new IllegalStateException("Expected a substitution group for element \"" + next.name + "\", but instead received one for \"" + base.getName() + "\"");
+        throw new IllegalStateException(
+            "Expected a substitution group for element \""
+            + next.name
+            + "\", but instead received one for \""
+            + base.getName()
+            + "\"");
 
       } else if (next.minOccurs != base.getMinOccurs()) {
-        throw new IllegalStateException("Expected a substitution group for element \"" + next.name + "\" and min occurs of " + next.minOccurs + ", but received a min occurs of " + base.getMinOccurs());
+        throw new IllegalStateException(
+            "Expected a substitution group for element \""
+            + next.name
+            + "\" and min occurs of "
+            + next.minOccurs
+            + ", but received a min occurs of "
+            + base.getMinOccurs());
 
       } else if (next.maxOccurs != base.getMaxOccurs()) {
-        throw new IllegalStateException("Expected a substitution group for element \"" + next.name + "\" and max occurs of " + next.maxOccurs + ", but received a max occurs of " + base.getMaxOccurs());
-
+        throw new IllegalStateException(
+            "Expected a substitution group for element \""
+            + next.name
+            + "\" and max occurs of "
+            + next.maxOccurs
+            + ", but received a max occurs of "
+            + base.getMaxOccurs());
       }
     }
 
@@ -350,7 +589,8 @@ public class TestSchemaWalker {
     public void onEnterAllGroup(XmlSchemaAll all) {
       StackEntry next = pop();
       if (next.type != Type.ALL) {
-        throw new IllegalStateException("Expected a " + next.type + " but received an All group.");
+        throw new IllegalStateException(
+            "Expected a " + next.type + " but received an All group.");
       }
       checkMinAndMaxOccurs(next, all);
     }
@@ -362,7 +602,8 @@ public class TestSchemaWalker {
     public void onEnterChoiceGroup(XmlSchemaChoice choice) {
       StackEntry next = pop();
       if (next.type != Type.CHOICE) {
-        throw new IllegalStateException("Expected a " + next.type + " but received a Choice group.");
+        throw new IllegalStateException(
+            "Expected a " + next.type + " but received a Choice group.");
       }
       checkMinAndMaxOccurs(next, choice);
     }
@@ -374,7 +615,8 @@ public class TestSchemaWalker {
     public void onEnterSequenceGroup(XmlSchemaSequence seq) {
       StackEntry next = pop();
       if (next.type != Type.SEQUENCE) {
-        throw new IllegalStateException("Expected a " + next.type + " but received a Sequence group.");
+        throw new IllegalStateException(
+            "Expected a " + next.type + " but received a Sequence group.");
       }
       checkMinAndMaxOccurs(next, seq);
     }
@@ -384,23 +626,40 @@ public class TestSchemaWalker {
 
     @Override
     public void onVisitAny(XmlSchemaAny any) {
-      throw new IllegalStateException("No Any types were expected in the schema.");
+      throw new IllegalStateException(
+          "No Any types were expected in the schema.");
     }
 
     @Override
     public void onVisitAnyAttribute(XmlSchemaElement element,
         XmlSchemaAnyAttribute anyAttr) {
 
-      throw new IllegalStateException("No anyAttribute types were expected in the schema.");
+      throw new IllegalStateException(
+          "No anyAttribute types were expected in the schema.");
     }
 
     private void checkMinAndMaxOccurs(StackEntry next, XmlSchemaParticle particle) {
       if (next.minOccurs != particle.getMinOccurs()) {
-        throw new IllegalStateException("Expected a minOccurs of " + next.minOccurs + " for " + next.type + " \"" + next.name + "\", but found a minOccurs of " + particle.getMinOccurs());
+        throw new IllegalStateException(
+            "Expected a minOccurs of "
+            + next.minOccurs
+            + " for "
+            + next.type
+            + " \""
+            + next.name
+            + "\", but found a minOccurs of "
+            + particle.getMinOccurs());
 
       } else if (next.maxOccurs != particle.getMaxOccurs()) {
-        throw new IllegalStateException("Expected a maxOccurs of " + next.maxOccurs + " for " + next.type + " \"" + next.name + "\", but found a maxOccurs of " + particle.getMaxOccurs());
-
+        throw new IllegalStateException(
+            "Expected a maxOccurs of "
+            + next.maxOccurs
+            + " for "
+            + next.type
+            + " \""
+            + next.name
+            + "\", but found a maxOccurs of "
+            + particle.getMaxOccurs());
       }
     }
 
@@ -426,10 +685,20 @@ public class TestSchemaWalker {
     // Build the expectations.
     ArrayList<Attribute> attrGroupAttrs = new ArrayList<Attribute>(43);
     
-    attrGroupAttrs.add( new Attribute("anySimpleType", "anySimpleType", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.ANYSIMPLETYPE, true) );
+    attrGroupAttrs.add(
+        new Attribute(
+            "anySimpleType",
+            "anySimpleType",
+            XmlSchemaTypeInfo.Type.ATOMIC,
+            XmlSchemaBaseSimpleType.ANYSIMPLETYPE,
+            true));
 
-    HashSet<XmlSchemaRestriction> whiteSpaceCollapseFixedRestrictions = new HashSet<XmlSchemaRestriction>();
-    whiteSpaceCollapseFixedRestrictions.add( new XmlSchemaRestriction(new XmlSchemaWhiteSpaceFacet("collapse", true)) );
+    HashSet<XmlSchemaRestriction> whiteSpaceCollapseFixedRestrictions =
+        new HashSet<XmlSchemaRestriction>();
+
+    whiteSpaceCollapseFixedRestrictions.add(
+        new XmlSchemaRestriction(
+            new XmlSchemaWhiteSpaceFacet("collapse", true)) );
 
     attrGroupAttrs.add( new Attribute("duration",     "duration",     XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DURATION,   true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
     attrGroupAttrs.add( new Attribute("dateTime",     "dateTime",     XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DATETIME,   true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
@@ -629,7 +898,8 @@ public class TestSchemaWalker {
     XmlSchemaCollection collection = null;
     FileReader fileReader = null;
     try {
-      File file = new File("src\\test\\resources\\test_schema.xsd");
+      File file =
+          UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
       fileReader = new FileReader(file);
 
       collection = new XmlSchemaCollection();

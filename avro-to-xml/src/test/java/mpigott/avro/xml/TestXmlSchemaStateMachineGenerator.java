@@ -46,8 +46,11 @@ public class TestXmlSchemaStateMachineGenerator {
   public void test() throws Exception {
     XmlSchemaCollection collection = null;
     FileReader fileReader = null;
+
+    File file =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
     try {
-      File file = new File("src\\test\\resources\\test_schema.xsd");
       fileReader = new FileReader(file);
 
       collection = new XmlSchemaCollection();

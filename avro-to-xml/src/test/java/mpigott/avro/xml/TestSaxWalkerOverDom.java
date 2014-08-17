@@ -473,19 +473,32 @@ public class TestSaxWalkerOverDom {
 
   @Test
   public void testRoot() throws Exception {
-    final File xmlFile = new File("src\\test\\resources\\test1_root.xml");
+    final File xmlFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test1_root.xml");
     runTest(xmlFile);
   }
 
   @Test
   public void testChildren() throws Exception {
-    final File xmlFile = new File("src\\test\\resources\\test2_children.xml");
+    final File xmlFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test2_children.xml");
+
     runTest(xmlFile);
   }
 
   @Test
   public void testGrandchildren() throws Exception {
-    final File xmlFile = new File("src\\test\\resources\\test3_grandchildren.xml");
+    final File xmlFile =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test3_grandchildren.xml");
+
     runTest(xmlFile);
   }
 
@@ -499,7 +512,8 @@ public class TestSaxWalkerOverDom {
     saxParser.parse(xmlFile, stackBuilder);
 
     // Parse the document using a DOM parser
-    final DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+    final DocumentBuilderFactory dbFactory =
+        DocumentBuilderFactory.newInstance();
     dbFactory.setNamespaceAware(true);
     final DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
     final Document doc = dBuilder.parse(xmlFile);

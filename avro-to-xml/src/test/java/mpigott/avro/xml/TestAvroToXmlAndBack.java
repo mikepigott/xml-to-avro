@@ -76,11 +76,18 @@ public class TestAvroToXmlAndBack {
   @Test
   public void testRoot() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
-    final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
-    final File xmlFile = new File("src\\test\\resources\\test1_root.xml");
+
+    final File schemaFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
+    final File xmlFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test1_root.xml");
 
     final XmlDatumConfig config =
-        new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
+        new XmlDatumConfig(
+            schemaFile,
+            "http://avro.apache.org/AvroTest",
+            root);
 
     runTest(config, xmlFile);
   }
@@ -88,8 +95,14 @@ public class TestAvroToXmlAndBack {
   @Test
   public void testChildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
-    final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
-    final File xmlFile = new File("src\\test\\resources\\test2_children.xml");
+    final File schemaFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
+    final File xmlFile =
+        UtilsForTests.buildFile("src",
+                                "test",
+                                "resources",
+                                "test2_children.xml");
 
     final XmlDatumConfig config =
         new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
@@ -100,11 +113,21 @@ public class TestAvroToXmlAndBack {
   @Test
   public void testGrandchildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
-    final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
-    final File xmlFile = new File("src\\test\\resources\\test3_grandchildren.xml");
+
+    final File schemaFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
+    final File xmlFile =
+        UtilsForTests.buildFile("src",
+                                "test",
+                                "resources",
+                                "test3_grandchildren.xml");
 
     final XmlDatumConfig config =
-        new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
+        new XmlDatumConfig(
+            schemaFile,
+            "http://avro.apache.org/AvroTest",
+            root);
 
     runTest(config, xmlFile);
   }
@@ -112,9 +135,20 @@ public class TestAvroToXmlAndBack {
   @Test
   public void testComplex() throws Exception {
     final QName root = new QName("urn:avro:complex_schema", "root");
-    final File complexSchemaFile = new File("src\\test\\resources\\complex_schema.xsd");
-    final File testSchemaFile = new File("src\\test\\resources\\test_schema.xsd");
-    final File xmlFile = new File("src\\test\\resources\\complex_test1.xml");
+    final File complexSchemaFile =
+        UtilsForTests.buildFile("src",
+                                "test",
+                                "resources",
+                                "complex_schema.xsd");
+
+    final File testSchemaFile =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
+    final File xmlFile = 
+        UtilsForTests.buildFile("src",
+                                "test",
+                                "resources",
+                                "complex_test1.xml");
 
     final XmlDatumConfig config =
         new XmlDatumConfig(complexSchemaFile, "urn:avro:complex_schema", root);
@@ -124,10 +158,15 @@ public class TestAvroToXmlAndBack {
 
     final Document outDoc = convertToAvroAndBack(config, xmlDoc);
 
-    final File expectedXml = new File("src\\test\\resources\\complex_test1_out.xml");
+    final File expectedXml =
+        UtilsForTests.buildFile("src",
+                                "test",
+                                "resources",
+                                "complex_test1_out.xml");
+
     final Document expectedDoc = docBuilder.parse(expectedXml);
 
-    DocumentComparer.assertEquivalent(expectedDoc, outDoc);
+    UtilsForTests.assertEquivalent(expectedDoc, outDoc);
   }
 
   private Document convertToAvroAndBack(XmlDatumConfig config, Document xmlDoc) throws Exception {
@@ -186,7 +225,7 @@ public class TestAvroToXmlAndBack {
     transformer.transform(source, result);
     */
 
-    DocumentComparer.assertEquivalent(xmlDoc, outDoc);
+    UtilsForTests.assertEquivalent(xmlDoc, outDoc);
   }
 
   private DocumentBuilder docBuilder;
