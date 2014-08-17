@@ -17,14 +17,17 @@
 package mpigott.avro.xml;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.constants.Constants;
@@ -57,6 +60,11 @@ final class DomBuilderFromSax extends DefaultHandler {
   DomBuilderFromSax(XmlSchemaCollection xmlSchemaCollection)
       throws ParserConfigurationException {
 
+    if (xmlSchemaCollection == null) {
+      throw new IllegalArgumentException(
+          "xmlSchemaCollection cannot be null.");
+    }
+
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     factory.setNamespaceAware(true);
 
@@ -70,6 +78,9 @@ final class DomBuilderFromSax extends DefaultHandler {
     namespaceToLocationMapping = null;
     elementsByQName = null;
     schemas = xmlSchemaCollection;
+
+    globalNamespaces = new HashSet<String>();
+    globalNamespaces.add("http://www.w3.org/2001/XMLSchema-instance");
   }
 
   /**
@@ -140,9 +151,17 @@ final class DomBuilderFromSax extends DefaultHandler {
         attrUri = null;
       }
 
+      boolean isGlobal = globalNamespaces.contains(attrUri);
+      if ((attrUri != null) && !isGlobal) {
+        final QName attrQName = new QName(attrUri, atts.getLocalName(attrIndex));
+        if(schemas.getAttributeByQName(attrQName) != null) {
+          isGlobal = true;
+        }
+      }
+
       final String attrValue = atts.getValue(attrIndex);
 
-      if ( urisMatch(uri, atts.getURI(attrIndex)) ) {
+      if (!isGlobal) {
         element.setAttribute(atts.getLocalName(attrIndex), attrValue);
       } else {
         element.setAttributeNS(attrUri, atts.getQName(attrIndex), attrValue);
@@ -338,4 +357,5 @@ final class DomBuilderFromSax extends DefaultHandler {
   private final ArrayList<Element> elementStack;
   private final DocumentBuilder docBuilder;
   private final XmlSchemaCollection schemas;
+  private final Set<String> globalNamespaces;
 }
