@@ -17,6 +17,8 @@
 package org.apache.avro.xml;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -1105,6 +1107,15 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           case BIN_HEX:
             bytes = DatatypeConverter.parseHexBinary(data);
             break;
+          case DECIMAL:
+            {
+              final BigDecimal decimal =
+                  Utils.createBigDecimalFrom(data, schema);
+              final BigInteger unscaledValue =
+                  decimal.unscaledValue();
+              out.writeBytes( unscaledValue.toByteArray() );
+              break;
+            }
           default:
             throw new IllegalArgumentException(
                 "Cannot generate bytes for data of a base type of "

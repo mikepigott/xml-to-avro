@@ -15,6 +15,9 @@
  */
 package org.apache.avro.xml;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.MathContext;
 import java.net.URISyntaxException;
 import java.net.URI;
 import java.net.URL;
@@ -33,6 +36,7 @@ import org.apache.ws.commons.schema.constants.Constants;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
+import org.codehaus.jackson.node.NumericNode;
 import org.codehaus.jackson.node.ObjectNode;
 import org.xml.sax.InputSource;
 
@@ -453,5 +457,74 @@ class Utils {
         + value
         + "\" using the provided schema "
         + type);
+  }
+
+  static BigDecimal createBigDecimalFrom(byte[] bytes, Schema schema) {
+    confirmIsValidDecimal(schema);
+    return new BigDecimal(
+        new BigInteger(bytes),
+        getScaleFrom(schema),
+        getMathContextFrom(schema));
+  }
+
+  static BigDecimal createBigDecimalFrom(String text, Schema schema) {
+    confirmIsValidDecimal(schema);
+    final int scale = getScaleFrom(schema);
+    final MathContext mathContext = getMathContextFrom(schema);
+    BigDecimal decimal = new BigDecimal(text, mathContext);
+    if (decimal.scale() != scale) {
+      decimal = decimal.setScale(scale, mathContext.getRoundingMode());
+    }
+    return decimal;
+  }
+
+  private static void confirmIsValidDecimal(Schema schema) {
+    final JsonNode logicalTypeNode = schema.getJsonProp("logicalType");
+    if (logicalTypeNode == null) {
+      throw new IllegalStateException(
+          "Attempted to read an XML Schema DECIMAL as an Avro "
+          + "logical type, but the logical type is missing!");
+
+    } else if (!"decimal".equals(logicalTypeNode.asText())) {
+      throw new IllegalStateException(
+          "Attempted to read an XML Schema DECIMAL as an Avro logical "
+          + "type, but the logical type is " + logicalTypeNode);
+    }
+  }
+
+  private static int getScaleFrom(Schema schema) {
+    int scale = 0;
+
+    final JsonNode scaleNode = schema.getJsonProp("scale");
+    if (scaleNode != null) {
+      if (!(scaleNode instanceof NumericNode)) {
+        throw new IllegalStateException(
+            "Attempted to read an XML Schema DECIMAL as an Avro logical "
+                + "type, but the scale is not a number! Found: "
+                + scaleNode);
+      }
+
+      scale = scaleNode.asInt();
+    }
+
+    return scale;
+  }
+
+  private static MathContext getMathContextFrom(Schema schema) {
+    final JsonNode precisionNode = schema.getJsonProp("precision");
+
+    if (precisionNode == null) {
+      throw new IllegalArgumentException(
+          "Attempted to read an XML Schema DECIMAL as an Avro "
+          + "logical type, but the precision is missing!");
+
+    } else if (!(precisionNode instanceof NumericNode)) {
+      throw new IllegalArgumentException(
+          "Attempted to read an XML Schema DECIMAL as an Avro logical "
+              + "type, but the precision is not a number! Found: "
+              + precisionNode);
+    }
+
+    return new MathContext( precisionNode.asInt() );
   }
 }

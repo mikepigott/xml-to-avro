@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -44,6 +45,7 @@ import org.apache.ws.commons.schema.constants.Constants;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
+import org.codehaus.jackson.node.NumericNode;
 import org.codehaus.jackson.node.ObjectNode;
 import org.w3c.dom.Document;
 import org.xml.sax.Attributes;
@@ -964,6 +966,11 @@ public class XmlDatumReader implements DatumReader<Document> {
         case BIN_BASE64:
           return DatatypeConverter.printBase64Binary(data);
 
+        case DECIMAL:
+        {
+          return DatatypeConverter.printDecimal(
+              Utils.createBigDecimalFrom(data, schema));
+        }
         default:
           throw new IllegalStateException(
               "Avro Schema is of type BYTES, but the XML Schema is of type "
