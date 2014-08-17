@@ -71,7 +71,7 @@
 			</xsd:restriction>
 		</xsd:simpleType>
 	</xsd:attribute>
-	<xsd:attribute name="id">
+	<xsd:attribute name="mapId">
 		<xsd:simpleType>
 			<xsd:restriction base="xsd:ID">
 				<xsd:minLength value="1" />
@@ -144,7 +144,7 @@
 		<xsd:complexType>
 			<xsd:complexContent>
 				<xsd:extension base="avro:recordType">
-					<xsd:attribute ref="avro:id" use="required" />
+					<xsd:attribute ref="avro:mapId" use="required" />
 				</xsd:extension>
 			</xsd:complexContent>
 		</xsd:complexType>

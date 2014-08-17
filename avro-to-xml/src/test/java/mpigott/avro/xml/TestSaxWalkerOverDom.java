@@ -120,7 +120,6 @@ public class TestSaxWalkerOverDom {
         final String actual = attrs.getValue(attribute.qName);
 
         if ( !attribute.value.equals(actual) ) {
-          System.err.println("Attribute [\"" + attribute.qName + "\" has a value of \"" + attribute.value + "\" but that does not match the actual value of \"" + attrs.getValue( attribute.qName) + "\".");
           return false;
         }
 
@@ -400,21 +399,37 @@ public class TestSaxWalkerOverDom {
   }
 
   @Test
-  public void test() throws Exception {
-    final File xsdFile = new File("src\\test\\resources\\test_schema.xsd");
+  public void testRoot() throws Exception {
+    final File xmlFile = new File("src\\test\\resources\\test1_root.xml");
+    runTest(xmlFile);
+  }
+
+  @Test
+  public void testChildren() throws Exception {
+    final File xmlFile = new File("src\\test\\resources\\test2_children.xml");
+    runTest(xmlFile);
+  }
+
+  @Test
+  public void testGrandchildren() throws Exception {
+    final File xmlFile = new File("src\\test\\resources\\test3_grandchildren.xml");
+    runTest(xmlFile);
+  }
+
+  private void runTest(File xmlFile) throws Exception {
     StackBuilder stackBuilder = new StackBuilder();
 
     // Parse the document using a real SAX parser
     SAXParserFactory spf = SAXParserFactory.newInstance();
     spf.setNamespaceAware(true);
     SAXParser saxParser = spf.newSAXParser();
-    saxParser.parse(xsdFile, stackBuilder);
+    saxParser.parse(xmlFile, stackBuilder);
 
     // Parse the document using a DOM parser
     final DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
     dbFactory.setNamespaceAware(true);
     final DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-    final Document doc = dBuilder.parse(xsdFile);
+    final Document doc = dBuilder.parse(xmlFile);
 
     /* Walk the DOM, firing off SAX events, and
      * confirm they match the real SAX events.
@@ -429,7 +444,7 @@ public class TestSaxWalkerOverDom {
     try {
       walker.walk(doc);
     } catch (Exception e) {
-      throw new SAXException("Traversed through element " + (stackSize - stack.size()) + " before failing.", e);
+      throw new RuntimeException("Traversed through element " + (stackSize - stack.size()) + " before failing.", e);
     }
   }
 

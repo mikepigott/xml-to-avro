@@ -20,22 +20,22 @@
 
 	<avro:primitive>decimal</avro:primitive>
 	<avro:nonNullPrimitive>int</avro:nonNullPrimitive>
-	<avro:map avro:id="id1">
+	<avro:map avro:mapId="id1">
 		<avro:primitive>double</avro:primitive>
 		<avro:nonNullPrimitive>float</avro:nonNullPrimitive>
 	</avro:map>
-	<avro:map avro:id="id2">
+	<avro:map avro:mapId="id2">
 		<avro:primitive>null</avro:primitive>
 	</avro:map>
 	<avro:record>
 		<avro:nonNullPrimitive>decimal</avro:nonNullPrimitive>
 	</avro:record>
-	<avro:map avro:id="id3">
+	<avro:map avro:mapId="id3">
 		<avro:primitive>string</avro:primitive>
-		<avro:map avro:id="id4">
+		<avro:map avro:mapId="id4">
 			<avro:nonNullPrimitive>string</avro:nonNullPrimitive>
 		</avro:map>
-		<avro:map avro:id="id5">
+		<avro:map avro:mapId="id5">
 			<avro:primitive>long</avro:primitive>
 		</avro:map>
 	</avro:map>

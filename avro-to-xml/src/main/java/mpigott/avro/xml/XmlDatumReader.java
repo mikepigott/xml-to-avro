@@ -497,8 +497,8 @@ public class XmlDatumReader implements DatumReader<Document> {
     final XmlSchemaStateMachineNode stateMachine =
         stateMachineGen.getStartNode();
 
-    /* 7. Build an AvroRecordName -> XmlSchemaStateMachineNode mapping, a
-     *    QName -> XmlSchemaElement mapping, and a namespace prefix mapping.
+    /* 7. Build an AvroRecordName -> XmlSchemaStateMachineNode mapping,
+     *    a QName -> Element mapping, and a namespace prefix mapping.
      */
     final Map<QName, XmlSchemaStateMachineNode> stateMachineNodesByQName =
         stateMachineGen.getStateMachineNodesByQName();

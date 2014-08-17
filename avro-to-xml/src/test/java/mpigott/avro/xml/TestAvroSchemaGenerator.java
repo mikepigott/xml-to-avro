@@ -436,7 +436,12 @@ public class TestAvroSchemaGenerator {
 
     List<Schema.Field> mapFields = new ArrayList<Schema.Field>();
     mapFields.add(
-        new Schema.Field("id", Schema.create(Schema.Type.STRING), null, null));
+        new Schema.Field(
+            "mapId",
+            Schema.create(Schema.Type.STRING),
+            null,
+            null));
+
     mapFields.add(
         new Schema.Field(
             "map",

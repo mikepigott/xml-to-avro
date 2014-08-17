@@ -27,7 +27,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.constants.Constants;
@@ -153,8 +152,10 @@ final class DomBuilderFromSax extends DefaultHandler {
 
       boolean isGlobal = globalNamespaces.contains(attrUri);
       if ((attrUri != null) && !isGlobal) {
-        final QName attrQName = new QName(attrUri, atts.getLocalName(attrIndex));
-        if(schemas.getAttributeByQName(attrQName) != null) {
+        final QName attrQName =
+            new QName(attrUri, atts.getLocalName(attrIndex));
+
+        if (schemas.getAttributeByQName(attrQName) != null) {
           isGlobal = true;
         }
       }
