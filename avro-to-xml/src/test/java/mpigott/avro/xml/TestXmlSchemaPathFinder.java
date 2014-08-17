@@ -49,7 +49,7 @@ import org.xml.sax.SAXException;
  *
  * @author  Mike Pigott
  */
-public class TestXmlSchemaPathCreator {
+public class TestXmlSchemaPathFinder {
 
   @BeforeClass
   public static void createStateMachine() throws FileNotFoundException {
