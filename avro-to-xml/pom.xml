@@ -50,26 +50,5 @@
       <artifactId>xmlunit</artifactId>
       <version>1.5</version>
     </dependency>
-    <!-- Remove these dependencies later -->
-    <dependency>
-    <groupId>org.apache.avro</groupId>
-    <artifactId>avro-ipc</artifactId>
-    <version>1.7.7</version>
-</dependency>
-<dependency>
-    <groupId>org.apache.avro</groupId>
-    <artifactId>avro-tools</artifactId>
-    <version>1.7.7</version>
-</dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro-protobuf</artifactId>
-      <version>1.7.7</version>
-    </dependency>
-    <dependency>
-      <groupId>org.antlr</groupId>
-      <artifactId>stringtemplate</artifactId>
-      <version>3.2.1</version>
-    </dependency>
   </dependencies>
 </project>
