@@ -1,0 +1,124 @@
+{
+  "gMonth" : null,
+  "idref" : null,
+  "boolean" : null,
+  "hexBinary" : null,
+  "name" : null,
+  "qname" : null,
+  "byte" : null,
+  "token" : null,
+  "base64Binary" : null,
+  "gYear" : null,
+  "time" : null,
+  "gMonthDay" : null,
+  "short" : null,
+  "id" : null,
+  "nonNegativeInteger" : null,
+  "long" : null,
+  "date" : null,
+  "float" : null,
+  "nmtoken" : null,
+  "nmtokens" : null,
+  "unsignedShort" : null,
+  "nonPositiveInteger" : null,
+  "entity" : null,
+  "dateTime" : null,
+  "gYearMonth" : null,
+  "gDay" : null,
+  "anySimpleType" : null,
+  "anyURI" : null,
+  "language" : null,
+  "unsignedLong" : null,
+  "string" : null,
+  "ncName" : null,
+  "duration" : null,
+  "positiveInteger" : null,
+  "double" : null,
+  "entities" : null,
+  "idrefs" : null,
+  "decimal" : null,
+  "normalizedString" : null,
+  "int" : null,
+  "unsignedInt" : null,
+  "negativeInteger" : null,
+  "unsignedByte" : null,
+  "integer" : null,
+  "root" : [ {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "decimal"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "int"
+    }
+  }, {
+    "map" : {
+      "id1" : {
+        "id" : "id1",
+        "map" : [ {
+          "org.apache.avro.AvroTest.primitive" : {
+            "primitive" : "double"
+          }
+        }, {
+          "org.apache.avro.AvroTest.nonNullPrimitive" : {
+            "nonNullPrimitive" : "float"
+          }
+        } ]
+      },
+      "id2" : {
+        "id" : "id2",
+        "map" : [ {
+          "org.apache.avro.AvroTest.primitive" : {
+            "primitive" : "null"
+          }
+        } ]
+      }
+    }
+  }, {
+    "org.apache.avro.AvroTest.record" : {
+      "record" : [ {
+        "org.apache.avro.AvroTest.nonNullPrimitive" : {
+          "nonNullPrimitive" : "decimal"
+        }
+      } ]
+    }
+  }, {
+    "map" : {
+      "id3" : {
+        "id" : "id3",
+        "map" : [ {
+          "org.apache.avro.AvroTest.primitive" : {
+            "primitive" : "string"
+          }
+        }, {
+          "map" : {
+            "id4" : {
+              "id" : "id4",
+              "map" : [ {
+                "org.apache.avro.AvroTest.nonNullPrimitive" : {
+                  "nonNullPrimitive" : "string"
+                }
+              } ]
+            },
+            "id5" : {
+              "id" : "id5",
+              "map" : [ {
+                "org.apache.avro.AvroTest.primitive" : {
+                  "primitive" : "long"
+                }
+              } ]
+            }
+          }
+        } ]
+      }
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "long"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "boolean"
+    }
+  } ]
+}

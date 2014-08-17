@@ -22,18 +22,12 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
+import java.io.FileReader;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
 import org.apache.avro.Schema;
 import org.apache.avro.io.DecoderFactory;
@@ -42,20 +36,11 @@ import org.apache.avro.io.JsonDecoder;
 import org.apache.avro.io.JsonEncoder;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
-/**
- * Tests converting an XML document to an Avro datum and back.
- *
- * @author  Mike Pigott
- */
-public class TestAvroToXmlAndBack {
+public class TestXmlDatumWriter {
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     dbf = DocumentBuilderFactory.newInstance();
@@ -73,28 +58,29 @@ public class TestAvroToXmlAndBack {
     docBuilder = dbf.newDocumentBuilder();
   }
 
-  @Test @Ignore
+  @Test
   public void testRoot() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
     final File xmlFile = new File("src\\test\\resources\\test1_root.xml");
+    final File avroFile = new File("src\\test\\resources\\test1_root.avro");
 
     final XmlDatumConfig config =
         new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
 
-    runTest(config, xmlFile);
+    runTest(config, xmlFile, avroFile);
   }
 
-  @Test @Ignore
   public void testChildren() throws Exception {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
     final File xmlFile = new File("src\\test\\resources\\test2_children.xml");
+    final File avroFile = new File("src\\test\\resources\\test2_children.avro");
 
     final XmlDatumConfig config =
         new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
 
-    runTest(config, xmlFile);
+    runTest(config, xmlFile, avroFile);
   }
 
   @Test
@@ -102,36 +88,36 @@ public class TestAvroToXmlAndBack {
     final QName root = new QName("http://avro.apache.org/AvroTest", "root");
     final File schemaFile = new File("src\\test\\resources\\test_schema.xsd");
     final File xmlFile = new File("src\\test\\resources\\test3_grandchildren.xml");
+    final File avroFile = new File("src\\test\\resources\\test3_grandchildren.avro");
 
     final XmlDatumConfig config =
         new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
 
-    runTest(config, xmlFile);
+    runTest(config, xmlFile, avroFile);
   }
 
-  @Test @Ignore
+  @Test
   public void testComplex() throws Exception {
     final QName root = new QName("urn:avro:complex_schema", "root");
     final File complexSchemaFile = new File("src\\test\\resources\\complex_schema.xsd");
     final File testSchemaFile = new File("src\\test\\resources\\test_schema.xsd");
     final File xmlFile = new File("src\\test\\resources\\complex_test1.xml");
+    final File avroFile = new File("src\\test\\resources\\complex_test1.avro");
 
     final XmlDatumConfig config =
         new XmlDatumConfig(complexSchemaFile, "urn:avro:complex_schema", root);
     config.addSchemaFile(testSchemaFile);
 
-    runTest(config, xmlFile);
+    runTest(config, xmlFile, avroFile);
   }
 
-  private void runTest(XmlDatumConfig config, File xmlFile) throws Exception {
+  private void runTest(
+      XmlDatumConfig config,
+      File xmlFile,
+      File expectedAvro) throws Exception {
+    
     final XmlDatumWriter writer = new XmlDatumWriter(config);
     final Schema xmlToAvroSchema = writer.getSchema();
-
-    /*
-    FileWriter tempSchemaWriter = new FileWriter("test.avsc");
-    tempSchemaWriter.write( xmlToAvroSchema.toString(true) );
-    tempSchemaWriter.close();
-    */
 
     final Document xmlDoc = docBuilder.parse(xmlFile);
 
@@ -144,35 +130,27 @@ public class TestAvroToXmlAndBack {
 
     encoder.flush();
 
-    BufferedReader tempReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(outStream.toByteArray())));
-    PrintWriter tempWriter = new PrintWriter(new FileWriter("src\\test\\resources\\test3_grandchildren.avro"));
-    String line = null;
-    while ((line = tempReader.readLine()) != null) {
-      tempWriter.println(line);
+    final BufferedReader actualInReader =
+        new BufferedReader(
+            new InputStreamReader(
+                new ByteArrayInputStream( outStream.toByteArray() )));
+
+    final BufferedReader expectedInReader =
+        new BufferedReader(new FileReader(expectedAvro));
+
+    String actualLine = null;
+    String expectedLine = null;
+
+    while(((actualLine = actualInReader.readLine()) != null)
+           & ((expectedLine = expectedInReader.readLine()) != null)) {
+
+      assertEquals(expectedLine, actualLine);
     }
-    tempWriter.close();
 
-    final ByteArrayInputStream inStream =
-        new ByteArrayInputStream( outStream.toByteArray() );
+    assertNull(actualLine);
+    assertNull(expectedLine);
 
-    final JsonDecoder decoder =
-        avroDecoderFactory.jsonDecoder(xmlToAvroSchema, inStream);
-
-    final XmlDatumReader reader = new XmlDatumReader();
-    reader.setSchema(xmlToAvroSchema);
-
-    final Document outDoc = reader.read(null, decoder);
-
-    /*
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
-    Transformer transformer = transformerFactory.newTransformer();
-    DOMSource source = new DOMSource(outDoc);
-    StreamResult result = new StreamResult(new File("test_out_doc.xml"));
- 
-    transformer.transform(source, result);
-    */
-
-    DocumentComparer.assertEquivalent(xmlDoc, outDoc);
+    expectedInReader.close();
   }
 
   private DocumentBuilder docBuilder;

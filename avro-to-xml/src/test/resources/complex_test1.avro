@@ -1,0 +1,165 @@
+{
+  "avro.complex_schema.realRoot" : {
+    "month" : "--08",
+    "year" : "2014",
+    "day" : "---12",
+    "realRoot" : [ {
+      "avro.complex_schema.backtrack" : {
+        "backtrack" : [ {
+          "avro.complex_schema.qName" : {
+            "qName" : {
+              "namespace" : "http://www.xbrl.org/2003/iso4217",
+              "localPart" : "USD"
+            }
+          }
+        }, {
+          "avro.complex_schema.avroEnum" : {
+            "avroEnum" : "avro"
+          }
+        }, {
+          "avro.complex_schema.xmlEnum" : {
+            "xmlEnum" : "thrift"
+          }
+        }, {
+          "avro.complex_schema.xmlEnum" : {
+            "xmlEnum" : "rest.li"
+          }
+        }, {
+          "avro.complex_schema.unsignedLongList" : {
+            "unsignedLongList" : [ 1.0, 2.0, 345.0, 67890.0, 1.23456789E9, 1.2345678901234567E19 ]
+          }
+        }, {
+          "avro.complex_schema.listOfUnion" : {
+            "listOfUnion" : [ {
+              "boolean" : true
+            }, {
+              "boolean" : false
+            }, {
+              "string" : "hello"
+            }, {
+              "string" : "goodbye"
+            }, {
+              "int" : 1234567890
+            }, {
+              "int" : -2147483648
+            }, {
+              "double" : 2.147483649E9
+            } ]
+          }
+        } ]
+      }
+    }, {
+      "map" : {
+        "idvalue0" : {
+          "truth" : true,
+          "id" : "idvalue0",
+          "listOfNumbers" : [ {
+            "int" : 127
+          }, {
+            "int" : -32768
+          }, {
+            "double" : 1.8446744073709552E19
+          }, {
+            "double" : -1.8446744073709552E19
+          } ],
+          "allTheThings" : [ {
+            "map" : {
+              "idvalue2" : {
+                "avro.complex_schema.secondMap" : {
+                  "id" : "idvalue2",
+                  "value" : "Second Map Value",
+                  "secondMap" : null
+                }
+              }
+            }
+          }, {
+            "map" : {
+              "idvalue1" : {
+                "avro.complex_schema.firstMap" : {
+                  "id" : "idvalue1",
+                  "firstMap" : [ {
+                    "avro.complex_schema.value" : {
+                      "value" : {
+                        "double" : 1234567.0
+                      }
+                    }
+                  }, {
+                    "avro.complex_schema.value" : {
+                      "value" : null
+                    }
+                  } ]
+                }
+              }
+            }
+          } ]
+        }
+      }
+    }, {
+      "avro.complex_schema.prohibit" : {
+        "prohibit" : [ {
+          "avro.complex_schema.fixed" : {
+            "fixed" : 100.0
+          }
+        } ]
+      }
+    }, {
+      "avro.complex_schema.anyAndFriends" : {
+        "anyAndFriends" : "\n    This is a mixed element\n  \t\n  \tinterspersed with wildcard elements.\n  \t\n  \tSince the wildcard elements are filtered\n  \t\n  \taway, the final Avro document should\n  \t\n  \tonly contain this text.\n  \t\n  \t\n  \t(If I did it right.)\n  "
+      }
+    }, {
+      "avro.complex_schema.simpleExtension" : {
+        "default" : "named",
+        "fixed" : 65534,
+        "simpleExtension" : {
+          "boolean" : true
+        }
+      }
+    }, {
+      "avro.complex_schema.simpleRestriction" : {
+        "default" : "hello",
+        "fixed" : 65534,
+        "simpleRestriction" : {
+          "boolean" : false
+        }
+      }
+    }, {
+      "avro.complex_schema.complexExtension" : {
+        "optional" : null,
+        "defaulted" : "hello",
+        "complexExtension" : [ {
+          "avro.complex_schema.fixed" : {
+            "fixed" : 100.0
+          }
+        }, {
+          "avro.complex_schema.unsignedLongList" : {
+            "unsignedLongList" : [ 1.0, 2.0, 4.0, 5.0, 6.0 ]
+          }
+        } ]
+      }
+    }, {
+      "avro.complex_schema.mixedType" : {
+        "mixedType" : [ {
+          "string" : "\n  \tHello, my name is\n  \t"
+        }, {
+          "avro.complex_schema.listOfUnion" : {
+            "listOfUnion" : [ {
+              "string" : "Mike"
+            }, {
+              "string" : "and"
+            }, {
+              "string" : "I"
+            } ]
+          }
+        }, {
+          "string" : "\n  \twelcome you to this mixed element with\n  \t"
+        }, {
+          "avro.complex_schema.unsignedLongList" : {
+            "unsignedLongList" : [ 2.0 ]
+          }
+        }, {
+          "string" : "\n  \tsub-elements.\n  "
+        } ]
+      }
+    } ]
+  }
+}

@@ -1,0 +1,200 @@
+{
+  "gMonth" : {
+    "string" : "--07"
+  },
+  "idref" : {
+    "string" : "idvalue0"
+  },
+  "boolean" : {
+    "boolean" : true
+  },
+  "hexBinary" : {
+    "bytes" : "\u000F\u0000"
+  },
+  "name" : {
+    "string" : "Name"
+  },
+  "qname" : {
+    "org.w3.www.2001.XMLSchema.qName" : {
+      "namespace" : "",
+      "localPart" : "QName"
+    }
+  },
+  "byte" : {
+    "int" : 57
+  },
+  "token" : {
+    "string" : "xmlSchema"
+  },
+  "base64Binary" : {
+    "bytes" : "0"
+  },
+  "gYear" : {
+    "string" : "2014"
+  },
+  "time" : {
+    "string" : "12:47:30"
+  },
+  "gMonthDay" : {
+    "string" : "--07-27"
+  },
+  "short" : {
+    "int" : -32768
+  },
+  "id" : {
+    "string" : "idvalue0"
+  },
+  "nonNegativeInteger" : {
+    "double" : 9.223372036854776E18
+  },
+  "long" : {
+    "long" : 9223372036854775807
+  },
+  "date" : {
+    "string" : "2014-07-27"
+  },
+  "float" : {
+    "float" : 0.0
+  },
+  "nmtoken" : {
+    "string" : "NMTOKEN"
+  },
+  "nmtokens" : {
+    "array" : [ "NMTOKENS" ]
+  },
+  "unsignedShort" : {
+    "int" : 65535
+  },
+  "nonPositiveInteger" : {
+    "double" : -9.223372036854776E18
+  },
+  "entity" : null,
+  "dateTime" : {
+    "string" : "2014-07-27T12:47:30"
+  },
+  "gYearMonth" : {
+    "string" : "2014-07"
+  },
+  "gDay" : {
+    "string" : "---27"
+  },
+  "anySimpleType" : null,
+  "anyURI" : {
+    "string" : "http://tempuri.org"
+  },
+  "language" : {
+    "string" : "EN"
+  },
+  "unsignedLong" : {
+    "double" : 1.8446744073709552E19
+  },
+  "string" : {
+    "string" : ""
+  },
+  "ncName" : {
+    "string" : "NCName"
+  },
+  "duration" : {
+    "string" : "P1D"
+  },
+  "positiveInteger" : {
+    "double" : 9.223372036854776E18
+  },
+  "double" : {
+    "double" : 32768.32768
+  },
+  "entities" : null,
+  "idrefs" : {
+    "array" : [ "idvalue0" ]
+  },
+  "decimal" : {
+    "double" : 65536.0
+  },
+  "normalizedString" : {
+    "string" : "xmlIsFun"
+  },
+  "int" : {
+    "int" : 2147483647
+  },
+  "unsignedInt" : {
+    "long" : 4294967295
+  },
+  "negativeInteger" : {
+    "double" : -9.223372036854776E18
+  },
+  "unsignedByte" : {
+    "int" : 255
+  },
+  "integer" : {
+    "double" : 9.223372036854776E18
+  },
+  "root" : [ {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "null"
+    }
+  }, {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "boolean"
+    }
+  }, {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "int"
+    }
+  }, {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "long"
+    }
+  }, {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "float"
+    }
+  }, {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "double"
+    }
+  }, {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "decimal"
+    }
+  }, {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "bytes"
+    }
+  }, {
+    "org.apache.avro.AvroTest.primitive" : {
+      "primitive" : "string"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "boolean"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "int"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "long"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "float"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "double"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "decimal"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "bytes"
+    }
+  }, {
+    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+      "nonNullPrimitive" : "string"
+    }
+  } ]
+}
