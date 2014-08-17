@@ -25,6 +25,20 @@ import org.xml.sax.Attributes;
 
 public class TestXmlSchemaElementValidator {
 
+  private static final String NAMESPACE = "urn:avro:test";
+  private static final String PREFIX = "avro";
+
+  private static final String PROHIBITED = "prohibited";
+  private static final String REQUIRED = "required";
+  private static final String OPTIONAL = "optional";
+
+  private static XmlSchema xmlSchema;
+  private static XmlSchemaElement xmlElement;
+  private static XmlSchemaAttribute prohibitedAttribute;
+  private static XmlSchemaAttribute optionalAttribute;
+  private static XmlSchemaAttribute requiredAttribute;
+  private static XmlSchemaNamespaceContext nsContext;
+
   private static class SaxAttribute {
 
     SaxAttribute(String localName, String val) {
@@ -1068,7 +1082,8 @@ public class TestXmlSchemaElementValidator {
         Collections.singletonList(
             new XmlSchemaStateMachineNode.Attribute(
                 requiredAttribute,
-                new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DECIMAL, facets)));
+                new XmlSchemaTypeInfo(
+                    XmlSchemaBaseSimpleType.DECIMAL, facets)));
 
     SaxAttributes saxAttributes = new SaxAttributes();
     saxAttributes.add( new SaxAttribute(REQUIRED, "123456789.123456789") );
@@ -1462,9 +1477,20 @@ public class TestXmlSchemaElementValidator {
     XmlSchemaStateMachineNode stateMachine =
         new XmlSchemaStateMachineNode(xmlElement, null, typeInfo);
 
-    XmlSchemaElementValidator.validateContent(stateMachine, "12", nsContext);
-    XmlSchemaElementValidator.validateContent(stateMachine, "aser921f", nsContext);
-    XmlSchemaElementValidator.validateContent(stateMachine, "\u1234\u5432", nsContext);
+    XmlSchemaElementValidator.validateContent(
+        stateMachine,
+        "12",
+        nsContext);
+
+    XmlSchemaElementValidator.validateContent(
+        stateMachine,
+        "aser921f",
+        nsContext);
+
+    XmlSchemaElementValidator.validateContent(
+        stateMachine,
+        "\u1234\u5432",
+        nsContext);
   }
 
   @Test
@@ -1508,7 +1534,10 @@ public class TestXmlSchemaElementValidator {
     XmlSchemaStateMachineNode stateMachine =
         new XmlSchemaStateMachineNode(xmlElement, null, typeInfo);
 
-    XmlSchemaElementValidator.validateContent(stateMachine, "12345", nsContext);    
+    XmlSchemaElementValidator.validateContent(
+        stateMachine,
+        "12345",
+        nsContext);    
   }
 
   @Test
@@ -2388,18 +2417,4 @@ public class TestXmlSchemaElementValidator {
 
     return facet;
   }
-
-  private static final String NAMESPACE = "urn:avro:test";
-  private static final String PREFIX = "avro";
-
-  private static final String PROHIBITED = "prohibited";
-  private static final String REQUIRED = "required";
-  private static final String OPTIONAL = "optional";
-
-  private static XmlSchema xmlSchema;
-  private static XmlSchemaElement xmlElement;
-  private static XmlSchemaAttribute prohibitedAttribute;
-  private static XmlSchemaAttribute optionalAttribute;
-  private static XmlSchemaAttribute requiredAttribute;
-  private static XmlSchemaNamespaceContext nsContext;
 }

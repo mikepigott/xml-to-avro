@@ -19,11 +19,32 @@ package mpigott.avro.xml;
 import javax.xml.namespace.QName;
 
 /**
- * Information about a {@link XmlSchemaPathNode} representing an Avro MAP.
+ * Information about a {@link XmlSchemaPathNode} representing
+ * an Avro MAP or a CONTENT node in a mixed-content element.
  *
- * @author  Mike Pigott
+ * <p>
+ * When XML elements are best represented by a map, sibling elements are
+ * grouped together under one common MAP instance.  This keeps track of
+ * whether a new element represents the start of a new MAP or the start
+ * of an item in an existing MAP.  A later path node will signify when
+ * the map ends.
+ * </p>
+ *
+ * <p>
+ * We also need to keep track of the content nodes that are part of mixed
+ * elements, as they will be added to the corresponding RECORD's ARRAY of
+ * children.
+ * </p>
  */
 final class AvroPathNode {
+
+  private final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> pathNode;
+  private final QName qName;
+  private final int occurrence;
+  private final Type type;
+  private final int contentUnionIndex;
+
+  private int mapSize;
 
   enum Type {
     MAP_START,
@@ -32,15 +53,30 @@ final class AvroPathNode {
     CONTENT
   }
 
+  /**
+   * Constructor for creating a new {@link AvroPathNode} to represent a MAP.
+   *
+   * @param pathNode  The path node representing the start or end of the map
+   *                  or one if its items.
+   *
+   * @param pathIndex The index of the path itself.
+   * @param type
+   * @param qName
+   * @param occurrence
+   */
   AvroPathNode(
       XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> pathNode,
-      int pathIndex,
       Type type,
       QName qName,
       int occurrence) {
 
+    if (type.equals(Type.CONTENT)) {
+      throw new IllegalArgumentException(
+          "Use the AvroPathNode(unionIndex) constructor "
+          + "for adding CONTENT nodes.");
+    }
+
     this.pathNode = pathNode;
-    this.pathIndex = pathIndex;
     this.qName = qName;
     this.type = type;
     this.occurrence = occurrence;
@@ -50,10 +86,9 @@ final class AvroPathNode {
 
   AvroPathNode(
       XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> pathNode,
-      int pathIndex,
       Type type) {
 
-    this(pathNode, pathIndex, type, null, 0);
+    this(pathNode, type, null, 0);
   }
 
   AvroPathNode(int unionIndex) {
@@ -61,7 +96,6 @@ final class AvroPathNode {
     this.contentUnionIndex = unionIndex;
 
     this.pathNode = null;
-    this.pathIndex = -1;
     this.qName = null;
     this.occurrence = -1;
     this.mapSize = -1;
@@ -82,10 +116,6 @@ final class AvroPathNode {
 
   XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> getPathNode() {
     return pathNode;
-  }
-
-  int getPathIndex() {
-    return pathIndex;
   }
 
   int getOccurrence() {
@@ -111,19 +141,9 @@ final class AvroPathNode {
   @Override
   public String toString() {
     StringBuilder str = new StringBuilder("[");
-    str.append(type).append(": ").append(pathIndex);
-    str.append(" ").append( pathNode.getDirection() );
+    str.append(type).append(": ").append( pathNode.getDirection() );
     str.append(" ").append( pathNode.getStateMachineNode() );
     str.append("]");
     return str.toString();
   }
-
-  private final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> pathNode;
-  private final int pathIndex;
-  private final QName qName;
-  private final int occurrence;
-  private final Type type;
-  private final int contentUnionIndex;
-
-  private int mapSize;
 }

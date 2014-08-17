@@ -41,6 +41,12 @@ import org.w3c.dom.Document;
 
 public class TestXmlDatumWriter {
 
+  private static DocumentBuilderFactory dbf;
+  private static EncoderFactory avroEncoderFactory;
+  private static DecoderFactory avroDecoderFactory;
+
+  private DocumentBuilder docBuilder;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     dbf = DocumentBuilderFactory.newInstance();
@@ -50,9 +56,6 @@ public class TestXmlDatumWriter {
     avroDecoderFactory = DecoderFactory.get();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @Before
   public void setUp() throws Exception {
     docBuilder = dbf.newDocumentBuilder();
@@ -215,10 +218,4 @@ public class TestXmlDatumWriter {
 
     expectedInReader.close();
   }
-
-  private DocumentBuilder docBuilder;
-
-  private static DocumentBuilderFactory dbf;
-  private static EncoderFactory avroEncoderFactory;
-  private static DecoderFactory avroDecoderFactory;
 }

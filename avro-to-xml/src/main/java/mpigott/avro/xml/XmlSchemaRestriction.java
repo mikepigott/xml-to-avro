@@ -30,12 +30,18 @@ import org.apache.ws.commons.schema.XmlSchemaTotalDigitsFacet;
 import org.apache.ws.commons.schema.XmlSchemaWhiteSpaceFacet;
 
 /**
- * This represents an {@link XmlSchemaFacet}.
- *
- * @author  Mike Pigott
+ * This represents an {@link XmlSchemaFacet}.  It uses an enum to more easily
+ * work with different facets, and its {@link #equals(Object)} and
+ * {@link #hashCode()} reflect that only enumerations and patterns can have
+ * multiple facets.
  */
 class XmlSchemaRestriction {
-	enum Type {
+
+  private Type type;
+  private Object value;
+  private boolean isFixed;
+
+  enum Type {
 		ENUMERATION,
 		EXCLUSIVE_MIN,
 		EXCLUSIVE_MAX,
@@ -76,7 +82,8 @@ class XmlSchemaRestriction {
     } else if (facet instanceof XmlSchemaMaxLengthFacet) {
       type = Type.LENGTH_MAX;
     } else {
-      throw new IllegalArgumentException("Unrecognized facet " + facet.getClass().getName());
+      throw new IllegalArgumentException(
+          "Unrecognized facet " + facet.getClass().getName());
     }
 
     value = facet.getValue();
@@ -129,7 +136,10 @@ class XmlSchemaRestriction {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
-		if ((type != null) && (type == Type.ENUMERATION)) {
+
+		if ((type != null)
+		    && ((type == Type.ENUMERATION) || (type == Type.PATTERN))) {
+
 			result = prime * result + (isFixed ? 1231 : 1237);
 			result = prime * result + ((value == null) ? 0 : value.hashCode());
 		}
@@ -157,8 +167,10 @@ class XmlSchemaRestriction {
 		if (type != other.type)
 			return false;
 
-		if ((type != null) && (type == Type.ENUMERATION)) {
-			if (isFixed != other.isFixed)
+		if ((type != null)
+		    && ((type == Type.ENUMERATION) || (type == Type.PATTERN))) {
+
+		  if (isFixed != other.isFixed)
 				return false;
 			if (value == null) {
 				if (other.value != null)
@@ -172,8 +184,4 @@ class XmlSchemaRestriction {
 	public String toString() {
 		return type.name() + ": " + value + " (Fixed: " + isFixed + ")";
 	}
-
-	private Type type;
-	private Object value;
-	private boolean isFixed;
 }

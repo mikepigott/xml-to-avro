@@ -46,8 +46,6 @@ import org.xml.sax.Attributes;
 /**
  * Methods to confirm that an XML element and
  * its attributes all conform to its XML Schema.
- *
- * @author  Mike Pigott
  */
 public final class XmlSchemaElementValidator {
 
@@ -58,7 +56,10 @@ public final class XmlSchemaElementValidator {
       try {
         datatypeFactory = DatatypeFactory.newInstance();
       } catch (DatatypeConfigurationException e) {
-        throw new IllegalStateException("Unable to create the DatatypeFactory for validating XML Schema durations.", e);
+        throw new IllegalStateException(
+            "Unable to create the DatatypeFactory for validating XML Schema "
+            + "durations.",
+            e);
       }
     }
     return datatypeFactory;
@@ -213,7 +214,12 @@ public final class XmlSchemaElementValidator {
            * empty, and the type is not mixed, then element content is where
            * it is not expected.
            */
-          throw new ValidationException(elemQName + " is a non-mixed complex type, therefore there should not be any content between the tags, like \"" + elementContent + "\".");
+          throw new ValidationException(
+              elemQName
+              + " is a non-mixed complex type, therefore there should"
+              + " not be any content between the tags, like \""
+              + elementContent
+              + "\".");
         }
         break;
       }
@@ -231,15 +237,29 @@ public final class XmlSchemaElementValidator {
               elementContent = element.getFixedValue();
             }
             if (elementContent == null) {
-              throw new ValidationException("Element " + elemQName + " has no content, no default value, and no fixed value, but is of type " + elemType.getType() + ".");
+              throw new ValidationException(
+                  "Element "
+                  + elemQName
+                  + " has no content, no default value, and no fixed value,"
+                  + " but is of type "
+                  + elemType.getType()
+                  + ".");
             }
           }
         }
-        validateType(elemQName.toString(), elementContent, elemType, nsContext);
+        validateType(
+            elemQName.toString(),
+            elementContent,
+            elemType,
+            nsContext);
         break;
       }
     default:
-      throw new IllegalStateException(elemQName + " has an unrecognized content type of " + elemType.getType() + ".");
+      throw new IllegalStateException(
+          elemQName
+          + " has an unrecognized content type of "
+          + elemType.getType()
+          + ".");
     }
   }
 
@@ -250,7 +270,8 @@ public final class XmlSchemaElementValidator {
       NamespaceContext nsContext) throws ValidationException {
 
     if ((value == null) || value.isEmpty()) {
-      throw new ValidationException(name + " cannot have a null or empty value!");
+      throw new ValidationException(
+          name + " cannot have a null or empty value!");
     }
 
     final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
@@ -325,11 +346,18 @@ public final class XmlSchemaElementValidator {
     case COMPLEX:
       // This only validates if the type is mixed.
       if ( !typeInfo.isMixed() ) {
-        throw new ValidationException(name + " has a value of \"" + value + "\" but it represents a non-mixed complex type.");
+        throw new ValidationException(
+            name
+            + " has a value of \""
+            + value
+            + "\" but it represents a non-mixed complex type.");
       }
       break;
     default:
-      throw new ValidationException(name + " has an unrecognized type of " + typeInfo.getType());
+      throw new ValidationException(
+          name
+          + " has an unrecognized type of "
+          + typeInfo.getType());
     }
   }
 
@@ -340,10 +368,15 @@ public final class XmlSchemaElementValidator {
       NamespaceContext nsContext) throws ValidationException {
 
     if ( !typeInfo.getType().equals(XmlSchemaTypeInfo.Type.ATOMIC) ) {
-      throw new ValidationException(name + " must have a type of ATOMIC, not " + typeInfo.getType());
+      throw new ValidationException(
+          name
+          + " must have a type of ATOMIC, not "
+          + typeInfo.getType());
 
     } else if ((value == null) || value.isEmpty()) {
-      throw new ValidationException(name + " cannot have a null or empty value when validating.");
+      throw new ValidationException(
+          name
+          + " cannot have a null or empty value when validating.");
     }
 
     final Map<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets =
@@ -700,7 +733,9 @@ public final class XmlSchemaElementValidator {
       newValue = new BigDecimal(numericValue.toString());
 
     } else {
-      throw new IllegalArgumentException(numericValue.getClass().getName() + " is not a subclass of java.lang.Number.");
+      throw new IllegalArgumentException(
+          numericValue.getClass().getName()
+          + " is not a subclass of java.lang.Number.");
     }
 
     return newValue;
@@ -742,7 +777,9 @@ public final class XmlSchemaElementValidator {
 
     if (lengthFacets != null) {
       for (XmlSchemaRestriction lengthFacet : lengthFacets) {
-        lengthRestriction = Integer.parseInt( lengthFacet.getValue().toString() );
+        lengthRestriction =
+            Integer.parseInt( lengthFacet.getValue().toString() );
+
         switch (facetType) {
         case LENGTH:
           satisfied = (value.length() == lengthRestriction);
@@ -754,7 +791,8 @@ public final class XmlSchemaElementValidator {
           satisfied = (value.length() <= lengthRestriction);
           break;
         default:
-          throw new IllegalArgumentException("Cannot perform a length restriction of type " + facetType);
+          throw new IllegalArgumentException(
+              "Cannot perform a length restriction of type " + facetType);
         }
 
         if (!satisfied) {
@@ -764,7 +802,15 @@ public final class XmlSchemaElementValidator {
     }
 
     if (!satisfied) {
-      throw new ValidationException(name + " value \"" + value + "\" does not meet the " + facetType + " restriction of " + lengthRestriction + ".");
+      throw new ValidationException(
+          name
+          + " value \""
+          + value
+          + "\" does not meet the "
+          + facetType
+          + " restriction of "
+          + lengthRestriction
+          + ".");
     }
   }
 
@@ -796,7 +842,9 @@ public final class XmlSchemaElementValidator {
 
     if (lengthFacets != null) {
       for (XmlSchemaRestriction lengthFacet : lengthFacets) {
-        lengthRestriction = Integer.parseInt( lengthFacet.getValue().toString() );
+        lengthRestriction =
+            Integer.parseInt( lengthFacet.getValue().toString() );
+
         switch (facetType) {
         case LENGTH:
           satisfied = (value.length == lengthRestriction);
@@ -808,7 +856,8 @@ public final class XmlSchemaElementValidator {
           satisfied = (value.length <= lengthRestriction);
           break;
         default:
-          throw new IllegalArgumentException("Cannot perform a length restriction of type " + facetType);
+          throw new IllegalArgumentException(
+              "Cannot perform a length restriction of type " + facetType);
         }
 
         if (!satisfied) {
@@ -818,7 +867,15 @@ public final class XmlSchemaElementValidator {
     }
 
     if (!satisfied) {
-      throw new ValidationException(name + " value of length " + value.length + " does not meet the " + facetType + " restriction of " + lengthRestriction + ".");
+      throw new ValidationException(
+          name
+          + " value of length "
+          + value.length
+          + " does not meet the "
+          + facetType
+          + " restriction of "
+          + lengthRestriction
+          + ".");
     }
   }
 
@@ -834,7 +891,14 @@ public final class XmlSchemaElementValidator {
 
     String[] numSplit = value.split("\\.");
     if ((numSplit.length == 0) || (numSplit.length > 2)) {
-      throw new ValidationException(name + " value \"" + value + "\" is expected to have one or two sections around the decimal point, not " + numSplit.length + ".");
+      throw new ValidationException(
+          name
+          + " value \""
+          + value
+          + "\" is expected to have one or two sections around the decimal"
+          + " point, not "
+          + numSplit.length
+          + ".");
     }
 
     if (numSplit.length > 1) {
@@ -880,7 +944,9 @@ public final class XmlSchemaElementValidator {
           break;
         }
         default:
-          throw new IllegalArgumentException("Cannot perform a digits facet check with a facet of type " + facetType);
+          throw new IllegalArgumentException(
+              "Cannot perform a digits facet check with a facet of type "
+              + facetType);
         }
       }
     }

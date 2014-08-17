@@ -27,15 +27,40 @@ import javax.xml.namespace.QName;
 import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
 
+/**
+ * Configuration for setting up the {@link XmlDatumWriter}.  XML Schemas may
+ * be defined by {@link java.net.URL}s and/or {@link java.io.File}s, and the
+ * name of the XML Document's root tag {@link javax.xml.namespace.QName} is
+ * needed to determine how to parse the XML Schema or Schemas.
+ *
+ * <p>
+ * When using files, a Schema URI is required.  If the Schema contains
+ * references to incomplete paths, this URI will be used to track them
+ * down.
+ * </p>
+ */
 public class XmlDatumConfig {
 
-	private XmlDatumConfig(QName rootTagName) {
+  private ArrayList<URL> schemaUrls;
+  private ArrayList<File> schemaFiles;
+  private String baseUri;
+  private QName baseTagName;
+
+  private XmlDatumConfig(QName rootTagName) {
 		baseTagName = rootTagName;
 		schemaUrls = null;
 		schemaFiles = null;
 		baseUri = null;
 	}
 
+  /**
+   * Creates a new <code>XmlDatumConfig</code> from the {@link java.net.URL}
+   * to fetch the XML Schema from and the {@link QName} representing the
+   * root element.
+   *
+   * @param schema      The URL of the XML Schema to read.
+   * @param rootTagName The <code>QName</code> of the root element.
+   */
 	public XmlDatumConfig(URL schema, QName rootTagName) {
 		this(rootTagName);
 		schemaUrls = new ArrayList<URL>(1);
@@ -43,6 +68,19 @@ public class XmlDatumConfig {
 		baseUri = getBaseUriFor(schema);
 	}
 
+  /**
+   * Creates a new <code>XmlDatumConfig</code> from a local {@link File}
+   * to read the XML Schema from and the {@link QName} representing the
+   * root element.  A base URI is also required as the default path to
+   * fetch any referenced schemas from.
+   *
+   * @param schema        The path to the XML Schema to read.
+   *
+   * @param schemaBaseUri The base URI of the schema - a default URI of
+   *                      where to retrieve other referenced schemas.
+   *
+   * @param rootTagName   The <code>QName</code> of the root element.
+   */
 	public XmlDatumConfig(File schema, String schemaBaseUri, QName rootTagName) {
 		this(rootTagName);
 
@@ -51,22 +89,51 @@ public class XmlDatumConfig {
 		baseUri = schemaBaseUri;
 	}
 
+	/**
+	 * <p>
+	 * The base URI.  If this <code>XmlDatumConfig</code> was created with a
+	 * URL, the base URI is the URL up to, but not including the schema file
+	 * name.
+	 * </p>
+	 * <p>
+	 * If the <code>XmlDatumConfig</code> was created with a <code>File</code>,
+	 * this is the <code>schemaBaseUri</code> provided in that constructor.
+	 * </p>
+	 */
 	public String getBaseUri() {
 		return baseUri;
 	}
 
+	/**
+	 * The list of XML Schema URLs provided via
+	 * {@link #XmlDatumConfig(URL, QName)} and
+	 * any subsequent calls to
+	 * {@link #addSchemaUrl(URL)}.
+	 */
 	public List<URL> getSchemaUrls() {
 	  return schemaUrls;
 	}
 
+	/**
+	 * The list of XML Schema files provided via
+	 * {@link #XmlDatumConfig(File, String, QName)}
+	 * and any subsequent calls to
+	 * {@link #addSchemaFile(File)}.
+	 */
 	public List<File> getSchemaFiles() {
 	  return schemaFiles;
 	}
 
+	/**
+	 * The XML Schema's root tag passed into the constructor.
+	 */
 	public QName getRootTagName() {
 		return baseTagName;
 	}
 
+	/**
+	 * Adds a URL to an XML Schema to include when generating Avro.
+	 */
 	public void addSchemaUrl(URL schemaUrl) {
 	  if (schemaUrls == null) {
 	    schemaUrls = new ArrayList<URL>(1);
@@ -74,6 +141,9 @@ public class XmlDatumConfig {
 	  schemaUrls.add(schemaUrl);
 	}
 
+  /**
+   * Adds a file path to an XML Schema to include when generating Avro.
+   */
 	public void addSchemaFile(File file) {
 	  if (schemaFiles == null) {
 	    schemaFiles = new ArrayList<File>(1);
@@ -144,9 +214,4 @@ public class XmlDatumConfig {
 
     return namespaceWithFile.substring(0, lastSlashBeforeFileIndex + 1);
   }
-
-  private ArrayList<URL> schemaUrls;
-	private ArrayList<File> schemaFiles;
-	private String baseUri;
-	private QName baseTagName;
 }

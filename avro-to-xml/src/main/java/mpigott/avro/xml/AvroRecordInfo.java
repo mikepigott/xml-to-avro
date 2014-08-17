@@ -23,19 +23,15 @@ import org.apache.avro.Schema;
 /**
  * Represents information about an Avro type
  * representing a node in the document hierarchy.
- *
- * <p>
- * A future version will keep track of records in the
- * document that have IDREFs referencing this one.
- * </p>
- *
- * @author  Mike Pigott
  */
 final class AvroRecordInfo {
 
-  /**
-   * Constructs a new <code>AvroRecordInfo</code> from its {@link Schema}.
-   */
+  private final Schema avroSchema;
+  private final int unionIndex;
+  private final int mapUnionIndex;
+
+  private int numChildren;
+
   public AvroRecordInfo(Schema avroSchema) {
     this.avroSchema = avroSchema;
     this.unionIndex = -1;
@@ -69,10 +65,4 @@ final class AvroRecordInfo {
   void incrementChildCount() {
     ++numChildren;
   }
-
-  private final Schema avroSchema;
-  private final int unionIndex;
-  private final int mapUnionIndex;
-
-  private int numChildren;
 }

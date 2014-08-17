@@ -52,22 +52,38 @@ import org.w3c.dom.NodeList;
 
 /**
  * Generates an Avro schema based on the walked XML Schema.
- *
- * @author  Mike Pigott
  */
 final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
+  private Schema root;
+
+  private final List<URL> schemaUrls;
+  private final List<File> schemaFiles;
+  private final String baseUri;
+
+  private final ArrayList<StackEntry> stack;
+  private final Map<QName, Schema> schemasByElement;
+  private final Map<QName, List<Schema>> substitutionGroups;
+  private final Map<QName, List<Schema>> fieldsByElement;
+  private final Map<QName, List<AttributeEntry>> attributesByElement; 
+
   private static class StackEntry {
-    public StackEntry(final QName elementQName, final boolean isSubstitutionGroup) {
+    final QName elementQName;
+    final boolean isSubstitutionGroup;
+
+    public StackEntry(
+        final QName elementQName,
+        final boolean isSubstitutionGroup) {
+
       this.elementQName = elementQName;
       this.isSubstitutionGroup = isSubstitutionGroup;
     }
-
-    final QName elementQName;
-    final boolean isSubstitutionGroup;
   }
 
   private static class AttributeEntry {
+    private final Schema.Field schemaField;
+    private final boolean isNonOptionalIdField;
+
     AttributeEntry(Schema.Field field, boolean isNonOptionalIdField) {
       this.schemaField = field;
       this.isNonOptionalIdField = isNonOptionalIdField;
@@ -80,9 +96,6 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     boolean isNonOptionalIdField() {
       return isNonOptionalIdField;
     }
-
-    private final Schema.Field schemaField;
-    private final boolean isNonOptionalIdField;
   }
 
   AvroSchemaGenerator(
@@ -130,7 +143,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * If this element was added previously, and it is not part of a substitution
    * group, add it to its parent.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo, boolean)
+   * @see XmlSchemaVisitor#onEnterElement(XmlSchemaElement, XmlSchemaTypeInfo, boolean)
    */
   @Override
   public void onEnterElement(
@@ -155,7 +168,10 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
          */
         final Schema schema = schemasByElement.get(elemQName);
         if (schema == null) {
-          throw new IllegalStateException("Element \"" + element.getQName() + "\" was previously visited, but has no schema.");
+          throw new IllegalStateException(
+              "Element \""
+              + element.getQName()
+              + "\" was previously visited, but has no schema.");
         }
 
         addSchemaToParent(schema);
@@ -182,7 +198,11 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     try {
       avroNamespace = Utils.getAvroNamespaceFor( elemQName.getNamespaceURI() );
     } catch (URISyntaxException e) {
-      throw new IllegalArgumentException("Element \"" + elemQName + "\" has an invalid namespace of \"" + elemQName.getNamespaceURI() + "\"", e);
+      throw new IllegalArgumentException(
+          "Element \""
+          + elemQName
+          + "\" has an invalid namespace of \""
+          + elemQName.getNamespaceURI() + "\"", e);
     }
 
     record =
@@ -199,7 +219,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * If this element was not visited previously, retrieves all of the fields
    * associated with the record corresponding to the element, and adds them.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo, boolean)
+   * @see XmlSchemaVisitor#onExitElement(XmlSchemaElement, XmlSchemaTypeInfo, boolean)
    */
   @Override
   public void onExitElement(
@@ -226,7 +246,8 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     Schema record = schemasByElement.get(entry.elementQName);
     if (record == null) {
-      throw new IllegalStateException("No schema found for element \"" + entry.elementQName + "\".");
+      throw new IllegalStateException(
+          "No schema found for element \"" + entry.elementQName + "\".");
 
     } else if (record.getType().equals(Schema.Type.MAP)) {
       record = record.getValueType();
@@ -411,7 +432,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Processes the attribute of the provided element,
    * adding it as a field to the corresponding record.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAttribute(org.apache.ws.commons.schema.XmlSchemaElement, org.apache.ws.commons.schema.XmlSchemaAttribute, mpigott.avro.xml.XmlSchemaTypeInfo)
+   * @see XmlSchemaVisitor#onVisitAttribute(XmlSchemaElement, XmlSchemaAttribute, XmlSchemaTypeInfo)
    */
   @Override
   public void onVisitAttribute(
@@ -493,7 +514,8 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     Schema record = schemasByElement.get(elemQName);
     if (record == null) {
-      throw new IllegalStateException("No schema found for element \"" + elemQName + "\".");
+      throw new IllegalStateException(
+          "No schema found for element \"" + elemQName + "\".");
     }
 
     /* If this RECORD contains exactly one non-optional ID attribute, it is
@@ -538,7 +560,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
   /**
    * Adds a new stack entry for this substitution group.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterSubstitutionGroup(org.apache.ws.commons.schema.XmlSchemaElement)
+   * @see XmlSchemaVisitor#onEnterSubstitutionGroup(XmlSchemaElement)
    */
   @Override
   public void onEnterSubstitutionGroup(XmlSchemaElement base) {
@@ -549,12 +571,14 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Retrieves all of the members of this substitution
    * group and adds them to the parent as children.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitSubstitutionGroup(org.apache.ws.commons.schema.XmlSchemaElement)
+   * @see XmlSchemaVisitor#onExitSubstitutionGroup(XmlSchemaElement)
    */
   @Override
   public void onExitSubstitutionGroup(XmlSchemaElement base) {
     final StackEntry entry = pop(base.getQName(), true);
-    final List<Schema> substitutes = substitutionGroups.get(entry.elementQName);
+    final List<Schema> substitutes =
+        substitutionGroups.get(entry.elementQName);
+
     if ((substitutes == null) || substitutes.isEmpty()) {
       /* This happens when an abstract element can only
        * be substituted by other abstract elements.
@@ -582,7 +606,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Avro schemas do not handle different group
    * types differently.  This is a no-op.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterAllGroup(org.apache.ws.commons.schema.XmlSchemaAll)
+   * @see XmlSchemaVisitor#onEnterAllGroup(XmlSchemaAll)
    */
   @Override
   public void onEnterAllGroup(XmlSchemaAll all) { }
@@ -591,7 +615,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Avro schemas do not handle different group
    * types differently.  This is a no-op.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitAllGroup(org.apache.ws.commons.schema.XmlSchemaAll)
+   * @see XmlSchemaVisitor#onExitAllGroup(XmlSchemaAll)
    */
   @Override
   public void onExitAllGroup(XmlSchemaAll all) { }
@@ -600,7 +624,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Avro schemas do not handle different group
    * types differently.  This is a no-op.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterChoiceGroup(org.apache.ws.commons.schema.XmlSchemaChoice)
+   * @see XmlSchemaVisitor#onEnterChoiceGroup(XmlSchemaChoice)
    */
   @Override
   public void onEnterChoiceGroup(XmlSchemaChoice choice) { }
@@ -609,7 +633,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Avro schemas do not handle different group
    * types differently.  This is a no-op.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitChoiceGroup(org.apache.ws.commons.schema.XmlSchemaChoice)
+   * @see XmlSchemaVisitor#onExitChoiceGroup(XmlSchemaChoice)
    */
   @Override
   public void onExitChoiceGroup(XmlSchemaChoice choice) { }
@@ -618,7 +642,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Avro schemas do not handle different group
    * types differently.  This is a no-op.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterSequenceGroup(org.apache.ws.commons.schema.XmlSchemaSequence)
+   * @see XmlSchemaVisitor#onEnterSequenceGroup(XmlSchemaSequence)
    */
   @Override
   public void onEnterSequenceGroup(final XmlSchemaSequence seq) {  }
@@ -627,7 +651,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Avro schemas do not handle different group
    * types differently.  This is a no-op.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitSequenceGroup(org.apache.ws.commons.schema.XmlSchemaSequence)
+   * @see XmlSchemaVisitor#onExitSequenceGroup(XmlSchemaSequence)
    */
   @Override
   public void onExitSequenceGroup(final XmlSchemaSequence seq) { }
@@ -636,7 +660,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Avro schemas do not have support for an
    * "anything" type. This method is a no-op.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAny(org.apache.ws.commons.schema.XmlSchemaAny)
+   * @see XmlSchemaVisitor#onVisitAny(XmlSchemaAny)
    */
   @Override
   public void onVisitAny(XmlSchemaAny any) { }
@@ -645,7 +669,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Avro schemas do not have support for an
    * "anything" type. This method is a no-op.
    *
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAnyAttribute(org.apache.ws.commons.schema.XmlSchemaElement, org.apache.ws.commons.schema.XmlSchemaAnyAttribute)
+   * @see XmlSchemaVisitor#onVisitAnyAttribute(XmlSchemaElement, XmlSchemaAnyAttribute)
    */
   @Override
   public void onVisitAnyAttribute(final XmlSchemaElement element, final XmlSchemaAnyAttribute anyAttr) {  }
@@ -678,7 +702,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    *         substitution group, or <code>null</code> if none.
    */
   private StackEntry getSubstitutionGroup() {
-    final ListIterator<StackEntry> iterator = stack.listIterator( stack.size() );
+    final ListIterator<StackEntry> iterator = stack.listIterator(stack.size());
     if (iterator.hasPrevious()) {
       StackEntry prev = iterator.previous();
       if (prev.isSubstitutionGroup) {
@@ -700,14 +724,21 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
   private StackEntry pop(QName entryQName, boolean isSubstGroup) {
     if ( stack.isEmpty() ) {
-      throw new IllegalStateException("Attempted to pop " + getStackEntryInfo(entryQName, isSubstGroup) + " off of an empty stack.");
+      throw new IllegalStateException(
+          "Attempted to pop "
+          + getStackEntryInfo(entryQName, isSubstGroup)
+          + " off of an empty stack.");
     }
 
     final StackEntry entry = stack.remove(stack.size() - 1);
 
     if (!entry.elementQName.equals(entryQName)
         || (entry.isSubstitutionGroup != isSubstGroup)) {
-      throw new IllegalStateException("Attempted to pop " + getStackEntryInfo(entryQName, isSubstGroup) + " but found " + getStackEntryInfo(entry.elementQName, entry.isSubstitutionGroup));
+      throw new IllegalStateException(
+          "Attempted to pop "
+          + getStackEntryInfo(entryQName, isSubstGroup)
+          + " but found "
+          + getStackEntryInfo(entry.elementQName, entry.isSubstitutionGroup));
     }
 
     return entry;
@@ -801,9 +832,15 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
       StringBuilder docs = new StringBuilder();
       for (XmlSchemaAnnotationItem item : annotation.getItems()) {
         if (item instanceof XmlSchemaDocumentation) {
-          final NodeList docNodes = ((XmlSchemaDocumentation) item).getMarkup();
-          for (int nodeIndex = 0; nodeIndex < docNodes.getLength(); ++nodeIndex) {
-            docs.append( docNodes.item(nodeIndex).getTextContent().replaceAll("\\s+", " ") );
+          final NodeList docNodes =
+              ((XmlSchemaDocumentation) item).getMarkup();
+
+          for (int nodeIdx = 0; nodeIdx < docNodes.getLength(); ++nodeIdx) {
+            docs.append(
+                docNodes
+                  .item(nodeIdx)
+                  .getTextContent()
+                  .replaceAll("\\s+", " "));
           }
           break;
         }
@@ -813,16 +850,4 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
 
     return null;
   }
-
-  private Schema root;
-
-  private final List<URL> schemaUrls;
-  private final List<File> schemaFiles;
-  private final String baseUri;
-
-  private final ArrayList<StackEntry> stack;
-  private final Map<QName, Schema> schemasByElement;
-  private final Map<QName, List<Schema>> substitutionGroups;
-  private final Map<QName, List<Schema>> fieldsByElement;
-  private final Map<QName, List<AttributeEntry>> attributesByElement; 
 }

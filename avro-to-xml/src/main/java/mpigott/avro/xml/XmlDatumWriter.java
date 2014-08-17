@@ -40,34 +40,51 @@ import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * Reads an XML {@link Document} and writes it to an {@link Encoder}.
-   * <p>
-   * Generates an Avro {@link Schema} on the fly from the XML Schema itself. 
-   * That {@link Schema can be retrieved by calling {@link #getSchema()}.
-   * </p>
-   *
- *
- * @author  Mike Pigott
+ * <p>
+ * Generates an Avro {@link Schema} on the fly from the XML Schema itself. 
+ * That {@link Schema can be retrieved by calling {@link #getSchema()}.
+ * </p>
  */
 public class XmlDatumWriter implements DatumWriter<Document> {
 
   private static final QName NIL_ATTR =
       new QName("http://www.w3.org/2001/XMLSchema-instance", "nil");
 
+  private final XmlSchemaCollection xmlSchemaCollection;
+  private final XmlSchemaStateMachineNode stateMachine;
+  private Schema schema;
+
   private static class StackEntry {
+    XmlSchemaDocumentNode<AvroRecordInfo> docNode;
+    boolean receivedContent;
+    int mapCount;
+    int mapInstance;
+
     StackEntry(XmlSchemaDocumentNode<AvroRecordInfo> docNode) {
       this.docNode = docNode;
       this.receivedContent = false;
       this.mapCount = 0;
       this.mapInstance = -1;
     }
-
-    XmlSchemaDocumentNode<AvroRecordInfo> docNode;
-    boolean receivedContent;
-    int mapCount;
-    int mapInstance;
   }
 
   private static class Writer extends DefaultHandler {
+    private static final XmlSchemaTypeInfo XML_MIXED_CONTENT_TYPE =
+        new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.STRING);
+
+    private static final Schema AVRO_MIXED_CONTENT_SCHEMA =
+        Schema.create(Schema.Type.STRING);
+
+    private XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> currLocation;
+    private StringBuilder content;
+    private QName currAnyElem;
+    private ArrayList<StackEntry> stack;
+    private int priorMapCount;
+
+    private final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path;
+    private final Encoder out;
+    private final XmlSchemaNamespaceContext nsContext;
+
     Writer(
         XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path,
         Encoder out) {
@@ -125,7 +142,10 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           && !currLocation
                .getDirection()
                .equals(XmlSchemaPathNode.Direction.SIBLING)) {
-        throw new IllegalStateException("We are starting an element, so our path node direction should be to a CHILD or SIBLING, not " + currLocation.getDirection());
+        throw new IllegalStateException(
+            "We are starting an element, so our path node direction should be "
+            + "to a CHILD or SIBLING, not "
+            + currLocation.getDirection());
       }
 
       if (currLocation
@@ -155,7 +175,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             new HashMap<String, XmlSchemaAttribute>();
 
         for (XmlSchemaStateMachineNode.Attribute attribute : attributes) {
-          attrTypes.put(attribute.getAttribute().getName(), attribute.getType());
+          attrTypes.put(
+              attribute.getAttribute().getName(),
+              attribute.getType());
 
           schemaAttrs.put(
               attribute.getAttribute().getName(),
@@ -236,14 +258,20 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                           field.name());
 
                   if (key == null) {
-                    throw new IllegalStateException("Attribute value for " + xsa.getQName() + " of element " + elemQName + " is null.");
+                    throw new IllegalStateException(
+                        "Attribute value for "
+                        + xsa.getQName()
+                        + " of element "
+                        + elemQName
+                        + " is null.");
                   }
                   break;
                 }
               }
 
               if (key == null) {
-                throw new IllegalStateException("Unable to find key for element " + elemQName);
+                throw new IllegalStateException(
+                    "Unable to find key for element " + elemQName);
               }
 
               out.writeString(key);
@@ -259,11 +287,19 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           case MAP_END:
           case CONTENT:
           default:
-            throw new IllegalStateException("Did not expect to find a map node of type " + mapNode.getType() + " when starting " + elemQName + ".");
+            throw new IllegalStateException(
+                "Did not expect to find a map node of type "
+                + mapNode.getType()
+                + " when starting "
+                + elemQName
+                + ".");
           }
 
         } else {
-          throw new IllegalStateException("Elements are either MAPs or RECORDs, not " + avroSchema.getType() + "s.");
+          throw new IllegalStateException(
+              "Elements are either MAPs or RECORDs, not "
+              + avroSchema.getType()
+              + "s.");
         }
 
         /* The last element in the set of fields is the children.  We want
@@ -277,7 +313,12 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           final Schema.Field field = avroSchema.getFields().get(fieldIndex);
           if (field.name().equals(elemQName.getLocalPart())) {
             // We reached the children field early ... not supposed to happen!
-            throw new IllegalStateException("The children field is indexed at " + fieldIndex + " when it was expected to be the last element, or " + (avroSchema.getFields().size() - 1) + ".");
+            throw new IllegalStateException(
+                "The children field is indexed at "
+                + fieldIndex
+                + " when it was expected to be the last element, or "
+                + (avroSchema.getFields().size() - 1)
+                + ".");
           }
 
           final XmlSchemaTypeInfo typeInfo = attrTypes.get( field.name() );
@@ -303,7 +344,14 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           try {
             write(typeInfo, attrQName, field.schema(), value);
           } catch (Exception e) {
-            throw new RuntimeException("Could not write " + field.name() + " in " + field.schema().toString() + " to the output stream for element " + elemQName, e);
+            throw new RuntimeException(
+                "Could not write "
+                + field.name()
+                + " in "
+                + field.schema().toString()
+                + " to the output stream for element "
+                + elemQName,
+                e);
           }
         }
 
@@ -362,12 +410,18 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         stack.add(entry);
 
       } catch (Exception e) {
-        throw new RuntimeException("Unable to write " + elemQName + " to the output stream.", e);
+        throw new RuntimeException(
+            "Unable to write "
+            + elemQName
+            + " to the output stream.",
+            e);
       }
     }
 
     @Override
-    public void characters(char[] ch, int start, int length) throws SAXException {
+    public void characters(char[] ch, int start, int length)
+        throws SAXException {
+
       if (currAnyElem != null) {
         // We do not process wildcard elements.
         return;
@@ -548,7 +602,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
           avroSchema = avroSchema.getValueType();
 
           if (record.getMapUnionIndex() >= 0) {
-            avroSchema = avroSchema.getTypes().get( record.getMapUnionIndex() );
+            avroSchema = avroSchema.getTypes().get(record.getMapUnionIndex());
           }
         }
 
@@ -557,7 +611,13 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         try {
           write(elemType, elemQName, avroSchema, value);
         } catch (IOException e) {
-          throw new RuntimeException("Attempted to write a default value of \"" + value + "\" for " + elemQName + " and failed.", e);
+          throw new RuntimeException(
+              "Attempted to write a default value of \""
+              + value
+              + "\" for "
+              + elemQName
+              + " and failed.",
+              e);
         }
       }
 
@@ -676,7 +736,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                                .equals(XmlSchemaStateMachineNode.Type.ANY))));
 
       if (currLocation == null) {
-        throw new IllegalStateException("Cannot find " + elemName + " in the path!");
+        throw new IllegalStateException(
+            "Cannot find " + elemName + " in the path!");
+
       } else if (
           currLocation
             .getStateMachineNode()
@@ -687,7 +749,14 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                 .getElement()
                 .getQName()
                 .equals(elemName)) {
-        throw new IllegalStateException("The next element in the path is " + currLocation.getStateMachineNode().getElement().getQName() + " (" + currLocation.getDirection() + "), not " + elemName + ".");
+        throw new IllegalStateException(
+            "The next element in the path is "
+            + currLocation.getStateMachineNode().getElement().getQName()
+            + " ("
+            + currLocation.getDirection()
+            + "), not "
+            + elemName
+            + ".");
       }
     }
 
@@ -820,7 +889,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                    .equals(AvroPathNode.Type.MAP_END));
     }
 
-    private String getAttrValue(Attributes atts, String namespaceUri, String name) {
+    private String getAttrValue(
+        Attributes atts,
+        String namespaceUri,
+        String name) {
+
       /* Attributes in XML Schema each have their own namespace, which
        * is not supported in Avro.  So, we will see if we can find the
        * attribute using the existing namespace, and if not, we will
@@ -1013,7 +1086,11 @@ public class XmlDatumWriter implements DatumWriter<Document> {
               out.writeString(data);
 
             } else if (!written) {
-              throw new IOException("Cannot write \"" + data + "\" as one of the types in " + schema.toString());
+              throw new IOException(
+                  "Cannot write \""
+                  + data
+                  + "\" as one of the types in "
+                  + schema.toString());
             }
           }
           break;
@@ -1029,7 +1106,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             bytes = DatatypeConverter.parseHexBinary(data);
             break;
           default:
-            throw new IllegalArgumentException("Cannot generate bytes for data of a base type of " + baseType);
+            throw new IllegalArgumentException(
+                "Cannot generate bytes for data of a base type of "
+                + baseType);
           }
           if (unionIndex >= 0) {
             out.writeIndex(unionIndex);
@@ -1165,22 +1244,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         throw new IOException("Cannot write data of type " + schema.getType());
       }
     }
-
-    private static final XmlSchemaTypeInfo XML_MIXED_CONTENT_TYPE =
-        new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.STRING);
-
-    private static final Schema AVRO_MIXED_CONTENT_SCHEMA =
-        Schema.create(Schema.Type.STRING);
-
-    private XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> currLocation;
-    private StringBuilder content;
-    private QName currAnyElem;
-    private ArrayList<StackEntry> stack;
-    private int priorMapCount;
-
-    private final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path;
-    private final Encoder out;
-    private final XmlSchemaNamespaceContext nsContext;
   }
 
   public XmlDatumWriter(XmlDatumConfig config, Schema avroSchema)
@@ -1264,7 +1327,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
    * from {@link #getSchema()}.
    * </p>
    *
-   * @see org.apache.avro.io.DatumWriter#write(java.lang.Object, org.apache.avro.io.Encoder)
+   * @see DatumWriter#write(java.lang.Object, org.apache.avro.io.Encoder)
    */
   @Override
   public void write(Document doc, Encoder out) throws IOException {
@@ -1293,8 +1356,4 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       throw new IOException("Unable to encode the document.", e);
     }
   }
-
-  private final XmlSchemaCollection xmlSchemaCollection;
-  private final XmlSchemaStateMachineNode stateMachine;
-  private Schema schema;
 }

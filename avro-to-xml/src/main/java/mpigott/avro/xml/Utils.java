@@ -33,13 +33,12 @@ import org.apache.ws.commons.schema.constants.Constants;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
+import org.codehaus.jackson.node.ObjectNode;
 import org.xml.sax.InputSource;
 
 /**
  * A set of utilities for encoding and
  * decoding XML Documents and Avro data.
- *
- * @author  Mike Pigott
  */
 class Utils {
 
@@ -152,7 +151,9 @@ class Utils {
             xmlToAvroTypeMap.get( typeInfo.getUserRecognizedType() );
   
           if (avroType == null) {
-            throw new IllegalArgumentException("No Avro type recognized for " + typeInfo.getUserRecognizedType());
+            throw new IllegalArgumentException(
+                "No Avro type recognized for "
+                + typeInfo.getUserRecognizedType());
           }
   
           schema = Schema.create(avroType);
@@ -205,7 +206,10 @@ class Utils {
         /* falls through */
       }
     default:
-      throw new IllegalArgumentException("Cannot create an Avro schema for a " + typeInfo.getType() + " type.");
+      throw new IllegalArgumentException(
+          "Cannot create an Avro schema for a "
+          + typeInfo.getType()
+          + " type.");
     }
   }
 
@@ -285,12 +289,16 @@ class Utils {
 
   }
 
-  static String getAvroNamespaceFor(String xmlSchemaNamespace) throws URISyntaxException {
-	  return getAvroNamespaceFor(new URI(xmlSchemaNamespace));
+  static String getAvroNamespaceFor(String xmlSchemaNamespace)
+      throws URISyntaxException {
+
+    return getAvroNamespaceFor(new URI(xmlSchemaNamespace));
   }
 
-  static String getAvroNamespaceFor(URL xmlSchemaNamespace) throws URISyntaxException {
-	  return getAvroNamespaceFor( xmlSchemaNamespace.toURI() );
+  static String getAvroNamespaceFor(URL xmlSchemaNamespace)
+      throws URISyntaxException {
+
+    return getAvroNamespaceFor( xmlSchemaNamespace.toURI() );
   }
 
   static String getAvroNamespaceFor(java.net.URI uri) {
@@ -430,9 +438,20 @@ class Utils {
     case LONG:
       return JsonNodeFactory.instance.numberNode( Long.parseLong(value) );
 
+    case RECORD:
+      {
+        /* TODO: Can only be converted to QName or Decimal; will need a
+         *       NamespaceContext and a check if value is numeric or not.
+         */
+      }
+
     default:
     }
 
-    throw new IllegalArgumentException("Could not parse the value \"" + value + "\" using the provided schema " + type);
+    throw new IllegalArgumentException(
+        "Could not parse the value \""
+        + value
+        + "\" using the provided schema "
+        + type);
   }
 }

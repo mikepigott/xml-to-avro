@@ -31,18 +31,24 @@ import org.codehaus.jackson.node.JsonNodeFactory;
 import org.codehaus.jackson.node.ObjectNode;
 
 /**
- * Represents the an Avro {@link Schema.Type} and its corresponding
- * {@link org.apache.ws.commons.schema.XmlSchemaType}, encoded in JSON.
+ * Represents an element's or attribute's type, meaning either a
+ * {@link XmlSchemaBaseSimpleType} with facets, a union or list of
+ * those, or a complex type.
  *
  * <p>
- * In cases where we do not have access to the original XML Schema,
- * the XML Schema Type encoded in JSON will disambiguate the lower
- * fidelity of the Avro schema type.
+ * Also maintains a {@link QName} representing a type the user recognizes.
+ * In the Avro case, this is the set of XML Schema simple types that can
+ * be directly converted to Avro counterparts.
  * </p>
- *
- * @author  Mike Pigott
  */
 final class XmlSchemaTypeInfo {
+
+  private Type type;
+  private HashMap<XmlSchemaRestriction.Type,List<XmlSchemaRestriction>> facets;
+  private boolean isMixed;
+  private XmlSchemaBaseSimpleType baseSimpleType;
+  private QName userRecognizedType;
+  private List<XmlSchemaTypeInfo> childTypes;
 
   enum Type {
     LIST,
@@ -155,11 +161,4 @@ final class XmlSchemaTypeInfo {
     str.append((childTypes == null) ? 0 : childTypes.size());
     return str.toString();
   }
-
-  private Type type;
-  private HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets;
-  private boolean isMixed;
-  private XmlSchemaBaseSimpleType baseSimpleType;
-  private QName userRecognizedType;
-  private List<XmlSchemaTypeInfo> childTypes;
 }

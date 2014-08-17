@@ -41,10 +41,26 @@ import org.xml.sax.helpers.DefaultHandler;
 /**
  * Builds an XML {@link org.w3c.dom.Document}
  * from an XML Schema during a SAX walk.
- *
- * @author  Mike Pigott
  */
 final class DomBuilderFromSax extends DefaultHandler {
+
+  private static final String XSI_NS =
+      "http://www.w3.org/2001/XMLSchema-instance";
+  private static final String XSI_SCHEMALOC = "schemaLocation";
+  private static final String XSI_NIL = "nil";
+
+  private Document document;
+  private StringBuilder content;
+  private Map<String, String> namespaceToLocationMapping;
+  private List<String> newPrefixes;
+  private XmlSchemaNamespaceContext nsContext;
+
+  private Map<QName, XmlSchemaElement> elementsByQName;
+
+  private final ArrayList<Element> elementStack;
+  private final DocumentBuilder docBuilder;
+  private final XmlSchemaCollection schemas;
+  private final Set<String> globalNamespaces;
 
   DomBuilderFromSax() throws ParserConfigurationException {
     this(null);
@@ -105,7 +121,7 @@ final class DomBuilderFromSax extends DefaultHandler {
   }
 
   /**
-   * @see org.xml.sax.helpers.DefaultHandler#startElement(java.lang.String, java.lang.String, java.lang.String, org.xml.sax.Attributes)
+   * @see DefaultHandler#startElement(String, String, String, Attributes)
    */
   @Override
   public void startElement(
@@ -138,7 +154,17 @@ final class DomBuilderFromSax extends DefaultHandler {
             qualifiedName,
             namespace);
       } catch (DOMException e) {
-        throw new IllegalStateException("Cannot add namespace attribute ns=\"" + Constants.XMLNS_ATTRIBUTE_NS_URI + "\", qn=\"" + qualifiedName + "\", value=\"" + namespace + "\" to element \"" + qName + "\".", e);
+        throw new IllegalStateException(
+            "Cannot add namespace attribute ns=\""
+            + Constants.XMLNS_ATTRIBUTE_NS_URI
+            + "\", qn=\""
+            + qualifiedName
+            + "\", value=\""
+            + namespace
+            + "\" to element \""
+            + qName
+            + "\".",
+            e);
       }
     }
     newPrefixes.clear();
@@ -209,10 +235,12 @@ final class DomBuilderFromSax extends DefaultHandler {
 
   /**
    * 
-   * @see org.xml.sax.helpers.DefaultHandler#characters(char[], int, int)
+   * @see DefaultHandler#characters(char[], int, int)
    */
   @Override
-  public void characters(char[] ch, int start, int length) throws SAXException {
+  public void characters(char[] ch, int start, int length)
+      throws SAXException {
+
     if (content == null) {
       content = new StringBuilder();
     }
@@ -220,7 +248,7 @@ final class DomBuilderFromSax extends DefaultHandler {
   }
 
   /**
-   * @see org.xml.sax.helpers.DefaultHandler#endElement(java.lang.String, java.lang.String, java.lang.String)
+   * @see DefaultHandler#endElement(String, String, String)
    */
   @Override
   public void endElement(
@@ -367,22 +395,4 @@ final class DomBuilderFromSax extends DefaultHandler {
       return elemUri.equals(attrUri);
     }
   }
-
-  private static final String XSI_NS =
-      "http://www.w3.org/2001/XMLSchema-instance";
-  private static final String XSI_SCHEMALOC = "schemaLocation";
-  private static final String XSI_NIL = "nil";
-
-  private Document document;
-  private StringBuilder content;
-  private Map<String, String> namespaceToLocationMapping;
-  private List<String> newPrefixes;
-  private XmlSchemaNamespaceContext nsContext;
-
-  private Map<QName, XmlSchemaElement> elementsByQName;
-
-  private final ArrayList<Element> elementStack;
-  private final DocumentBuilder docBuilder;
-  private final XmlSchemaCollection schemas;
-  private final Set<String> globalNamespaces;
 }

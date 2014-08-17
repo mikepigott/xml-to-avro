@@ -42,6 +42,16 @@ import org.junit.Assert;
 
 public class TestUtils {
 
+  private static String NAMESPACE_URI =
+      "http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/"
+      + "fds-20130228.xsd";
+
+  private static String EXPECTED_RESULT =
+      "gov.sec.www.Archives.edgar.data.1013237.000143774913004187."
+      + "fds_20130228.xsd";
+
+  private static ArrayList<QName> avroUnrecognizedTypes;
+
   @Test
   public void testGetAvroNamespaceForString() throws URISyntaxException {
     Assert.assertEquals(
@@ -67,7 +77,9 @@ public class TestUtils {
   @Test
   public void testUblUrn() throws URISyntaxException {
     URI uri =
-        new URI("urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2");
+        new URI("urn:oasis:names:specification:ubl:schema:xsd:"
+                + "ApplicationResponse-2");
+    
     Assert.assertEquals(
         "oasis.names.specification.ubl.schema.xsd.ApplicationResponse_2",
         Utils.getAvroNamespaceFor(uri));
@@ -595,9 +607,4 @@ public class TestUtils {
     Schema schema = Schema.createArray( Schema.create(Schema.Type.BOOLEAN) );
     Utils.createJsonNodeFor("fail! fail! fail!", schema);
   }
-
-  private static String NAMESPACE_URI = "http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd";
-  private static String EXPECTED_RESULT = "gov.sec.www.Archives.edgar.data.1013237.000143774913004187.fds_20130228.xsd";
-
-  private static ArrayList<QName> avroUnrecognizedTypes;
 }

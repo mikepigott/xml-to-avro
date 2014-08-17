@@ -37,12 +37,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
-/**
- * Tests {@link DomBuilderFromSax}.
- *
- * @author  Mike Pigott
- */
 public class TestDomBuilderFromSax {
+
+  private static final File TEST_SCHEMA =
+      UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
+  private static SAXParserFactory spf;
+  private static DocumentBuilderFactory dbf;
+
+  private SAXParser saxParser;
+  private DocumentBuilder domParser;
 
   @BeforeClass
   public static void setUpFactories() {
@@ -105,13 +109,4 @@ public class TestDomBuilderFromSax {
 
     UtilsForTests.assertEquivalent(expectedDoc, actualDoc);
   }
-
-  private SAXParser saxParser;
-  private DocumentBuilder domParser;
-
-  private static final File TEST_SCHEMA =
-      UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
-
-  private static SAXParserFactory spf;
-  private static DocumentBuilderFactory dbf;
 }

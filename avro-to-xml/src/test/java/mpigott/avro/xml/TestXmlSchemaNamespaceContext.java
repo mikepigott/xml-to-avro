@@ -29,11 +29,6 @@ import java.util.Set;
 import org.apache.ws.commons.schema.constants.Constants;
 import org.junit.Test;
 
-/**
- * Tests {@link XmlSchemaNamespaceContext}.
- *
- * @author  Mike Pigott
- */
 public class TestXmlSchemaNamespaceContext {
 
   @Test

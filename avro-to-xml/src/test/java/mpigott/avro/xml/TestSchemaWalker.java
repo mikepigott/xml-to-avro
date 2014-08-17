@@ -488,7 +488,8 @@ public class TestSchemaWalker {
                 + " but actually was "
                 + attributeType.getType());
 
-          } else if (attr.type.equals(XmlSchemaTypeInfo.Type.ATOMIC) && !attr.baseType.equals(attributeType.getBaseType())) {
+          } else if (attr.type.equals(XmlSchemaTypeInfo.Type.ATOMIC)
+                     && !attr.baseType.equals(attributeType.getBaseType())) {
 
             throw new IllegalStateException(
                 "Element \""
@@ -638,7 +639,10 @@ public class TestSchemaWalker {
           "No anyAttribute types were expected in the schema.");
     }
 
-    private void checkMinAndMaxOccurs(StackEntry next, XmlSchemaParticle particle) {
+    private void checkMinAndMaxOccurs(
+        StackEntry next,
+        XmlSchemaParticle particle) {
+
       if (next.minOccurs != particle.getMinOccurs()) {
         throw new IllegalStateException(
             "Expected a minOccurs of "
@@ -937,5 +941,4 @@ public class TestSchemaWalker {
     }
     return elem;
   }
-
 }

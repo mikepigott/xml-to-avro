@@ -48,10 +48,14 @@ import org.w3c.dom.Document;
 
 /**
  * Tests converting an XML document to an Avro datum and back.
- *
- * @author  Mike Pigott
  */
 public class TestAvroToXmlAndBack {
+
+  private static DocumentBuilderFactory dbf;
+  private static EncoderFactory avroEncoderFactory;
+  private static DecoderFactory avroDecoderFactory;
+
+  private DocumentBuilder docBuilder;
 
   /**
    * @throws java.lang.Exception
@@ -105,7 +109,10 @@ public class TestAvroToXmlAndBack {
                                 "test2_children.xml");
 
     final XmlDatumConfig config =
-        new XmlDatumConfig(schemaFile, "http://avro.apache.org/AvroTest", root);
+        new XmlDatumConfig(
+            schemaFile,
+            "http://avro.apache.org/AvroTest",
+            root);
 
     runTest(config, xmlFile);
   }
@@ -169,15 +176,12 @@ public class TestAvroToXmlAndBack {
     UtilsForTests.assertEquivalent(expectedDoc, outDoc);
   }
 
-  private Document convertToAvroAndBack(XmlDatumConfig config, Document xmlDoc) throws Exception {
+  private Document convertToAvroAndBack(
+      XmlDatumConfig config,
+      Document xmlDoc) throws Exception {
+
     final XmlDatumWriter writer = new XmlDatumWriter(config);
     final Schema xmlToAvroSchema = writer.getSchema();
-
-    /*
-    FileWriter tempSchemaWriter = new FileWriter("test.avsc");
-    tempSchemaWriter.write( xmlToAvroSchema.toString(true) );
-    tempSchemaWriter.close();
-    */
 
     final ByteArrayOutputStream outStream = new ByteArrayOutputStream();
 
@@ -187,16 +191,6 @@ public class TestAvroToXmlAndBack {
     writer.write(xmlDoc, encoder);
 
     encoder.flush();
-
-    /*
-    BufferedReader tempReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(outStream.toByteArray())));
-    PrintWriter tempWriter = new PrintWriter(new FileWriter("test.avro"));
-    String line = null;
-    while ((line = tempReader.readLine()) != null) {
-      tempWriter.println(line);
-    }
-    tempWriter.close();
-    */
 
     final ByteArrayInputStream inStream =
         new ByteArrayInputStream( outStream.toByteArray() );
@@ -216,21 +210,6 @@ public class TestAvroToXmlAndBack {
 
     final Document outDoc = convertToAvroAndBack(config, xmlDoc);
 
-    /*
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
-    Transformer transformer = transformerFactory.newTransformer();
-    DOMSource source = new DOMSource(outDoc);
-    StreamResult result = new StreamResult(new File("src\\test\\resources\\complex_test1_out.xml"));
- 
-    transformer.transform(source, result);
-    */
-
     UtilsForTests.assertEquivalent(xmlDoc, outDoc);
   }
-
-  private DocumentBuilder docBuilder;
-
-  private static DocumentBuilderFactory dbf;
-  private static EncoderFactory avroEncoderFactory;
-  private static DecoderFactory avroDecoderFactory;
 }

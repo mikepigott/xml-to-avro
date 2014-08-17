@@ -26,13 +26,13 @@ import org.apache.ws.commons.schema.resolver.DefaultURIResolver;
 import org.xml.sax.InputSource;
 
 /**
- * This class is used by {@link org.apache.ws.commons.schema.XmlSchemaCollection}
+ * This class is used by
+ * {@link org.apache.ws.commons.schema.XmlSchemaCollection}
  * to resolve schemas from multiple base URIs.
- *
- * @author  Mike Pigott
- * @version 1.0
  */
 class XmlSchemaMultiBaseUriResolver extends DefaultURIResolver {
+
+  private List<String> baseUris;
 
   public XmlSchemaMultiBaseUriResolver() {
     baseUris = new java.util.ArrayList<String>();
@@ -45,7 +45,11 @@ class XmlSchemaMultiBaseUriResolver extends DefaultURIResolver {
    * @see org.apache.ws.commons.schema.resolver.URIResolver#resolveEntity(String, String, String)
    */
   @SuppressWarnings("unused")
-  public InputSource resolveEntity(String namespace, String schemaLocation, String baseUri) {
+  public InputSource resolveEntity(
+      String namespace,
+      String schemaLocation,
+      String baseUri) {
+
     InputSource source = null;
     if ((baseUri != null) && !baseUri.isEmpty()) {
       baseUris.add(baseUri);
@@ -111,6 +115,4 @@ class XmlSchemaMultiBaseUriResolver extends DefaultURIResolver {
   public void setCollectionBaseURI(String uri) {
     baseUris.add(uri);
   }
-
-  private List<String> baseUris;
 }

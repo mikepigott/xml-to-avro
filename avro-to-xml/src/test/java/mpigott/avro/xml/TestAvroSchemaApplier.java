@@ -46,16 +46,20 @@ import org.xml.sax.SAXException;
  * limitations under the License.
  */
 
-/**
- * Tests {@link AvroSchemaApplier}.
- *
- * @author  Mike Pigott
- */
 public class TestAvroSchemaApplier {
+
+  private static XmlSchemaStateMachineNode root;
+  private static SAXParserFactory spf;
+  private static Schema avroSchema;
+
+  private SAXParser saxParser;
+  private XmlSchemaPathFinder pathCreator;
 
   @BeforeClass
   public static void createStateMachine() throws FileNotFoundException {
-    File file = new File("src\\test\\resources\\test_schema.xsd");
+    File file =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
+
     ArrayList<File> schemaFiles = new ArrayList<File>(1);
     schemaFiles.add(file);
 
@@ -115,7 +119,11 @@ public class TestAvroSchemaApplier {
   public void test() throws Exception {
     // 1. Build the XML Document Path.
     final File xsdFile =
-        new File("src\\test\\resources\\test3_grandchildren.xml");
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "test3_grandchildren.xml");
 
     try {
       saxParser.parse(xsdFile, pathCreator);
@@ -178,7 +186,10 @@ public class TestAvroSchemaApplier {
     return numElemsProcessed;
   }
 
-  private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
+  private static XmlSchemaElement getElementOf(
+      XmlSchemaCollection collection,
+      String name) {
+
     XmlSchemaElement elem = null;
     for (XmlSchema schema : collection.getXmlSchemas()) {
       elem = schema.getElementByName(name);
@@ -188,11 +199,4 @@ public class TestAvroSchemaApplier {
     }
     return elem;
   }
-
-  private SAXParser saxParser;
-  private XmlSchemaPathFinder pathCreator;
-
-  private static XmlSchemaStateMachineNode root;
-  private static SAXParserFactory spf;
-  private static Schema avroSchema;
 }

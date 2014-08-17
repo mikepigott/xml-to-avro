@@ -21,10 +21,22 @@ import java.util.List;
 
 /**
  * This represents a node in the path when walking an XML or Avro document.
- *
- * @author  Mike Pigott
+ * As {@link XmlSchemaPathFinder} walks through an XML document, it builds
+ * <code>XmlSchemaPathNode</code>s  representing the path walked, and
+ * {@link XmlSchemaDocumentNode}s representing where the XML document's
+ * elements fall in the XML Schema's sequences, choices, and all groups.
  */
 final class XmlSchemaPathNode<U, V> {
+
+  private Direction direction;
+  private XmlSchemaDocumentNode<U> documentNode;
+  private XmlSchemaStateMachineNode stateMachineNode;
+  private int nextNodeStateIndex;
+  private int iterationNum;
+  private V userDefinedContent;
+
+  private XmlSchemaPathNode<U, V> prevNode;
+  private XmlSchemaPathNode<U, V> nextNode;
 
   enum Direction {
     PARENT(2),
@@ -211,7 +223,8 @@ final class XmlSchemaPathNode<U, V> {
    * @param newPrevious The new previous <code>DocumentPathNode</code> this
    *                    node is traversed from.
    *
-   * @param newNode The new {@link XmlSchemaStateMachineNode} this node refers to.
+   * @param newNode The new {@link XmlSchemaStateMachineNode}
+   *                this node refers to.
    *
    * @return The next node in the path that this node referred to, as it will
    *         be discarded internally. 
@@ -247,14 +260,4 @@ final class XmlSchemaPathNode<U, V> {
   void setUserDefinedContent(V content) {
     userDefinedContent = content;
   }
-
-  private Direction direction;
-  private XmlSchemaDocumentNode<U> documentNode;
-  private XmlSchemaStateMachineNode stateMachineNode;
-  private int nextNodeStateIndex;
-  private int iterationNum;
-  private V userDefinedContent;
-
-  private XmlSchemaPathNode<U, V> prevNode;
-  private XmlSchemaPathNode<U, V> nextNode;
 }

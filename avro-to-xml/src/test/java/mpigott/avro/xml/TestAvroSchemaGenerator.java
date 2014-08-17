@@ -40,14 +40,13 @@ import org.junit.Test;
 /**
  * Verifies the {@link AvroSchemaGenerator} generates the expected
  * {@link Schema} for <code>src/test/resources/test_schema.xsd</code>.
- *
- * @author  Mike Pigott
  */
 public class TestAvroSchemaGenerator {
 
   @Test
   public void testSchema() throws Exception {
-    File file = new File("src\\test\\resources\\test_schema.xsd");
+    File file =
+        UtilsForTests.buildFile("src", "test", "resources", "test_schema.xsd");
     ArrayList<File> schemaFiles = new ArrayList<File>(1);
     schemaFiles.add(file);
 
@@ -87,7 +86,13 @@ public class TestAvroSchemaGenerator {
 
   @Test
   public void testComplexSchema() throws Exception {
-    File file = new File("src\\test\\resources\\complex_schema.xsd");
+    File file =
+        UtilsForTests.buildFile(
+            "src",
+            "test",
+            "resources",
+            "complex_schema.xsd");
+
     ArrayList<File> schemaFiles = new ArrayList<File>(1);
     schemaFiles.add(file);
 
@@ -125,7 +130,10 @@ public class TestAvroSchemaGenerator {
     UtilsForTests.assertEquivalent(getExpectedComplexSchema(), schema);
   }
 
-  private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
+  private static XmlSchemaElement getElementOf(
+      XmlSchemaCollection collection,
+      String name) {
+
     XmlSchemaElement elem = null;
     for (XmlSchema schema : collection.getXmlSchemas()) {
       elem = schema.getElementByName(name);
@@ -202,8 +210,6 @@ public class TestAvroSchemaGenerator {
     rootFields.add(
         new Schema.Field("string", optionalStringSchema, null, null) );
     rootFields.add(
-        new Schema.Field("normalizedString", optionalStringSchema, null, null) );
-    rootFields.add(
         new Schema.Field("token", optionalStringSchema, null, null) );
     rootFields.add(
         new Schema.Field("language", optionalStringSchema, null, null) );
@@ -259,6 +265,13 @@ public class TestAvroSchemaGenerator {
         new Schema.Field("float", optionalFloatSchema, null, null));
     rootFields.add(
         new Schema.Field("double", optionalDoubleSchema, null, null));
+
+    rootFields.add(
+        new Schema.Field(
+            "normalizedString",
+            optionalStringSchema,
+            null,
+            null) );
 
     rootFields.add(
         new Schema.Field(
@@ -470,7 +483,8 @@ public class TestAvroSchemaGenerator {
   private static Schema getExpectedComplexSchema() {
     final String namespace = "avro.complex_schema";
 
-    Schema firstMapValue = Schema.createRecord("value", null, namespace, false);
+    Schema firstMapValue =
+        Schema.createRecord("value", null, namespace, false);
 
     // simpleRestriction
     List<Schema.Field> simpleRestrictionFields = new ArrayList<Schema.Field>();
@@ -715,7 +729,8 @@ public class TestAvroSchemaGenerator {
             null));
     avroEnumRecord.setFields(avroEnumFields);
 
-    Schema xmlEnumRecord = Schema.createRecord("xmlEnum", null, namespace, false);
+    Schema xmlEnumRecord =
+        Schema.createRecord("xmlEnum", null, namespace, false);
 
     List<Schema.Field> xmlEnumFields = new ArrayList<Schema.Field>();
     xmlEnumFields.add(
@@ -852,7 +867,8 @@ public class TestAvroSchemaGenerator {
     mixedTypeSchema.setFields(mixedTypeFields);
 
     // realRoot
-    Schema realRootSchema = Schema.createRecord("realRoot", null, namespace, false);
+    Schema realRootSchema =
+        Schema.createRecord("realRoot", null, namespace, false);
 
     List<Schema.Field> realRootSchemaFields = new ArrayList<Schema.Field>();
     realRootSchemaFields.add(
@@ -898,8 +914,7 @@ public class TestAvroSchemaGenerator {
 
     realRootSchema.setFields(realRootSchemaFields);
 
-    Schema rootSchema = Schema.createUnion( Collections.singletonList(realRootSchema));
-    return rootSchema;
+    return Schema.createUnion( Collections.singletonList(realRootSchema));
   }
 
   private static Schema getOptionalStringSchema() {

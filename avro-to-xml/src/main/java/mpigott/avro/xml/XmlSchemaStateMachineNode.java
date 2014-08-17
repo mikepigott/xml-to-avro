@@ -38,18 +38,28 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
  *   <li>An all group</li>
  *   <li>A choice group</li>
  *   <li>A sequence group</li>
- *   <li>An &lt;any&gt; node.</li>
+ *   <li>An &lt;any&gt; wildcard element</li>
+ *   <li>A substitution group</li>
  * </ul>
+ *
  * As a {@link org.w3c.dom.Document} is traversed, the state machine is used
  * to determine how to process the current element.  Two passes will be needed:
  * the first pass will determine the correct path through the document's schema
  * in order to properly parse the elements, and the second traversal will read
  * the elements while following that path. 
  * </p>
- *
- * @author  Mike Pigott
  */
 final class XmlSchemaStateMachineNode {
+
+  private final Type nodeType;
+  private final XmlSchemaElement element;
+  private final List<Attribute> attributes;
+  private final XmlSchemaTypeInfo typeInfo;
+  private final long minOccurs;
+  private final long maxOccurs;
+  private final XmlSchemaAny any;
+
+  private List<XmlSchemaStateMachineNode> possibleNextStates;
 
   enum Type {
     ELEMENT,
@@ -98,9 +108,12 @@ final class XmlSchemaStateMachineNode {
       long maxOccurs) {
 
     if ( nodeType.equals(Type.ELEMENT) ) {
-      throw new IllegalArgumentException("This constructor cannot be used for elements.");
+      throw new IllegalArgumentException(
+          "This constructor cannot be used for elements.");
+
     } else if ( nodeType.equals(Type.ANY) ) {
-      throw new IllegalArgumentException("This constructor cannot be used for anys.");
+      throw new IllegalArgumentException(
+          "This constructor cannot be used for wildcard elements.");
     }
 
     this.nodeType = nodeType;
@@ -144,7 +157,8 @@ final class XmlSchemaStateMachineNode {
   }
 
   /**
-   * Constructs a {@link XmlSchemaStateMachineNode} from the {@link XmlSchemaAny}.
+   * Constructs a {@link XmlSchemaStateMachineNode}
+   * from the {@link XmlSchemaAny}.
    *
    * @param any The <code>XmlSchemaAny</code> to construct the node from.
    */
@@ -226,7 +240,8 @@ final class XmlSchemaStateMachineNode {
    * @param next A node that could follow this one in the XML document.
    * @return Itself, for chaining.
    */
-  XmlSchemaStateMachineNode addPossibleNextState(XmlSchemaStateMachineNode next) {
+  XmlSchemaStateMachineNode addPossibleNextState(
+      XmlSchemaStateMachineNode next) {
     possibleNextStates.add(next);
     return this;
   }
@@ -275,14 +290,4 @@ final class XmlSchemaStateMachineNode {
     }
     return name.toString();
   }
-
-  private final Type nodeType;
-  private final XmlSchemaElement element;
-  private final List<Attribute> attributes;
-  private final XmlSchemaTypeInfo typeInfo;
-  private final long minOccurs;
-  private final long maxOccurs;
-  private final XmlSchemaAny any;
-
-  private List<XmlSchemaStateMachineNode> possibleNextStates;
 }

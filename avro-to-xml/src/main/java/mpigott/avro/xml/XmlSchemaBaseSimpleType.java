@@ -23,9 +23,8 @@ import javax.xml.namespace.QName;
 import org.apache.ws.commons.schema.constants.Constants;
 
 /**
- * Represents the set of simple types defined by XML Schema.
- *
- * @author  Mike Pigott
+ * Represents the set of simple types defined by XML Schema, and
+ * conversions between them and their respective {@link QName}s.
  */
 enum XmlSchemaBaseSimpleType {
   ANYTYPE(Constants.XSD_ANYTYPE),
@@ -49,6 +48,8 @@ enum XmlSchemaBaseSimpleType {
   ANYURI(Constants.XSD_ANYURI),
   QNAME(Constants.XSD_QNAME),
   NOTATION(Constants.XSD_NOTATION);
+
+  private QName qName;
 
   XmlSchemaBaseSimpleType(QName qName) {
     this.qName = qName;
@@ -75,6 +76,4 @@ enum XmlSchemaBaseSimpleType {
   static boolean isBaseSimpleType(QName qName) {
     return reverseMap.containsKey(qName);
   }
-
-  private QName qName;
 }

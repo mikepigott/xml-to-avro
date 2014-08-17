@@ -6,18 +6,22 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
- * Represents the state machine as a tree with the current iteration of each
- * node, and additional state information for All and Sequence groups.
- *
- * If the node represents a sequence group, we need to know which child we
- * visit next.  Once we visit a node the maximum number of occurrences (or
- * we visit the minimum number of occurrences and the element name does not
- * match), this index will be incremented to the next child.
- *
- * This class is package-protected, and not private, to allow an external
- * graph generator to build a visualization of the tree.
+ * The <code>XmlSchemaDocumentNode</code> represents a node in the
+ * XML Schema as it is used by an XML document.  As {@link XmlSchemaPathFinder}
+ * walks through an XML document, it builds {@link XmlSchemaPathNode}s
+ * representing the path walked, and <code>XmlSchemaDocumentNode</code>s
+ * representing where the XML document's elements fall in the XML Schema's
+ * sequences, choices, and all groups.
  */
 final class XmlSchemaDocumentNode<U> {
+
+  private XmlSchemaStateMachineNode stateMachineNode;
+  private XmlSchemaDocumentNode parent;
+  private List<SortedMap<Integer, XmlSchemaDocumentNode<U>>> children;
+  private List<XmlSchemaPathNode> visitors;
+  private boolean receivedContent;
+  private U userDefinedContent;
+
   XmlSchemaDocumentNode(
       XmlSchemaDocumentNode parent,
       XmlSchemaStateMachineNode stateMachineNode) {
@@ -63,9 +67,17 @@ final class XmlSchemaDocumentNode<U> {
     this.receivedContent = receivedContent;
   }
 
+  /**
+   * A visitor is a CHILD or SIBLING {@link XmlSchemaPathNode} entering
+   * this <code>XmlSchemaDocumentNode</code>.  This is used to keep track
+   * of how many occurrences are active via the current path winding
+   * through the schema.
+   */
   void addVisitor(XmlSchemaPathNode path) {
     if (path.getDocumentNode() != this) {
-      throw new IllegalArgumentException("Path node must have this XmlSchemaDocumentNode as its document node.");
+      throw new IllegalArgumentException(
+          "Path node must have this XmlSchemaDocumentNode "
+          + "as its document node.");
     }
 
     switch( path.getDirection() ) {
@@ -73,7 +85,11 @@ final class XmlSchemaDocumentNode<U> {
     case SIBLING:
       break;
     default:
-      throw new IllegalArgumentException("Only child and sibling paths may be visitors of an XmlSchemaDocumentNode, not a " + path.getDirection() + " path.");
+      throw new IllegalArgumentException(
+          "Only CHILD and SIBLING paths may be visitors of an "
+          + "XmlSchemaDocumentNode, not a "
+          + path.getDirection()
+          + " path.");
     }
 
     if (visitors == null) {
@@ -97,7 +113,12 @@ final class XmlSchemaDocumentNode<U> {
     }
 
     if ((children != null) && (visitors.size() != children.size())) {
-      throw new IllegalStateException("The number of visitors (" + visitors.size() + ") does not match the number of occurrences (" + children.size() + ").");
+      throw new IllegalStateException(
+          "The number of visitors ("
+          + visitors.size()
+          + ") does not match the number of occurrences ("
+          + children.size()
+          + ").");
     }
 
     int visitorIndex = 0;
@@ -122,7 +143,12 @@ final class XmlSchemaDocumentNode<U> {
 
   int getIteration() {
     if ((children != null) && (children.size() != visitors.size())) {
-      throw new IllegalStateException("The number of occurrences (" + children.size() + ") is not equal to the number of visitors (" + visitors.size() + ").");
+      throw new IllegalStateException(
+          "The number of occurrences ("
+          + children.size()
+          + ") is not equal to the number of visitors ("
+          + visitors.size()
+          + ").");
     }
     return visitors.size();
   }
@@ -176,11 +202,4 @@ final class XmlSchemaDocumentNode<U> {
   void setUserDefinedContent(U userDefinedContent) {
     this.userDefinedContent = userDefinedContent;
   }
-
-  private XmlSchemaStateMachineNode stateMachineNode;
-  private XmlSchemaDocumentNode parent;
-  private List<SortedMap<Integer, XmlSchemaDocumentNode<U>>> children;
-  private List<XmlSchemaPathNode> visitors;
-  private boolean receivedContent;
-  private U userDefinedContent;
 }

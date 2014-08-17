@@ -30,9 +30,13 @@ import org.apache.ws.commons.schema.utils.NamespacePrefixList;
 /**
  * A {@link javax.xml.namespace.NamespaceContext}.
  *
- * @author  Mike Pigott
+ * <p>
+ * Implemented as a series of scope-based stacks, one per prefix.
+ * </p>
  */
 final class XmlSchemaNamespaceContext implements NamespacePrefixList {
+
+  private Map<String, List<String>> namespacesByPrefixStack;
 
   XmlSchemaNamespaceContext() {
     namespacesByPrefixStack = new HashMap<String, List<String>>();
@@ -155,6 +159,4 @@ final class XmlSchemaNamespaceContext implements NamespacePrefixList {
   void clear() {
     namespacesByPrefixStack.clear();
   }
-
-  private Map<String, List<String>> namespacesByPrefixStack;
 }

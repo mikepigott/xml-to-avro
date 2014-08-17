@@ -30,9 +30,13 @@ import org.custommonkey.xmlunit.XMLUnit;
 import org.w3c.dom.Document;
 
 /**
- * Compares two {@link Document}s for equivalence.
+ * Utilities to:
  *
- * @author  Mike Pigott
+ * <ul>
+ *   <li>Compare two {@link Document}s for equivalence.</li>
+ *   <li>Compare two Avro {@link Schema}s for equivalence</li>
+ *   <li>Build a file path in a cross-platform way.</li>
+ * </ul>
  */
 final class UtilsForTests {
 

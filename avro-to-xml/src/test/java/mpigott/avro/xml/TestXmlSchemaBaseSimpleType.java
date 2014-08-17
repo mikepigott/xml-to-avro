@@ -27,12 +27,9 @@ import org.apache.ws.commons.schema.constants.Constants;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-/**
- * Tests the {@link XmlSchemaBaseSimpleType}.
- *
- * @author  Mike Pigott
- */
 public class TestXmlSchemaBaseSimpleType {
+
+  private static List<QName> nonBaseTypes;
 
   @BeforeClass
   public static void setUpNonBaseTypes() {
@@ -298,6 +295,4 @@ public class TestXmlSchemaBaseSimpleType {
           XmlSchemaBaseSimpleType.isBaseSimpleType(nonBaseType) );
     }
   }
-
-  private static List<QName> nonBaseTypes;
 }

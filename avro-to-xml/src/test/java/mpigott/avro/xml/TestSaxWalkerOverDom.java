@@ -43,8 +43,6 @@ import org.junit.Test;
  * Reads the <code>src/test/resources/test_schema.xsd</code>
  * file as an XML document and confirms the correct events
  * are triggered.
- *
- * @author Mike Pigott
  */
 public class TestSaxWalkerOverDom {
 
@@ -538,5 +536,4 @@ public class TestSaxWalkerOverDom {
           e);
     }
   }
-
 }

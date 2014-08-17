@@ -34,8 +34,6 @@ import org.xml.sax.helpers.DefaultHandler;
  * Performs a SAX-based walk through the XML document, determining the
  * interpretation ("path") that best matches both the XML Schema and the
  * Avro Schema.
- *
- * @author  Mike Pigott
  */
 final class XmlSchemaPathFinder extends DefaultHandler {
 
@@ -44,6 +42,23 @@ final class XmlSchemaPathFinder extends DefaultHandler {
    * We will stop looking once we reach MAX_DEPTH.
    */
   private static final int MAX_DEPTH = 256;
+
+  private final XmlSchemaStateMachineNode rootNode;
+  private final XmlSchemaNamespaceContext nsContext;
+
+  private XmlSchemaPathNode rootPathNode;
+
+  private XmlSchemaPathNode currentPath;
+
+  private List<PathSegment> unusedPathSegmentPool;
+
+  private ArrayList<TraversedElement> traversedElements;
+  private ArrayList<DecisionPoint> decisionPoints;
+
+  private ArrayList<QName> elementStack;
+  private ArrayList<QName> anyStack;
+
+  private XmlSchemaPathManager pathMgr;
 
   /* We want to keep track of all of the valid path segments to a particular
    * element, but we do not want to stomp on the very first node until we
@@ -59,6 +74,13 @@ final class XmlSchemaPathFinder extends DefaultHandler {
    * Path segments may also be recycled when a decision point is refuted.
    */
   private final class PathSegment implements Comparable<PathSegment> {
+
+    private XmlSchemaPathNode start;
+    private XmlSchemaPathNode end;
+    private XmlSchemaPathNode afterStart;
+    private int length;
+    private int afterStartPathIndex;
+
     PathSegment(XmlSchemaPathNode node) {
       set(node);
     }
@@ -265,12 +287,6 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
       return str.toString();
     }
-
-    private XmlSchemaPathNode start;
-    private XmlSchemaPathNode end;
-    private XmlSchemaPathNode afterStart;
-    private int length;
-    private int afterStartPathIndex;
   }
 
   /**
@@ -284,6 +300,13 @@ final class XmlSchemaPathFinder extends DefaultHandler {
    * a path that successfully navigates both the document and the schema.
    */
   private static class DecisionPoint {
+
+    private final XmlSchemaPathNode decisionPoint;
+    private final List<PathSegment> choices;
+    private final int traversedElementIndex;
+    private final ArrayList<QName> elementStack;
+    private final ArrayList<QName> anyStack;
+
     DecisionPoint(
         XmlSchemaPathNode decisionPoint,
         List<PathSegment> choices,
@@ -360,15 +383,18 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
       return str.toString();
     }
-
-    private final XmlSchemaPathNode decisionPoint;
-    private final List<PathSegment> choices;
-    private final int traversedElementIndex;
-    private final ArrayList<QName> elementStack;
-    private final ArrayList<QName> anyStack;
   }
 
+  /* Represents an element-start, element-end, or content we have
+   * seen before.  When walking our way through the XML Schema,
+   * we need this information in order to properly backtrack if we
+   * took a wrong path.
+   */
   private static class TraversedElement {
+
+    QName elemName;
+    Traversal traversal;
+
     enum Traversal {
       START,
       CONTENT,
@@ -385,11 +411,13 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       str.append(" : ").append(traversal);
       return str.toString();
     }
-
-    QName elemName;
-    Traversal traversal;
   }
 
+  /* Represents a group's fulfillment state.  It is either not fulfilled,
+   * meaning more children are required, partially fulfilled, meaning at
+   * least the minimum number of children have been added, or completely
+   * fulfilled, meaning no more children can be introduced.
+   */
   enum Fulfillment {
     NOT,
     PARTIAL,
@@ -445,7 +473,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
   /**
    * Find the path through the XML Schema that best matches this element.
    *
-   * @see org.xml.sax.helpers.DefaultHandler#startElement(java.lang.String, java.lang.String, java.lang.String, org.xml.sax.Attributes)
+   * @see DefaultHandler#startElement(String, String, String, Attributes)
    */
   @Override
   public void startElement(
@@ -658,7 +686,12 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               currentPath = contentPath;
 
             } else {
-              throw new IllegalStateException("Unrecognized element traversal direction for " + te.elemName + " of " + te.traversal + '.');
+              throw new IllegalStateException(
+                  "Unrecognized element traversal direction for "
+                  + te.elemName
+                  + " of "
+                  + te.traversal
+                  + '.');
             }
           }
 
@@ -706,7 +739,9 @@ final class XmlSchemaPathFinder extends DefaultHandler {
          * one or more paths through the XML Schema that match the document,
          * throw an error.  There is nothing more we can do here.
          */
-        throw new IllegalStateException("Walked through XML Schema and could not find a traversal that represented this XML Document.");
+        throw new IllegalStateException(
+            "Walked through XML Schema and could not find a traversal that "
+            + "represented this XML Document.");
       }
 
       /* Current path now points to the element we
@@ -738,7 +773,12 @@ final class XmlSchemaPathFinder extends DefaultHandler {
        * internal exception is thrown instead. Likewise, any useful info
        * about the error reported in the wrapper SAXException is lost.
        */
-      throw new RuntimeException("Error occurred while starting element " + elemQName + "; traversed path is " + getElementsTraversedAsString(), e);
+      throw new RuntimeException(
+          "Error occurred while starting element "
+          + elemQName
+          + "; traversed path is "
+          + getElementsTraversedAsString(),
+          e);
     }
   }
 
@@ -747,7 +787,8 @@ final class XmlSchemaPathFinder extends DefaultHandler {
    * @see org.xml.sax.helpers.DefaultHandler#characters(char[], int, int)
    */
   @Override
-  public void characters(char[] ch, int start, int length) throws SAXException {
+  public void characters(char[] ch, int start, int length)
+      throws SAXException {
 
     /* If the most recent path node is an element with simple content,
      * confirm these characters match the data type expected.
@@ -787,7 +828,12 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         return;
 
       } else if (!elemExpectsContent && !text.isEmpty()) {
-        throw new IllegalStateException("Element " + state.getElement().getQName() + " has no content, but we received \"" + text + "\" for it.");
+        throw new IllegalStateException(
+            "Element "
+            + state.getElement().getQName()
+            + " has no content, but we received \""
+            + text
+            + "\" for it.");
 
       } else if (elemExpectsContent
                    && text.isEmpty()
@@ -795,7 +841,10 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                    && !elemTypeInfo.isMixed()
                    && (element.getDefaultValue() == null)
                    && (element.getFixedValue() == null)) {
-        throw new IllegalStateException("Received empty text for element " + state.getElement().getQName() + " when content was expected.");
+        throw new IllegalStateException(
+            "Received empty text for element "
+            + state.getElement().getQName()
+            + " when content was expected.");
       }
 
       XmlSchemaElementValidator.validateContent(state, text, nsContext);
@@ -815,7 +864,10 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               TraversedElement.Traversal.CONTENT) );
 
     } catch (Exception e) {
-      throw new RuntimeException("Error occurred while processing characters; traversed path was " + getElementsTraversedAsString(), e);
+      throw new RuntimeException(
+          "Error occurred while processing characters; traversed path was "
+          + getElementsTraversedAsString(),
+          e);
     }
   }
 
@@ -845,7 +897,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
    * If the parent (or grandparent) is an element, return to it.
    * We expect the next call to be to endElement of that.
    *
-   * @see org.xml.sax.helpers.DefaultHandler#endElement(java.lang.String, java.lang.String, java.lang.String)
+   * @see DefaultHandler#endElement(String, String, String)
    */
   @Override
   public void endElement(
@@ -866,7 +918,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
       if (!isAny
             && !elementStack.get(elementStack.size() - 1).equals(elemQName) ) {
-        throw new IllegalStateException("Attempting to end element " + elemQName + " but the stack is expecting " + elementStack.get(elementStack.size() - 1));
+        throw new IllegalStateException(
+            "Attempting to end element "
+            + elemQName
+            + " but the stack is expecting "
+            + elementStack.get(elementStack.size() - 1));
       }
 
       if (!isAny) {
@@ -876,19 +932,24 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       final XmlSchemaStateMachineNode state =
           currentPath.getStateMachineNode();
 
-      if ( state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT) ) {
+      if (state.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
 
         // 1. Is this the element we are looking for?
         if (!state.getElement().getQName().equals(elemQName) ) {
-          throw new IllegalStateException("We are ending element " + elemQName + " but our current position is for element " + state.getElement().getQName() + " !!");
+          throw new IllegalStateException(
+              "We are ending element "
+              + elemQName
+              + " but our current position is for element "
+              + state.getElement().getQName()
+              + '.');
         }
 
         // 2. Check the element received the expected content, if any.
         final XmlSchemaTypeInfo elemTypeInfo = state.getElementType();
 
         final boolean elemExpectsContent =
-            (elemTypeInfo != null)
-            && (!elemTypeInfo.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX));
+          (elemTypeInfo != null)
+          && (!elemTypeInfo.getType().equals(XmlSchemaTypeInfo.Type.COMPLEX));
 
         if (elemExpectsContent
             && !state.getElement().isNillable()
@@ -915,14 +976,22 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       }
 
     } catch (Exception e) {
-      throw new RuntimeException("Error occurred while ending element " + elemQName + "; traversed path was " + getElementsTraversedAsString(), e);
+      throw new RuntimeException(
+          "Error occurred while ending element "
+          + elemQName
+          + "; traversed path was "
+          + getElementsTraversedAsString(),
+          e);
     }
   }
 
   @Override
   public void endDocument() throws SAXException {
     if ( !elementStack.isEmpty() ) {
-      throw new IllegalStateException("Ended the document but " + elementStack.size() + " elements have not been closed.");
+      throw new IllegalStateException(
+          "Ended the document but "
+          + elementStack.size()
+          + " elements have not been closed.");
     }
 
     pathMgr.clear();
@@ -963,7 +1032,13 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     } else if (currentPath.getDocIteration() == state.getMaxOccurs()) {
       completelyFulfilled = true;
     } else if (currentPath.getDocIteration() > state.getMaxOccurs()) {
-      throw new IllegalStateException("Current path's document iteration of " + currentPath.getDocIteration() + " is greater than the maximum number of occurrences (" + state.getMaxOccurs() + ").");
+      throw new IllegalStateException(
+          "Current path's document iteration of "
+          + currentPath.getDocIteration()
+          + " is greater than the maximum number of occurrences ("
+          + state.getMaxOccurs()
+          + ").");
+
     } else {
       completelyFulfilled = false;
     }
@@ -985,7 +1060,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     case SUBSTITUTION_GROUP:
       {
         /* If any child meets the minimum number, we are partially fulfilled.
-         * If all elements meet the maximum number, we are completely fulfilled.
+         * If all elements meet the maximum, we are completely fulfilled.
          */
         boolean groupPartiallyFulfilled = false;
         boolean groupCompletelyFulfilled = false;
@@ -1034,7 +1109,9 @@ final class XmlSchemaPathFinder extends DefaultHandler {
             stateIndex < nextStates.size();
             ++stateIndex) {
 
-          final XmlSchemaStateMachineNode nextState = nextStates.get(stateIndex);
+          final XmlSchemaStateMachineNode nextState =
+              nextStates.get(stateIndex);
+
           if ((children != null) && children.containsKey(stateIndex)) {
             final XmlSchemaDocumentNode child = children.get(stateIndex);
             final int iteration = child.getIteration();
@@ -1100,7 +1177,10 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         break;
       }
     default:
-      throw new IllegalStateException("Current position has a node of unrecognized type \"" + currentPath.getStateMachineNode().getNodeType() + '\"');
+      throw new IllegalStateException(
+          "Current position has a node of unrecognized type \""
+          + currentPath.getStateMachineNode().getNodeType()
+          + '\"');
     }
 
     Fulfillment fulfillment = Fulfillment.NOT;
@@ -1142,7 +1222,10 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         final String elemName =
             getLeafNodeName( startNode.getStateMachineNode() );
 
-        throw new IllegalStateException("Element " + elemName + " has null children!  Exactly one is expected.");
+        throw new IllegalStateException(
+            "Element "
+            + elemName
+            + " has null children!  Exactly one is expected.");
 
       } else if (startNode
                    .getStateMachineNode()
@@ -1152,7 +1235,10 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         final String elemName =
             getLeafNodeName( startNode.getStateMachineNode() );
 
-        throw new IllegalStateException("Element " + elemName + " has zero children!  Exactly one is expected.");
+        throw new IllegalStateException(
+            "Element "
+            + elemName
+            + " has zero children!  Exactly one is expected.");
 
       } else if (currentPath
                    .getStateMachineNode()
@@ -1161,14 +1247,21 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         final String elemName =
             getLeafNodeName( currentPath.getStateMachineNode() );
 
-        throw new IllegalStateException("Element " + elemName + " has " + currentPath.getStateMachineNode().getPossibleNextStates().size() + " children!  Only one was expected.");
+        throw new IllegalStateException(
+            "Element "
+            + elemName
+            + " has "
+            + currentPath.getStateMachineNode().getPossibleNextStates().size()
+            + " children!  Only one was expected.");
       }
 
       if ((startNode.getDocumentNode() != null)
           && (startNode.getDocumentNode().getChildren() != null)
           && !startNode.getDocumentNode().getChildren().isEmpty()
           && (startNode.getDocumentNode().getChildren().size() > 1)) {
-        throw new IllegalStateException("There are multiple children in the document node for element " + currentPath.getStateMachineNode().getElement().getQName());
+        throw new IllegalStateException(
+            "There are multiple children in the document node for element "
+            + currentPath.getStateMachineNode().getElement().getQName());
       }
 
       final XmlSchemaPathNode childPath =
@@ -1324,11 +1417,26 @@ final class XmlSchemaPathFinder extends DefaultHandler {
 
     } else if (startNode.getStateMachineNode() != state) {
 
-      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode state machine (" + startNode.getStateMachineNode().getNodeType() + ") does not match the tree node (" + state.getNodeType() + ").");
+      throw new IllegalStateException(
+          "While searching for "
+          + elemQName
+          + ", the DocumentPathNode state machine ("
+          + startNode.getStateMachineNode().getNodeType()
+          + ") does not match the tree node ("
+          + state.getNodeType()
+          + ").");
 
     } else if (startNode.getIteration()
                  <= startNode.getDocIteration()) {
-      throw new IllegalStateException("While searching for " + elemQName + ", the DocumentPathNode iteration (" + startNode.getIteration() + ") should be greater than the tree node's iteration (" + startNode.getDocIteration() + ").  Current state machine position is " + state.getNodeType());
+      throw new IllegalStateException(
+          "While searching for "
+          + elemQName
+          + ", the DocumentPathNode iteration ("
+          + startNode.getIteration()
+          + ") should be greater than the tree node's iteration ("
+          + startNode.getDocIteration()
+          + ").  Current state machine position is "
+          + state.getNodeType());
 
     } else if (state.getMaxOccurs() < startNode.getIteration()) {
       return null;
@@ -1341,9 +1449,12 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       if (( state.getPossibleNextStates() == null)
           || state.getPossibleNextStates().isEmpty()) {
 
-        throw new IllegalStateException("Group " + state.getNodeType() + " has no children.  Found when processing " + elemQName);
+        throw new IllegalStateException(
+            "Group "
+            + state.getNodeType()
+            + " has no children.  Found when processing "
+            + elemQName);
       }
-
     }
 
     List<PathSegment> choices = null;
@@ -1366,7 +1477,14 @@ final class XmlSchemaPathFinder extends DefaultHandler {
         int position = startNode.getDocSequencePosition();
 
         if (startNode.getDocIteration() > startNode.getMaxOccurs()) {
-          throw new IllegalStateException("Somehow the document iteration for " + startNode.getStateMachineNode() + " of " + startNode.getDocIteration() + " exceeds the maximum number of occurrences of " + startNode.getMaxOccurs());
+          throw new IllegalStateException(
+              "Somehow the document iteration for "
+              + startNode.getStateMachineNode()
+              + " of "
+              + startNode.getDocIteration()
+              + " exceeds the maximum number of occurrences of "
+              + startNode.getMaxOccurs());
+
         } else if (startNode.getDocIteration() == startNode.getMaxOccurs()) {
           ++position;
         }
@@ -1384,7 +1502,17 @@ final class XmlSchemaPathFinder extends DefaultHandler {
            * nodes should point to the same state machine node in memory.
            */
           if (nextPath.getIteration() > nextPath.getMaxOccurs()) {
-            throw new IllegalStateException("Reached a sequence group when searching for " + elemQName + " whose iteration at the current position (" + nextPath.getIteration() + ") was already maxed out (" + nextPath.getMaxOccurs() + ").  Was at position " + stateIndex + "; tree node's starting position was " + startNode.getDocSequencePosition());
+            throw new IllegalStateException(
+                "Reached a sequence group when searching for "
+                + elemQName
+                + " whose iteration at the current position ("
+                + nextPath.getIteration()
+                + ") was already maxed out ("
+                + nextPath.getMaxOccurs()
+                + ").  Was at position "
+                + stateIndex
+                + "; tree node's starting position was "
+                + startNode.getDocSequencePosition());
           }
 
           final boolean reachedMinOccurs =
@@ -1451,7 +1579,12 @@ final class XmlSchemaPathFinder extends DefaultHandler {
                    .getNodeType()
                    .equals(XmlSchemaStateMachineNode.Type.ANY)) {
 
-            throw new IllegalStateException("While searching for " + elemQName + ", encountered an All group which contained a child of type " + nextState.getNodeType() + '.');
+            throw new IllegalStateException(
+                "While searching for "
+                + elemQName
+                + ", encountered an All group which contained a child of type "
+                + nextState.getNodeType()
+                + '.');
           }
 
           final XmlSchemaPathNode nextPath =
@@ -1484,7 +1617,12 @@ final class XmlSchemaPathFinder extends DefaultHandler {
          * apply, this element matches.  False otherwise.
          */
         if (traversedElements.size() < 2) {
-          throw new IllegalStateException("Reached a wildcard element while searching for " + elemQName + ", but we've only seen " + traversedElements.size() + " element(s)!");
+          throw new IllegalStateException(
+              "Reached a wildcard element while searching for "
+              + elemQName
+              + ", but we've only seen "
+              + traversedElements.size()
+              + " element(s)!");
         }
 
         final XmlSchemaAny any = state.getAny();
@@ -1558,7 +1696,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       }
       break;
     default:
-      throw new IllegalStateException("Unrecognized node type " + state.getNodeType() + " when processing element " + elemQName);
+      throw new IllegalStateException(
+          "Unrecognized node type "
+          + state.getNodeType()
+          + " when processing element "
+          + elemQName);
     }
 
     if ((choices == null) && (currDepth > 0)) {
@@ -1594,11 +1736,19 @@ final class XmlSchemaPathFinder extends DefaultHandler {
       break;
     case ELEMENT:
       if ( !state.getElement().getQName().equals(currElem) ) {
-        throw new IllegalStateException("We expected to walk upwards from element " + currElem + ", but our current element is " + state.getElement().getQName());
+        throw new IllegalStateException(
+            "We expected to walk upwards from element "
+            + currElem
+            + ", but our current element is "
+            + state.getElement().getQName());
       }
       break;
     default:
-      throw new IllegalStateException("We expected to walk upwards from element " + currElem + ", but our current position is in a node of type " + state.getNodeType());
+      throw new IllegalStateException(
+          "We expected to walk upwards from element "
+          + currElem
+          + ", but our current position is in a node of type "
+          + state.getNodeType());
     }
 
     XmlSchemaDocumentNode iter = currentPath.getDocumentNode();
@@ -1747,7 +1897,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               .getNodeType()
               .equals(XmlSchemaStateMachineNode.Type.ANY)) {
 
-      throw new IllegalStateException(errMsgPrefix + " when our current position in the tree is a " + currentPath.getStateMachineNode().getNodeType() + '.');
+      throw new IllegalStateException(
+          errMsgPrefix
+          + " when our current position in the tree is a "
+          + currentPath.getStateMachineNode().getNodeType()
+          + '.');
     }
   }
 
@@ -1755,7 +1909,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     if (!node.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT)
         && !node.getNodeType().equals(XmlSchemaStateMachineNode.Type.ANY)) {
 
-      throw new IllegalStateException("State machine node needs to be an element or a wildcard element, not a " + currentPath.getStateMachineNode().getNodeType() + '.');
+      throw new IllegalStateException(
+          "State machine node needs to be an element or a wildcard element, "
+          + "not a "
+          + currentPath.getStateMachineNode().getNodeType()
+          + '.');
     }
 
     String elemName = "a wildcard element";
@@ -1799,7 +1957,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
               .getElement()
               .getQName()
               .equals(element)) {
-      throw new IllegalStateException("Walked up tree and stopped at node " + currentPath.getStateMachineNode() + ", which does not represent element " + element);
+      throw new IllegalStateException(
+          "Walked up tree and stopped at node "
+          + currentPath.getStateMachineNode()
+          + ", which does not represent element "
+          + element);
     }
 
     return iter.getStateMachineNode();
@@ -1820,24 +1982,11 @@ final class XmlSchemaPathFinder extends DefaultHandler {
           attrs,
           nsContext);
     } catch (ValidationException ve) {
-      throw new IllegalStateException("Cannot validate attributes of " + currentPath.getStateMachineNode().getElement().getQName() +".", ve);
+      throw new IllegalStateException(
+          "Cannot validate attributes of "
+          + currentPath.getStateMachineNode().getElement().getQName()
+          + '.',
+          ve);
     }
   }
-
-  private final XmlSchemaStateMachineNode rootNode;
-  private final XmlSchemaNamespaceContext nsContext;
-
-  private XmlSchemaPathNode rootPathNode;
-
-  private XmlSchemaPathNode currentPath;
-
-  private List<PathSegment> unusedPathSegmentPool;
-
-  private ArrayList<TraversedElement> traversedElements;
-  private ArrayList<DecisionPoint> decisionPoints;
-
-  private ArrayList<QName> elementStack;
-  private ArrayList<QName> anyStack;
-
-  private XmlSchemaPathManager pathMgr;
 }

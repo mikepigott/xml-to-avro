@@ -33,13 +33,22 @@ import org.apache.ws.commons.schema.XmlSchemaSequence;
 
 /**
  * Builds a state machine from an
- * {@link org.apache.ws.commons.schema.XmlSchema}.
- *
- * @author  Mike Pigott
+ * {@link org.apache.ws.commons.schema.XmlSchema}
+ * representing how to walk through the schema when parsing an XML document.
  */
 final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
 
+  private List<XmlSchemaStateMachineNode> stack;
+  private XmlSchemaStateMachineNode startNode;
+  private Map<QName, ElementInfo> elementInfoByQName;
+
   private static class ElementInfo {
+    final List<XmlSchemaStateMachineNode.Attribute> attributes;
+    final XmlSchemaTypeInfo typeInfo;
+    final XmlSchemaElement element;
+
+    XmlSchemaStateMachineNode stateMachineNode;
+
     ElementInfo(
         XmlSchemaElement element,
         XmlSchemaTypeInfo typeInfo) {
@@ -51,14 +60,8 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     }
 
     void addAttribute(XmlSchemaAttribute attr, XmlSchemaTypeInfo attrType) {
-      attributes.add( new XmlSchemaStateMachineNode.Attribute(attr, attrType) );
+      attributes.add(new XmlSchemaStateMachineNode.Attribute(attr, attrType));
     }
-
-    final List<XmlSchemaStateMachineNode.Attribute> attributes;
-    final XmlSchemaTypeInfo typeInfo;
-    final XmlSchemaElement element;
-
-    XmlSchemaStateMachineNode stateMachineNode;
   }
 
   public XmlSchemaStateMachineGenerator() {
@@ -83,7 +86,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo, boolean)
+   * @see XmlSchemaVisitor#onEnterElement(XmlSchemaElement, XmlSchemaTypeInfo, boolean)
    */
   @Override
   public void onEnterElement(
@@ -147,7 +150,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitElement(org.apache.ws.commons.schema.XmlSchemaElement, mpigott.avro.xml.XmlSchemaTypeInfo, boolean)
+   * @see XmlSchemaVisitor#onExitElement(XmlSchemaElement, XmlSchemaTypeInfo, boolean)
    */
   @Override
   public void onExitElement(
@@ -182,7 +185,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAttribute(org.apache.ws.commons.schema.XmlSchemaElement, org.apache.ws.commons.schema.XmlSchemaAttribute, mpigott.avro.xml.XmlSchemaTypeInfo)
+   * @see XmlSchemaVisitor#onVisitAttribute(XmlSchemaElement, XmlSchemaAttribute, XmlSchemaTypeInfo)
    */
   @Override
   public void onVisitAttribute(
@@ -237,7 +240,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterSubstitutionGroup(org.apache.ws.commons.schema.XmlSchemaElement)
+   * @see XmlSchemaVisitor#onEnterSubstitutionGroup(XmlSchemaElement)
    */
   @Override
   public void onEnterSubstitutionGroup(XmlSchemaElement base) {
@@ -258,7 +261,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitSubstitutionGroup(org.apache.ws.commons.schema.XmlSchemaElement)
+   * @see XmlSchemaVisitor#onExitSubstitutionGroup(XmlSchemaElement)
    */
   @Override
   public void onExitSubstitutionGroup(XmlSchemaElement base) {
@@ -266,7 +269,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterAllGroup(org.apache.ws.commons.schema.XmlSchemaAll)
+   * @see XmlSchemaVisitor#onEnterAllGroup(XmlSchemaAll)
    */
   @Override
   public void onEnterAllGroup(XmlSchemaAll all) {
@@ -277,7 +280,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitAllGroup(org.apache.ws.commons.schema.XmlSchemaAll)
+   * @see XmlSchemaVisitor#onExitAllGroup(XmlSchemaAll)
    */
   @Override
   public void onExitAllGroup(XmlSchemaAll all) {
@@ -285,7 +288,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterChoiceGroup(org.apache.ws.commons.schema.XmlSchemaChoice)
+   * @see XmlSchemaVisitor#onEnterChoiceGroup(XmlSchemaChoice)
    */
   @Override
   public void onEnterChoiceGroup(XmlSchemaChoice choice) {
@@ -296,7 +299,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitChoiceGroup(org.apache.ws.commons.schema.XmlSchemaChoice)
+   * @see XmlSchemaVisitor#onExitChoiceGroup(XmlSchemaChoice)
    */
   @Override
   public void onExitChoiceGroup(XmlSchemaChoice choice) {
@@ -304,7 +307,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onEnterSequenceGroup(org.apache.ws.commons.schema.XmlSchemaSequence)
+   * @see XmlSchemaVisitor#onEnterSequenceGroup(XmlSchemaSequence)
    */
   @Override
   public void onEnterSequenceGroup(XmlSchemaSequence seq) {
@@ -315,7 +318,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onExitSequenceGroup(org.apache.ws.commons.schema.XmlSchemaSequence)
+   * @see XmlSchemaVisitor#onExitSequenceGroup(XmlSchemaSequence)
    */
   @Override
   public void onExitSequenceGroup(XmlSchemaSequence seq) {
@@ -323,7 +326,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAny(org.apache.ws.commons.schema.XmlSchemaAny)
+   * @see XmlSchemaVisitor#onVisitAny(XmlSchemaAny)
    */
   @Override
   public void onVisitAny(XmlSchemaAny any) {
@@ -339,7 +342,7 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see mpigott.avro.xml.XmlSchemaVisitor#onVisitAnyAttribute(org.apache.ws.commons.schema.XmlSchemaElement, org.apache.ws.commons.schema.XmlSchemaAnyAttribute)
+   * @see XmlSchemaVisitor#onVisitAnyAttribute(XmlSchemaElement, XmlSchemaAnyAttribute)
    */
   @Override
   public void onVisitAnyAttribute(XmlSchemaElement element,
@@ -397,8 +400,4 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
           + " only to find it did not have a parent.");
     }
   }
-
-  private List<XmlSchemaStateMachineNode> stack;
-  private XmlSchemaStateMachineNode startNode;
-  private Map<QName, ElementInfo> elementInfoByQName;
 }

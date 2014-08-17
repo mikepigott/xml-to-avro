@@ -23,12 +23,13 @@ import java.util.Map;
 
 /**
  * Factory for creating {@link XmlSchemaPathNode}s.  This allows
- * for recyling and abstracts away the complexity of walking through an
- * XML Schema.
- *
- * @author  Mike Pigott
+ * for recycling and abstracts away the complexity of walking through
+ * an XML Schema.
  */
 final class XmlSchemaPathManager<U, V> {
+
+  private ArrayList<XmlSchemaPathNode<U, V>> unusedPathNodes;
+  private ArrayList<XmlSchemaDocumentNode<U>> unusedDocNodes;
 
   /**
    * Constructs the document path node factory.
@@ -329,7 +330,4 @@ final class XmlSchemaPathManager<U, V> {
 
     unusedDocNodes.add(node);
   }
-
-  private ArrayList<XmlSchemaPathNode<U, V>> unusedPathNodes;
-  private ArrayList<XmlSchemaDocumentNode<U>> unusedDocNodes;
 }

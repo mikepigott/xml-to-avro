@@ -27,8 +27,6 @@ import org.apache.ws.commons.schema.XmlSchemaSequence;
 /**
  * Defines a visitor interface for notifications when walking
  * an {@link XmlSchema} using the {@link XmlSchemaWalker}.
- *
- * @author  Mike Pigott
  */
 interface XmlSchemaVisitor {
 

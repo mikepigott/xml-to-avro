@@ -47,19 +47,23 @@ import org.xml.sax.SAXException;
  * <ul>
  *   <li>{@link ContentHandler#startDocument()}</li>
  *   <li>{@link ContentHandler#startPrefixMapping(String, String)}</li>
- *   <li>{@link ContentHandler#startElement(String, String, String, org.xml.sax.Attributes)}</li>
+ *   <li>{@link ContentHandler#startElement(String, String, String, Attributes)}</li>
  *   <li>{@link ContentHandler#characters(char[], int, int)}</li>
  *   <li>{@link ContentHandler#endElement(String, String, String)}</li>
  *   <li>{@link ContentHandler#endPrefixMapping(String)}</li>
  *   <li>{@link ContentHandler#endDocument()}</li>
  * </ul>
  * </p>
- *
- * @author  Mike Pigott
  */
 final class SaxWalkerOverDom {
 
+  private List<ContentHandler> listeners;
+
   private static class Attr {
+
+    final QName qName;
+    final String qualifiedName;
+    final String value;
 
     Attr(String namespace, String localName, String qualName, String val) {
       qName = new QName(namespace, localName);
@@ -74,13 +78,15 @@ final class SaxWalkerOverDom {
           node.getNodeName(),
           node.getNodeValue());
     }
-
-    final QName qName;
-    final String qualifiedName;
-    final String value;
   }
 
   private static class DomAttrsAsSax implements org.xml.sax.Attributes {
+
+    private final List<Attr> attributes;
+    private final Map<String, Attr> attrsByQualifiedName;
+    private final Map<QName, Attr> attrsByQName;
+    private final Map<String, Integer> indexByQualifiedName;
+    private final Map<QName, Integer> indexByQName;
 
     DomAttrsAsSax(NamedNodeMap domAttrs) throws SAXException {
       attributes = new ArrayList<Attr>();
@@ -232,12 +238,6 @@ final class SaxWalkerOverDom {
         return (attr == null) ? null : attr.value;
       }
     }
-
-    private final List<Attr> attributes;
-    private final Map<String, Attr> attrsByQualifiedName;
-    private final Map<QName, Attr> attrsByQName;
-    private final Map<String, Integer> indexByQualifiedName;
-    private final Map<QName, Integer> indexByQName;
   }
 
   /**
@@ -357,7 +357,11 @@ final class SaxWalkerOverDom {
       } else if (node instanceof org.w3c.dom.Comment) {
         // Ignored.
       } else {
-        throw new SAXException("Unrecognized child of " + element.getTagName() + " of type " + node.getClass().getName());
+        throw new SAXException(
+            "Unrecognized child of "
+            + element.getTagName()
+            + " of type "
+            + node.getClass().getName());
       }
     }
 
@@ -441,6 +445,4 @@ final class SaxWalkerOverDom {
 
     return prefixes;
   }
-
-  private List<ContentHandler> listeners;
 }

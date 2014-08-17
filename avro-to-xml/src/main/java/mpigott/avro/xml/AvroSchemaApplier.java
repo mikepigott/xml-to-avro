@@ -34,12 +34,37 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
 
 /**
- * Applies an Avro schema to a tree described
- * by {@link XmlSchemaDocumentNode}s.
+ * Applies an Avro schema to a tree described by
+ * {@link XmlSchemaDocumentNode}s and {@link XmlSchemaDocumentPathNode}s.
  *
- * @author  Mike Pigott
+ * <p>
+ * Schema evolution is handled with the following conversions:
+ * <ul>
+ *   <li>STRING, BOOLEAN, ENUM, DOUBLE, FLOAT, LONG, INT -> STRING</li>
+ *   <li>DOUBLE, FLOAT, LONG, INT -> DOUBLE</li>
+ *   <li>FLOAT, LONG, INT -> FLOAT</li>
+ *   <li>LONG, INT -> LONG</li>
+ *   <li>INT -> INT</li>
+ *   <li>BOOLEAN -> BOOLEAN</li>
+ *   <li>BYTES -> BYTES</li>
+ *   <li>ENUM -> ENUM when destination ENUM is a superset of the source.</li>
+ *   <li>RECORD -> RECORD when all the fields can be converted as well.</li>
+ * </ul>
+ * </p>
+ *
+ * <p>
+ * Also joins sibling map elements under the same map,
+ * and tracks the content nodes of a mixed element.
+ * </p>
  */
 final class AvroSchemaApplier {
+
+  private List<Schema> unionOfValidElementsStack;
+  private List<AvroRecordInfo> avroRecordStack;
+
+  private final Schema avroSchema;
+  private final Map<Schema.Type, Set<Schema.Type>> conversionCache;
+  private final boolean xmlIsWritten;
 
   /**
    * {@link XmlSchemaPathNode} contain their destination
@@ -325,7 +350,9 @@ final class AvroSchemaApplier {
                   + childrenSchema.getElementType().getType());
             }
 
-            verifyIsUnionOfMapsAndRecords(childrenSchema.getElementType(), typeInfo.isMixed());
+            verifyIsUnionOfMapsAndRecords(
+                childrenSchema.getElementType(),
+                typeInfo.isMixed());
 
             unionOfChildrenTypes = childrenSchema.getElementType();
           }
@@ -818,7 +845,6 @@ final class AvroSchemaApplier {
 
     AvroPathNode mostRecentlyLeftMap = null;
 
-    int pathIndex = 0;
     while(path != null) {
 
       final boolean isElement =
@@ -860,7 +886,6 @@ final class AvroSchemaApplier {
               mostRecentlyLeftMap =
                   new AvroPathNode(
                       path,
-                      pathIndex,
                       AvroPathNode.Type.MAP_END,
                       stackEntry
                         .docNode
@@ -897,7 +922,6 @@ final class AvroSchemaApplier {
                 pathIndices.add(
                     new AvroPathNode(
                         path,
-                        pathIndex,
                         AvroPathNode.Type.MAP_START));
                 incrementMapParentChildCount(path);
 
@@ -915,7 +939,6 @@ final class AvroSchemaApplier {
                   .add(
                       new AvroPathNode(
                           path,
-                          pathIndex,
                           AvroPathNode.Type.ITEM_START));
               }
 
@@ -949,7 +972,6 @@ final class AvroSchemaApplier {
               mostRecentlyLeftMap =
                   new AvroPathNode(
                       path,
-                      pathIndex,
                       AvroPathNode.Type.MAP_END,
                       stackEntry
                         .docNode
@@ -973,7 +995,6 @@ final class AvroSchemaApplier {
       }
 
       path = path.getNext();
-      ++pathIndex;
     }
 
     /* Will be 1 if the root is an element,
@@ -981,7 +1002,8 @@ final class AvroSchemaApplier {
      */
     if (docNodeStack.size() > 1) {
       throw new IllegalStateException(
-          "Expected the stack to have one element in it at the end, but found "
+          "Expected the stack to have no more than one "
+          + "element in it at the end, but found "
           + docNodeStack.size()
           + ".");
     }
@@ -1161,11 +1183,4 @@ final class AvroSchemaApplier {
       path = path.getNext();
     }
   }
-
-  private List<Schema> unionOfValidElementsStack;
-  private List<AvroRecordInfo> avroRecordStack;
-
-  private final Schema avroSchema;
-  private final Map<Schema.Type, Set<Schema.Type>> conversionCache;
-  private final boolean xmlIsWritten;
 }

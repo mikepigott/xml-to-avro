@@ -43,16 +43,23 @@ import org.apache.ws.commons.schema.XmlSchemaType;
 
 /**
  * Walks an {@link XmlSchema} from a starting {@link XmlSchemaElement},
- * notifying attached visitors as it decends.  Can be configured for
- * either a depth-first or a breadth-first walk.
- *
- * @author  Mike Pigott
+ * notifying attached visitors as it descends.
  */
 final class XmlSchemaWalker {
 
+  private Set<QName> userRecognizedTypes;
+
+  private final XmlSchemaCollection schemas;
+  private final ArrayList<XmlSchemaVisitor> visitors;
+  private final Map<QName, List<XmlSchemaElement>> elemsBySubstGroup;
+  private final Map<String, XmlSchema> schemasByNamespace;
+  private final Map<QName, XmlSchemaScope> scopeCache;
+  private final Set<QName> visitedElements;
+
   /**
-   * Initializes the {@link XmlSchemaWalker} with the {@link XmlScheamCollection}
-   * to reference when following an {@link XmlSchemaElement}.
+   * Initializes the {@link XmlSchemaWalker} with the
+   * {@link XmlScheamCollection} to reference when following
+   * an {@link XmlSchemaElement}.
    */
   XmlSchemaWalker(XmlSchemaCollection xmlSchemas) {
     if (xmlSchemas == null) {
@@ -271,7 +278,9 @@ final class XmlSchemaWalker {
       XmlSchemaGroupRef groupRef = (XmlSchemaGroupRef) particle;
       XmlSchemaGroupParticle group = groupRef.getParticle();
       if (group == null) {
-        XmlSchema schema = schemasByNamespace.get( groupRef.getRefName().getNamespaceURI() );
+        XmlSchema schema =
+            schemasByNamespace.get( groupRef.getRefName().getNamespaceURI() );
+
         group = schema.getGroupByName( groupRef.getRefName() ).getParticle();
       }
       walk(group, groupRef.getMinOccurs(), groupRef.getMaxOccurs());
@@ -290,12 +299,18 @@ final class XmlSchemaWalker {
       }
 
     } else {
-      throw new IllegalArgumentException("Unknown particle type " + particle.getClass().getName());
+      throw new IllegalArgumentException(
+          "Unknown particle type "
+          + particle.getClass().getName());
     }
 
   }
 
-  private void walk(XmlSchemaGroupParticle group, long minOccurs, long maxOccurs) {
+  private void walk(
+      XmlSchemaGroupParticle group,
+      long minOccurs,
+      long maxOccurs) {
+
     // Only make a copy of the particle if the minOccurs or maxOccurs was set.
     final boolean forceCopy =
         ((minOccurs != group.getMinOccurs())
@@ -318,7 +333,9 @@ final class XmlSchemaWalker {
       seq = (XmlSchemaSequence) group;
 
     } else {
-      throw new IllegalArgumentException("Unrecognized XmlSchemaGroupParticle of type " + group.getClass().getName());
+      throw new IllegalArgumentException(
+          "Unrecognized XmlSchemaGroupParticle of type "
+          + group.getClass().getName());
     }
 
     // 2. Make a copy if necessary.
@@ -393,7 +410,10 @@ final class XmlSchemaWalker {
         } else if (item instanceof XmlSchemaParticle) {
           children.add((XmlSchemaParticle) item);
         } else {
-          throw new IllegalArgumentException("Choice child is not an XmlSchemaGroup or XmlSchemaParticle; it is a " + item.getClass().getName());
+          throw new IllegalArgumentException(
+              "Choice child is not an XmlSchemaGroup or XmlSchemaParticle; "
+              + "it is a "
+              + item.getClass().getName());
         }
       }
 
@@ -405,13 +425,17 @@ final class XmlSchemaWalker {
         } else if (item instanceof XmlSchemaParticle) {
           children.add((XmlSchemaParticle) item);
         } else {
-          throw new IllegalArgumentException("Sequence child is not an XmlSchemaGroup or XmlSchemaParticle; is is a " + item.getClass().getName());
+          throw new IllegalArgumentException(
+              "Sequence child is not an XmlSchemaGroup or XmlSchemaParticle; "
+              + "it is a "
+              + item.getClass().getName());
         }
       }
     }
 
     if (children == null) {
-      throw new IllegalStateException("Could not process group of type " + group.getClass().getName());
+      throw new IllegalStateException(
+          "Could not process group of type " + group.getClass().getName());
     }
 
     for (XmlSchemaParticle child : children) {
@@ -447,7 +471,8 @@ final class XmlSchemaWalker {
     }
 
     final QName elemQName = getElementQName(element);
-    final XmlSchema schema = schemasByNamespace.get( elemQName.getNamespaceURI() );
+    final XmlSchema schema =
+        schemasByNamespace.get( elemQName.getNamespaceURI() );
 
     XmlSchemaElement globalElem = null;
     if ( !element.isRef() ) {
@@ -499,13 +524,4 @@ final class XmlSchemaWalker {
       return element.getQName();
     }
   }
-
-  private Set<QName> userRecognizedTypes;
-
-  private final XmlSchemaCollection schemas;
-  private final ArrayList<XmlSchemaVisitor> visitors;
-  private final Map<QName, List<XmlSchemaElement>> elemsBySubstGroup;
-  private final Map<String, XmlSchema> schemasByNamespace;
-  private final Map<QName, XmlSchemaScope> scopeCache;
-  private final Set<QName> visitedElements;
 }
