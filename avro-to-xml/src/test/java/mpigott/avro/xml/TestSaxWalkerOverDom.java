@@ -112,7 +112,24 @@ public class TestSaxWalkerOverDom {
           || !stringsEqual(qName, qn)
           || (attributes.size() > attrs.getLength()))
       {
-        throw new IllegalStateException("Expected element [\"" + namespace + "\", \"" + localName + "\", \"" + qName + "\", " + attributes.size() + " attrs] does not match actual of [\"" + ns + "\", \"" + ln + "\", \"" + qn + "\", " + attrs.getLength() + " attrs].");
+        throw new IllegalStateException(
+            "Expected element [\""
+            + namespace
+            + "\", \""
+            + localName
+            + "\", \""
+            + qName
+            + "\", "
+            + attributes.size()
+            + " attrs] does not match actual of [\""
+            + ns
+            + "\", \""
+            + ln
+            + "\", \""
+            + qn
+            + "\", "
+            + attrs.getLength()
+            + " attrs].");
       }
 
       for (int index = 0; index < attributes.size(); ++index) {
@@ -123,8 +140,19 @@ public class TestSaxWalkerOverDom {
           return false;
         }
 
-        if ( !attrs.getValue(attribute.namespace, attribute.localName).equals(actual) ) {
-          System.err.println("Attribute [\"" + attribute.namespace + "\", \"" + attribute.localName + "\"] has a value of \"" + attribute.value + "\" which does not match the actual value of \"" + actual + "\".  ");
+        if (!attrs
+               .getValue(attribute.namespace, attribute.localName)
+               .equals(actual) ) {
+          System.err.println(
+              "Attribute [\""
+              + attribute.namespace
+              + "\", \""
+              + attribute.localName
+              + "\"] has a value of \""
+              + attribute.value
+              + "\" which does not match the actual value of \""
+              + actual
+              + "\".  ");
           return false;
         }
       }
@@ -169,7 +197,12 @@ public class TestSaxWalkerOverDom {
         return true;
 
       } else {
-        throw new IllegalArgumentException("\"" + lhs + "\" does not match \"" + rhs + "\"");
+        throw new IllegalArgumentException(
+            "\""
+            + lhs
+            + "\" does not match \""
+            + rhs
+            + "\"");
       }
     }
 
@@ -201,7 +234,10 @@ public class TestSaxWalkerOverDom {
     @Override
     public void endDocument() throws SAXException {
       if ( !stack.isEmpty() ) {
-        throw new SAXException("Reaced the end of the document early; expected " + stack.size() + " more elements.");
+        throw new SAXException(
+            "Reaced the end of the document early; expected "
+            + stack.size()
+            + " more elements.");
       }
     }
 
@@ -213,17 +249,30 @@ public class TestSaxWalkerOverDom {
         Attributes atts) throws SAXException {
 
       if ( stack.isEmpty() ) {
-        throw new SAXException("Element " + toString(uri, localName, qName, atts) + " is not expected; stack is empty!");
+        throw new SAXException(
+            "Element "
+            + toString(uri, localName, qName, atts)
+            + " is not expected; stack is empty!");
       }
 
       StackEntry entry = stack.remove(0);
 
       if (entry.type != StackEntry.Type.ELEMENT) {
-        throw new SAXException("Expected text of (" + entry + ") but received element of (" + toString(uri, localName, qName, atts) + ").");
+        throw new SAXException(
+            "Expected text of ("
+            + entry
+            + ") but received element of ("
+            + toString(uri, localName, qName, atts)
+            + ").");
       }
 
       if ( !entry.equals(uri, localName, qName, atts) ) {
-        throw new SAXException("Expected element (" + entry + ") does not match actual (" + toString(uri, localName, qName, atts) + ").");
+        throw new SAXException(
+            "Expected element ("
+            + entry
+            + ") does not match actual ("
+            + toString(uri, localName, qName, atts)
+            + ").");
       }
     }
 
@@ -246,17 +295,28 @@ public class TestSaxWalkerOverDom {
       final String value = toString(ch, start, length);
 
       if ( stack.isEmpty() ) {
-        throw new SAXException("Unexpected string \"" + value + "\"; stack is empty!");
+        throw new SAXException(
+            "Unexpected string \"" + value + "\"; stack is empty!");
       }
 
       StackEntry entry = stack.remove(0);
 
       if (!entry.type.equals(StackEntry.Type.TEXT)) {
-        throw new SAXException("Unexpected string \"" + value + "\"; was expecting element (" + entry + ").");
+        throw new SAXException(
+            "Unexpected string \""
+            + value
+            + "\"; was expecting element ("
+            + entry
+            + ").");
       }
 
       if ( !entry.equals(value) ) {
-        throw new SAXException("Expected string \"" + entry + "\" but received \"" + value + "\".");
+        throw new SAXException(
+            "Expected string \""
+            + entry
+            + "\" but received \""
+            + value
+            + "\".");
       }
     }
 
@@ -265,7 +325,12 @@ public class TestSaxWalkerOverDom {
         throws SAXException {
 
       if ( !prefixMappings.containsKey(prefix) ) {
-        throw new SAXException("Prefix \"" + prefix + "\" and URI \"" + uri + "\" are not expected.");
+        throw new SAXException(
+            "Prefix \""
+            + prefix
+            + "\" and URI \""
+            + uri
+            + "\" are not expected.");
       }
 
       /* This is a quick and dirty test; in reality the prefix-to-namespace
@@ -281,7 +346,12 @@ public class TestSaxWalkerOverDom {
         }
       }
       if (!found) {
-        throw new SAXException("Prefix \"" + prefix + "\" does not have a namespace of \"" + uri + "\".");
+        throw new SAXException(
+            "Prefix \""
+            + prefix
+            + "\" does not have a namespace of \""
+            + uri
+            + "\".");
       }
     }
 
@@ -314,7 +384,9 @@ public class TestSaxWalkerOverDom {
       throw new UnsupportedOperationException("This should not be called.");
     }
 
-    private static String toString(String uri, String localName, String qName, Attributes attrs) {
+    private static String toString(
+        String uri, String localName, String qName, Attributes attrs) {
+
       StringBuilder str = new StringBuilder("namespace=\"");
       str.append(uri).append("\", localName=\"").append(localName);
       str.append("\", qName=\"").append(qName).append("\", attributes={ ");
@@ -323,7 +395,8 @@ public class TestSaxWalkerOverDom {
         str.append("[Attr: namespace=\"").append( attrs.getURI(index) );
         str.append("\", localName=\"").append( attrs.getLocalName(index) );
         str.append("\", qName=\"").append( attrs.getQName(index) );
-        str.append("\", value=\"").append( attrs.getValue(index) ).append("\"] ");
+        str.append("\", value=\"").append( attrs.getValue(index) );
+        str.append("\"] ");
       }
 
       str.append('}');
@@ -444,7 +517,11 @@ public class TestSaxWalkerOverDom {
     try {
       walker.walk(doc);
     } catch (Exception e) {
-      throw new RuntimeException("Traversed through element " + (stackSize - stack.size()) + " before failing.", e);
+      throw new RuntimeException(
+          "Traversed through element "
+          + (stackSize - stack.size())
+          + " before failing.",
+          e);
     }
   }
 
