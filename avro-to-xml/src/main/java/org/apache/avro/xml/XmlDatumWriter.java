@@ -1063,24 +1063,39 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                       subTypeIndex);
             }
 
-            try {
-              write(xmlSubType, xmlQName, subType, data, subTypeIndex);
-              written = true;
-              break;
-            } catch (IOException ioe) {
-              /* Could not parse the value using the
-               * provided type; try the next one.
-               */
+            if (xmlSubType != null) {
+              try {
+                write(xmlSubType, xmlQName, subType, data, subTypeIndex);
+                written = true;
+                break;
+              } catch (Exception e) {
+                /* Could not parse the value using the
+                 * provided type; try the next one.
+                 */
+              }
             }
           }
 
           if (!written) {
             if (bytesIndex >= 0) {
-              try {
-                write(xmlType, xmlQName, bytesType, data, bytesIndex);
-                written = true;
-              } catch (IOException ioe) {
-                // Cannot write the data as bytes either.
+              XmlSchemaTypeInfo subType = xmlType;
+              if (xmlType.getType().equals(XmlSchemaTypeInfo.Type.UNION)) {
+                subType =
+                    Utils.chooseUnionType(
+                        xmlType,
+                        xmlQName,
+                        schema.getTypes().get(bytesIndex),
+                        bytesIndex);
+              }
+
+              // Only write the bytes if we know how.
+              if (subType != null) {
+                try {
+                  write(subType, xmlQName, bytesType, data, bytesIndex);
+                  written = true;
+                } catch (Exception e) {
+                  // Cannot write the data as bytes either.
+                }
               }
             }
             if (!written && (textIndex >= 0)) {
@@ -1113,7 +1128,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
                   Utils.createBigDecimalFrom(data, schema);
               final BigInteger unscaledValue =
                   decimal.unscaledValue();
-              out.writeBytes( unscaledValue.toByteArray() );
+              bytes = unscaledValue.toByteArray();
               break;
             }
           default:

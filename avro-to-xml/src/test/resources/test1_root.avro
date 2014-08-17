@@ -45,7 +45,7 @@
     "string" : "idvalue0"
   },
   "nonNegativeInteger" : {
-    "double" : 9.223372036854776E18
+    "bytes" : "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
   },
   "long" : {
     "long" : 9223372036854775807
@@ -66,7 +66,7 @@
     "int" : 65535
   },
   "nonPositiveInteger" : {
-    "double" : -9.223372036854776E18
+    "bytes" : "\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
   },
   "entity" : null,
   "dateTime" : {
@@ -86,7 +86,7 @@
     "string" : "EN"
   },
   "unsignedLong" : {
-    "double" : 1.8446744073709552E19
+    "bytes" : "\u0000ÿÿÿÿÿÿÿÿ"
   },
   "string" : {
     "string" : "hello"
@@ -98,7 +98,7 @@
     "string" : "P1D"
   },
   "positiveInteger" : {
-    "double" : 9.223372036854776E18
+    "bytes" : "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
   },
   "double" : {
     "double" : 32768.32768
@@ -108,7 +108,7 @@
     "array" : [ "idvalue0" ]
   },
   "decimal" : {
-    "double" : 65536.0
+    "bytes" : "\u0001\u0000\u0000"
   },
   "normalizedString" : {
     "string" : "xmlIsFun"
@@ -120,13 +120,13 @@
     "long" : 4294967295
   },
   "negativeInteger" : {
-    "double" : -9.223372036854776E18
+    "bytes" : "\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
   },
   "unsignedByte" : {
     "int" : 255
   },
   "integer" : {
-    "double" : 9.223372036854776E18
+    "bytes" : "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
   },
   "root" : [ ]
 }

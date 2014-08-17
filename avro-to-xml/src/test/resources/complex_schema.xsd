@@ -123,7 +123,13 @@
 				<element name="firstMap">
 					<complexType>
 						<sequence>
-							<element name="value" type="decimal" default="1234567" nillable="true" minOccurs="1" maxOccurs="2" />
+							<element name="value" default="1234567" nillable="true" minOccurs="1" maxOccurs="2">
+								<simpleType>
+									<restriction base="decimal">
+										<fractionDigits value="0"></fractionDigits>
+									</restriction>
+								</simpleType>
+							</element>
 						</sequence>
 						<attribute name="id" type="ID" use="required" />
 					</complexType>

@@ -26,7 +26,7 @@
           }
         }, {
           "avro.complex_schema.unsignedLongList" : {
-            "unsignedLongList" : [ 1.0, 2.0, 345.0, 67890.0, 1.23456789E9, 1.2345678901234567E19 ]
+            "unsignedLongList" : [ "\u0001", "\u0002", "\u0001Y", "\u0001\t2", "I\u0002Ò", "\u0000«T©ë\u001F\nÒ" ]
           }
         }, {
           "avro.complex_schema.listOfUnion" : {
@@ -43,7 +43,7 @@
             }, {
               "int" : -2147483648
             }, {
-              "double" : 2.147483649E9
+              "bytes" : "\u0000\u0000\u0000\u0001"
             } ]
           }
         } ]
@@ -58,9 +58,9 @@
           }, {
             "int" : -32768
           }, {
-            "double" : 1.8446744073709552E19
+            "bytes" : "\u0000ÿÿÿÿÿÿÿÿ"
           }, {
-            "double" : -1.8446744073709552E19
+            "bytes" : "ÿ\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
           } ],
           "allTheThings" : [ {
             "map" : {
@@ -80,7 +80,7 @@
                   "firstMap" : [ {
                     "avro.complex_schema.value" : {
                       "value" : {
-                        "double" : 1234567.0
+                        "bytes" : "\u0012Ö"
                       }
                     }
                   }, {
@@ -98,7 +98,7 @@
       "avro.complex_schema.prohibit" : {
         "prohibit" : [ {
           "avro.complex_schema.fixed" : {
-            "fixed" : 100.0
+            "fixed" : "d"
           }
         } ]
       }
@@ -128,11 +128,11 @@
         "defaulted" : "hello",
         "complexExtension" : [ {
           "avro.complex_schema.fixed" : {
-            "fixed" : 100.0
+            "fixed" : "d"
           }
         }, {
           "avro.complex_schema.unsignedLongList" : {
-            "unsignedLongList" : [ 1.0, 2.0, 4.0, 5.0, 6.0 ]
+            "unsignedLongList" : [ "\u0001", "\u0002", "\u0004", "\u0005", "\u0006" ]
           }
         } ]
       }
@@ -154,7 +154,7 @@
           "string" : "\n  \twelcome you to this mixed element with\n  \t"
         }, {
           "avro.complex_schema.unsignedLongList" : {
-            "unsignedLongList" : [ 2.0 ]
+            "unsignedLongList" : [ "\u0002" ]
           }
         }, {
           "string" : "\n  \tsub-elements.\n  "

@@ -987,33 +987,7 @@ public class XmlDatumReader implements DatumReader<Document> {
 
     case DOUBLE:
       {
-        final double value = in.readDouble();
-
-        switch ( xmlType.getBaseType() ) {
-        case DECIMAL:
-          {
-            BigDecimal result = new BigDecimal(value);
-
-            if (xmlType
-                  .getUserRecognizedType()
-                  .equals(Constants.XSD_UNSIGNEDLONG)) {
-
-              if (result.compareTo(MAX_UNSIGNEDLONG) > 0) {
-                result = MAX_UNSIGNEDLONG;
-              }
-            }
-
-            return DatatypeConverter.printDecimal(result);
-          }
-
-        case DOUBLE:
-          return DatatypeConverter.printDouble(value);
-
-        default:
-          throw new IOException(
-              "Avro Schema is of type DOUBLE, but the XML Schema is of type "
-              + xmlType.getBaseType() + '.');
-        }
+        return DatatypeConverter.printDouble( in.readDouble() );
       }
     case ENUM:
       return schema.getEnumSymbols().get( in.readEnum() );

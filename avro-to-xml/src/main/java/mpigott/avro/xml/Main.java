@@ -1,5 +1,7 @@
 package mpigott.avro.xml;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,6 +42,8 @@ import org.apache.avro.xml.XmlDatumWriter;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.custommonkey.xmlunit.DetailedDiff;
+import org.custommonkey.xmlunit.XMLUnit;
 import org.junit.Assert;
 import org.w3c.dom.Document;
 
@@ -122,5 +126,16 @@ public class Main {
     transformer.transform(source, result);
 
     inStream.close();
+
+    XMLUnit.setIgnoreWhitespace(true);
+    XMLUnit.setIgnoreAttributeOrder(true);
+
+    DetailedDiff diff = new DetailedDiff(XMLUnit.compareXML(xbrlDoc, doc));
+
+    if ( !diff.similar() ) {
+      System.out.println("Differences found: " + diff.toString());
+    } else {
+      System.out.println("Success!");
+    }
   }
 }

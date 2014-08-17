@@ -393,21 +393,12 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
               element.getQName(),
               element.isNillable());
 
-      String defaultValue = element.getDefaultValue();
-      if (defaultValue == null) {
-        defaultValue = element.getFixedValue();
-      }
-      JsonNode defaultNode = null;
-      if (defaultValue != null) {
-        defaultNode = Utils.createJsonNodeFor(defaultValue, childSchema);
-      }
-
       final Schema.Field field =
           new Schema.Field(
               entry.elementQName.getLocalPart(),
               childSchema,
               "Simple type " + typeInfo.getUserRecognizedType(),
-              defaultNode);
+              null);
 
       schemaFields.add(field);
 
@@ -456,11 +447,6 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
     final String documentation =
         getDocumentationFor( attribute.getAnnotation() );
 
-    String defaultValue = attribute.getDefaultValue();
-    if (defaultValue == null) {
-      defaultValue = attribute.getFixedValue();
-    }
-
     boolean isOptional = false;
 
     // Optional types are unions of the real type and null.
@@ -487,7 +473,7 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
             attrQName.getLocalPart(),
             attrSchema,
             documentation,
-            Utils.createJsonNodeFor(defaultValue, attrSchema));
+            null);
 
     List<AttributeEntry> attrs = attributesByElement.get(elemQName);
     if (attrs == null) {

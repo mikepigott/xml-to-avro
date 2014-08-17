@@ -15,6 +15,7 @@
  */
 package org.apache.avro.xml;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
@@ -29,15 +30,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
 
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.constants.Constants;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.IntNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
 import org.codehaus.jackson.node.NumericNode;
 import org.codehaus.jackson.node.ObjectNode;
+import org.codehaus.jackson.node.TextNode;
 import org.xml.sax.InputSource;
 
 /**
@@ -55,7 +59,7 @@ class Utils {
   static {
     xmlToAvroTypeMap.put(Constants.XSD_ANYTYPE,       Schema.Type.STRING);
     xmlToAvroTypeMap.put(Constants.XSD_BOOLEAN,       Schema.Type.BOOLEAN);
-    xmlToAvroTypeMap.put(Constants.XSD_DECIMAL,       Schema.Type.DOUBLE);
+    xmlToAvroTypeMap.put(Constants.XSD_DECIMAL,       Schema.Type.BYTES);
     xmlToAvroTypeMap.put(Constants.XSD_DOUBLE,        Schema.Type.DOUBLE);
     xmlToAvroTypeMap.put(Constants.XSD_FLOAT,         Schema.Type.FLOAT);
     xmlToAvroTypeMap.put(Constants.XSD_BASE64,        Schema.Type.BYTES);
@@ -65,7 +69,6 @@ class Utils {
     xmlToAvroTypeMap.put(Constants.XSD_INT,           Schema.Type.INT);
     xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDINT,   Schema.Type.LONG);
     xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDSHORT, Schema.Type.INT);
-    xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDLONG,  Schema.Type.DOUBLE);
     xmlToAvroTypeMap.put(Constants.XSD_QNAME,         Schema.Type.RECORD);
   }
 
@@ -161,6 +164,76 @@ class Utils {
           }
   
           schema = Schema.create(avroType);
+
+          // DECIMAL is a logical type.
+          if (schema.getType().equals(Schema.Type.BYTES)
+              && typeInfo
+                   .getBaseType()
+                   .equals(XmlSchemaBaseSimpleType.DECIMAL)) {
+
+            /* If there is a restriction on the number of fraction
+             * and/or total digits, we need to respect it.
+             */
+            int scale = 8;
+            int precision = MathContext.DECIMAL128.getPrecision();
+
+            HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
+              facets = typeInfo.getFacets();
+
+            if (facets != null) {
+
+              // Fraction Digits are the scale
+              final List<XmlSchemaRestriction> fractionDigitsFacets =
+                  facets.get(XmlSchemaRestriction.Type.DIGITS_FRACTION);
+
+              if ((fractionDigitsFacets != null)
+                  && !fractionDigitsFacets.isEmpty()) {
+
+                final XmlSchemaRestriction fractionDigitsFacet =
+                    fractionDigitsFacets.get(0);
+
+                final Object value = fractionDigitsFacet.getValue();
+                if (value instanceof Number) {
+                  scale = ((Number) value).intValue();
+                } else {
+                  try {
+                    scale = Integer.parseInt(value.toString());
+                  } catch (NumberFormatException nfe) {
+                    throw new IllegalStateException(
+                        "Fraction digits facet is not a number: " + value);
+                  }
+                }
+              }
+
+              // Total Digits are the precision
+              final List<XmlSchemaRestriction> totalDigitsFacets =
+                  facets.get(XmlSchemaRestriction.Type.DIGITS_TOTAL);
+              if ((totalDigitsFacets != null)
+                  && !totalDigitsFacets.isEmpty()) {
+
+                final XmlSchemaRestriction totalDigitsFacet =
+                    fractionDigitsFacets.get(0);
+
+                final Object value = totalDigitsFacet.getValue();
+                if (value instanceof Number) {
+                  precision = ((Number) value).intValue();
+                } else {
+                  try {
+                    precision = Integer.parseInt(value.toString());
+                  } catch (NumberFormatException nfe) {
+                    throw new IllegalStateException(
+                        "Total digits facet is not a number: " + value);
+                  }
+                }
+              }
+            }
+
+            schema.addProp("logicalType", new TextNode("decimal"));
+
+            schema.addProp("scale", new IntNode(scale));
+
+            schema.addProp("precision", new IntNode(precision));
+          }
         }
 
         return createSchemaOf(schema, isOptional, typeInfo.isMixed());
@@ -374,89 +447,6 @@ class Utils {
       offset += Character.charCount(codepoint);
     }
     return str.toString();
-  }
-
-  static JsonNode createJsonNodeFor(String value, Schema type) {
-    if ((value == null) || value.isEmpty()) {
-      return null;
-    }
-
-    switch ( type.getType() ) {
-    case ARRAY:
-      {
-        final Schema subType = type.getElementType();
-        final String[] elems = value.split(" ");
-        final ArrayNode arrayNode = JsonNodeFactory.instance.arrayNode();
-        for (String elem : elems) {
-          arrayNode.add( createJsonNodeFor(elem, subType) );
-        }
-        return arrayNode;
-      }
-    case UNION:
-      {
-        final List<Schema> subTypes = type.getTypes();
-        Schema textType = null;
-        for (Schema subType : subTypes) {
-          // Try the text types last.
-          if (subType.getType().equals(Schema.Type.BYTES)
-              || subType.getType().equals(Schema.Type.STRING)) {
-            textType = subType;
-            continue;
-          }
-
-          try {
-            return createJsonNodeFor(value, subType);
-          } catch (Exception e) {
-            /* Could not parse the value using the
-             * provided type; try the next one.
-             */
-          }
-        }
-
-        if (textType != null) {
-          return createJsonNodeFor(value, textType);
-        }
-        break;
-      }
-    case BOOLEAN:
-      if (value.equalsIgnoreCase("true")
-          || value.equalsIgnoreCase("false") ) {
-
-        return JsonNodeFactory
-                 .instance
-                 .booleanNode( Boolean.parseBoolean(value) );
-      }
-      break;
-
-    case BYTES:
-    case STRING:
-      return JsonNodeFactory.instance.textNode(value);
-
-    case DOUBLE:
-    case FLOAT:
-      return JsonNodeFactory.instance.numberNode( Double.parseDouble(value) );
-
-    case INT:
-      return JsonNodeFactory.instance.numberNode( Integer.parseInt(value) );
-
-    case LONG:
-      return JsonNodeFactory.instance.numberNode( Long.parseLong(value) );
-
-    case RECORD:
-      {
-        /* TODO: Can only be converted to QName or Decimal; will need a
-         *       NamespaceContext and a check if value is numeric or not.
-         */
-      }
-
-    default:
-    }
-
-    throw new IllegalArgumentException(
-        "Could not parse the value \""
-        + value
-        + "\" using the provided schema "
-        + type);
   }
 
   static BigDecimal createBigDecimalFrom(byte[] bytes, Schema schema) {

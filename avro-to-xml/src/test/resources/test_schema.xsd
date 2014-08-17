@@ -34,7 +34,13 @@
 		<xsd:attribute name="base64Binary"         type="xsd:base64Binary"       use="optional" />
 		<xsd:attribute name="hexBinary"            type="xsd:hexBinary"          use="optional" />
 		<xsd:attribute name="float"                type="xsd:float"              use="optional" />
-		<xsd:attribute name="decimal"              type="xsd:decimal"            use="optional" />
+		<xsd:attribute name="decimal"              use="optional">
+			<xsd:simpleType>
+				<xsd:restriction base="xsd:decimal">
+					<xsd:fractionDigits value="0"></xsd:fractionDigits>
+				</xsd:restriction>
+			</xsd:simpleType>
+		</xsd:attribute>
 		<xsd:attribute name="double"               type="xsd:double"             use="optional" />
 		<xsd:attribute name="anyURI"               type="xsd:anyURI"             use="optional" />
 		<xsd:attribute name="qname"                type="xsd:QName"              use="optional" />

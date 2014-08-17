@@ -17,6 +17,7 @@ package org.apache.avro.xml;
 
 import static org.junit.Assert.*;
 
+import java.math.MathContext;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -123,6 +124,7 @@ public class TestUtils {
     avroUnrecognizedTypes.add(Constants.XSD_STRING);
     avroUnrecognizedTypes.add(Constants.XSD_ANYURI);
     avroUnrecognizedTypes.add(Constants.XSD_NOTATION);
+    avroUnrecognizedTypes.add(Constants.XSD_UNSIGNEDLONG);
   }
 
   @Test
@@ -141,7 +143,6 @@ public class TestUtils {
     assertTrue( recTypes.contains(Constants.XSD_INT) );
     assertTrue( recTypes.contains(Constants.XSD_UNSIGNEDINT) );
     assertTrue( recTypes.contains(Constants.XSD_UNSIGNEDSHORT) );
-    assertTrue( recTypes.contains(Constants.XSD_UNSIGNEDLONG) );
     assertTrue( recTypes.contains(Constants.XSD_QNAME) );
 
     for (QName unrecognizedType : avroUnrecognizedTypes) {
@@ -160,7 +161,7 @@ public class TestUtils {
         Utils.getAvroSchemaTypeFor(Constants.XSD_BOOLEAN));
 
     assertEquals(
-        Schema.Type.DOUBLE,
+        Schema.Type.BYTES,
         Utils.getAvroSchemaTypeFor(Constants.XSD_DECIMAL));
 
     assertEquals(
@@ -200,10 +201,6 @@ public class TestUtils {
         Utils.getAvroSchemaTypeFor(Constants.XSD_UNSIGNEDSHORT));
 
     assertEquals(
-        Schema.Type.DOUBLE,
-        Utils.getAvroSchemaTypeFor(Constants.XSD_UNSIGNEDLONG));
-
-    assertEquals(
         Schema.Type.RECORD,
         Utils.getAvroSchemaTypeFor(Constants.XSD_QNAME));
 
@@ -213,399 +210,18 @@ public class TestUtils {
   }
 
   @Test
-  public void testCreateJsonNodeNoArgs() {
-    assertNull( Utils.createJsonNodeFor(null, null) );
-  }
-
-  @Test
-  public void testCreateJsonNodeBoolean() {
-    final Schema schema = Schema.create(Schema.Type.BOOLEAN);
-
-    JsonNode trueBoolNode = Utils.createJsonNodeFor("true", schema);
-
-    assertTrue(trueBoolNode instanceof BooleanNode);
-    assertTrue(((BooleanNode) trueBoolNode).asBoolean());
-
-    JsonNode falseBoolNode = Utils.createJsonNodeFor("false", schema);
-    assertTrue(falseBoolNode instanceof BooleanNode);
-    assertFalse(((BooleanNode) falseBoolNode).asBoolean());
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testCreateInvalidJsonNodeBoolean() {
-    final Schema schema = Schema.create(Schema.Type.BOOLEAN);
-    Utils.createJsonNodeFor("fail!", schema);
-  }
-
-  @Test
-  public void testCreateJsonNodeBytes() {
-    byte[] bytes = new byte[] { 12, 127, -128, -2, 0 };
-    Schema schema = Schema.create(Schema.Type.BYTES);
-
-    // BASE64
-    String bytesAsString = DatatypeConverter.printBase64Binary(bytes);
-    JsonNode binaryNode = Utils.createJsonNodeFor(bytesAsString, schema);
-
-    assertTrue(binaryNode instanceof TextNode);
-    assertEquals(bytesAsString, binaryNode.asText());
-
-    // HEX
-    bytesAsString = DatatypeConverter.printHexBinary(bytes);
-    binaryNode = Utils.createJsonNodeFor(bytesAsString, schema);
-
-    assertTrue(binaryNode instanceof TextNode);
-    assertEquals(bytesAsString, binaryNode.asText());
-  }
-
-  @Test
-  public void testCreateJsonNodeString() {
-    String value = "avro string";
-    Schema schema = Schema.create(Schema.Type.STRING);
-
-    JsonNode stringNode = Utils.createJsonNodeFor(value, schema);
-
-    assertTrue(stringNode instanceof TextNode);
-    assertEquals(value, stringNode.asText());
-  }
-
-  @Test
-  public void testCreateJsonNodeDouble() {
-    double number = 12807.217;
-    Schema schema = Schema.create(Schema.Type.DOUBLE);
-
-    JsonNode numberNode =
-        Utils.createJsonNodeFor(Double.toString(number), schema);
-
-    assertTrue(numberNode instanceof NumericNode);
-    assertEquals(number, numberNode.asDouble(), 0.001);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testCreateInvalidJsonNodeDouble() {
-    Schema schema = Schema.create(Schema.Type.DOUBLE);
-    Utils.createJsonNodeFor("fail!", schema);
-  }
-
-  @Test
-  public void testCreateJsonNodeFloat() {
-    float number = 12807.217f;
-    Schema schema = Schema.create(Schema.Type.FLOAT);
-
-    JsonNode numberNode =
-        Utils.createJsonNodeFor(Float.toString(number), schema);
-
-    assertTrue(numberNode instanceof NumericNode);
-    assertEquals(number, numberNode.asDouble(), 0.001);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testCreateInvalidJsonNodeFloat() {
-    Schema schema = Schema.create(Schema.Type.FLOAT);
-    Utils.createJsonNodeFor("fail!", schema);
-  }
-
-  @Test
-  public void testCreateJsonNodeInt() {
-    int number = 820107;
-    Schema schema = Schema.create(Schema.Type.INT);
-
-    JsonNode numberNode =
-        Utils.createJsonNodeFor(Integer.toString(number), schema);
-
-    assertTrue(numberNode instanceof NumericNode);
-    assertEquals(number, numberNode.asInt());
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testCreateInvalidJsonNodeInt() {
-    Schema schema = Schema.create(Schema.Type.INT);
-    Utils.createJsonNodeFor("fail!", schema);
-  }
-
-  @Test
-  public void testCreateJsonNodeLong() {
-    long number = 12319891255687L;
-    Schema schema = Schema.create(Schema.Type.LONG);
-
-    JsonNode numberNode =
-        Utils.createJsonNodeFor(Long.toString(number), schema);
-
-    assertTrue(numberNode instanceof NumericNode);
-    assertEquals(number, numberNode.asLong());
-
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testCreateInvalidJsonNodeLong() {
-    Schema schema = Schema.create(Schema.Type.LONG);
-    Utils.createJsonNodeFor("fail!", schema);
-  }
-
-  @Test
-  public void testUnionWithoutStringOrBytes() {
-    ArrayList<Schema> unionTypes = new ArrayList<Schema>(5);
-    unionTypes.add( Schema.create(Schema.Type.INT) );
-    unionTypes.add( Schema.create(Schema.Type.FLOAT) );
-    unionTypes.add( Schema.create(Schema.Type.DOUBLE) );
-    unionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
-    unionTypes.add( Schema.create(Schema.Type.LONG) );
-
-    Schema schema = Schema.createUnion(unionTypes);
-
-    checkBaseTypes(schema);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testInvalidUnionWithoutStringOrBytes() {
-    ArrayList<Schema> unionTypes = new ArrayList<Schema>(5);
-    unionTypes.add( Schema.create(Schema.Type.INT) );
-    unionTypes.add( Schema.create(Schema.Type.FLOAT) );
-    unionTypes.add( Schema.create(Schema.Type.DOUBLE) );
-    unionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
-    unionTypes.add( Schema.create(Schema.Type.LONG) );
-
-    Schema schema = Schema.createUnion(unionTypes);
-    Utils.createJsonNodeFor("fail!", schema);
-  }
-
-  @Test
-  public void testUnionWithString() {
-    ArrayList<Schema> unionTypes = new ArrayList<Schema>(6);
-    unionTypes.add( Schema.create(Schema.Type.INT) );
-    unionTypes.add( Schema.create(Schema.Type.FLOAT) );
-    unionTypes.add( Schema.create(Schema.Type.DOUBLE) );
-    unionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
-    unionTypes.add( Schema.create(Schema.Type.LONG) );
-    unionTypes.add( Schema.create(Schema.Type.STRING) );
-
-    Schema schema = Schema.createUnion(unionTypes);
-
-    checkBaseTypes(schema);
-
-    String value = "hello";
-    JsonNode result = Utils.createJsonNodeFor(value, schema);
-
-    assertTrue(result.getClass().getName(), result instanceof TextNode);
-    assertEquals(value, result.asText());
-  }
-
-  @Test
-  public void testUnionWithBytes() {
-    ArrayList<Schema> unionTypes = new ArrayList<Schema>(6);
-    unionTypes.add( Schema.create(Schema.Type.INT) );
-    unionTypes.add( Schema.create(Schema.Type.FLOAT) );
-    unionTypes.add( Schema.create(Schema.Type.DOUBLE) );
-    unionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
-    unionTypes.add( Schema.create(Schema.Type.LONG) );
-    unionTypes.add( Schema.create(Schema.Type.BYTES) );
-
-    Schema schema = Schema.createUnion(unionTypes);
-
-    checkBaseTypes(schema);
-
-    byte[] bytes = new byte[] { -128, -64, -32, -16, -8, 7, 15, 31, 63, 127 };
-    String value = DatatypeConverter.printBase64Binary(bytes);
-
-    JsonNode result = Utils.createJsonNodeFor(value, schema);
-
-    assertTrue(result.getClass().getName(), result instanceof TextNode);
-    assertEquals(value, result.asText());
-  }
-
-  @Test
-  public void testUnionWithBytesAndString() {
-    ArrayList<Schema> unionTypes = new ArrayList<Schema>(7);
-    unionTypes.add( Schema.create(Schema.Type.INT) );
-    unionTypes.add( Schema.create(Schema.Type.FLOAT) );
-    unionTypes.add( Schema.create(Schema.Type.DOUBLE) );
-    unionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
-    unionTypes.add( Schema.create(Schema.Type.LONG) );
-    unionTypes.add( Schema.create(Schema.Type.BYTES) );
-    unionTypes.add( Schema.create(Schema.Type.STRING) );
-
-    Schema schema = Schema.createUnion(unionTypes);
-
-    checkBaseTypes(schema);
-
-    // String
-    String value = "hello";
-    JsonNode result = Utils.createJsonNodeFor(value, schema);
-
-    assertTrue(result.getClass().getName(), result instanceof TextNode);
-    assertEquals(value, result.asText());
-
-    // Bytes
-    byte[] bytes = new byte[] { -128, -64, -32, -16, -8, 7, 15, 31, 63, 127 };
-    value = DatatypeConverter.printBase64Binary(bytes);
-    result = Utils.createJsonNodeFor(value, schema);
-
-    assertTrue(result.getClass().getName(), result instanceof TextNode);
-    assertEquals(value, result.asText());
-  }
-
-  private void checkBaseTypes(Schema schema) {
-    // Boolean
-    String value = "true";
-    JsonNode result = Utils.createJsonNodeFor(value, schema);
-    assertTrue(result instanceof BooleanNode);
-    assertTrue( result.asBoolean() );
-
-    value = "false";
-    result = Utils.createJsonNodeFor(value, schema);
-    assertTrue(result instanceof BooleanNode);
-    assertFalse( result.asBoolean() );
-
-    // Float
-    value = "12345.67";
-    result = Utils.createJsonNodeFor(value, schema);
-    assertTrue(result instanceof NumericNode);
-    assertEquals(12345.67, result.asDouble(), 0.01);
-
-    // Double
-    value = "1234567.8901";
-    result = Utils.createJsonNodeFor(value, schema);
-    assertTrue(result instanceof NumericNode);
-    assertEquals(1234567.8901, result.asDouble(), 0.0001);
-
-    // Long
-    value = "12319891255687";
-    result = Utils.createJsonNodeFor(value, schema);
-    assertTrue(result instanceof NumericNode);
-    assertEquals(12319891255687L, result.asLong());
-
-    // Int
-    value = "820107";
-    result = Utils.createJsonNodeFor(value, schema);
-    assertTrue(result instanceof NumericNode);
-    assertEquals(820107, result.asInt());
-  }
-
-  @Test
-  public void testArrayOfUnionTypes() {
-    ArrayList<Schema> unionTypes = new ArrayList<Schema>(7);
-    unionTypes.add( Schema.create(Schema.Type.INT) );
-    unionTypes.add( Schema.create(Schema.Type.FLOAT) );
-    unionTypes.add( Schema.create(Schema.Type.DOUBLE) );
-    unionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
-    unionTypes.add( Schema.create(Schema.Type.LONG) );
-    unionTypes.add( Schema.create(Schema.Type.BYTES) );
-    unionTypes.add( Schema.create(Schema.Type.STRING) );
-
-    Schema unionSchema = Schema.createUnion(unionTypes);
-
-    Schema schema = Schema.createArray(unionSchema);
-
-    String value = "true 127 12319891255687 12345.67 1234567.8901 false hello";
-
-    JsonNode result = Utils.createJsonNodeFor(value, schema);
-
-    assertTrue(result instanceof ArrayNode);
-    Iterator<JsonNode> iter = result.getElements();
-
-    // First Node: Boolean
-    JsonNode next = iter.next();
-    assertTrue(next instanceof BooleanNode);
-    assertTrue( next.asBoolean() );
-
-    // Second Node: Int
-    next = iter.next();
-    assertTrue(next instanceof NumericNode);
-    assertEquals(127, next.asInt());
-
-    // Third Node: Long
-    next = iter.next();
-    assertTrue(next instanceof NumericNode);
-    assertEquals(12319891255687L, next.asLong());
-
-    // Fourth Node: Float
-    next = iter.next();
-    assertTrue(next instanceof NumericNode);
-    assertEquals(12345.67, next.asDouble(), 0.001);
-
-    // Fifth Node: Double
-    next = iter.next();
-    assertTrue(next instanceof NumericNode);
-    assertEquals(1234567.8901, next.asDouble(), 0.00001);
-
-    // Sixth Node: Boolean
-    next = iter.next();
-    assertTrue(next instanceof BooleanNode);
-    assertFalse( next.asBoolean() );
-
-    // Seventh Node: String
-    next = iter.next();
-    assertTrue(next instanceof TextNode);
-    assertEquals("hello", next.asText());
-
-    // No more.
-    assertFalse( iter.hasNext() );
-  }
-
-  @Test
-  public void testArrayOfLongs() {
-    String value = "12319891255687";
-    long longVal = 12319891255687L;
-
-    Schema schema = Schema.createArray( Schema.create(Schema.Type.LONG) );
-
-    // 1-element array
-    JsonNode result = Utils.createJsonNodeFor(value, schema);
-
-    assertTrue(result instanceof ArrayNode);
-
-    Iterator<JsonNode> iter = result.getElements();
-
-    JsonNode next = iter.next();
-    assertTrue(next instanceof NumericNode);
-    assertEquals(longVal, next.asLong());
-    assertFalse( iter.hasNext() );
-
-    // 4-element array
-    value = "12319891255687 12319891255687 12319891255687 12319891255687";
-
-    result = Utils.createJsonNodeFor(value, schema);
-    assertTrue(result instanceof ArrayNode);
-
-    iter = result.getElements();
-    int count = 0;
-    while (iter.hasNext()) {
-      ++count;
-      next = iter.next();
-      assertTrue(next instanceof NumericNode);
-      assertEquals(longVal, next.asLong());
-    }
-    assertEquals(4, count);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testInvalidArrayOfLongs() {
-    Schema schema = Schema.createArray( Schema.create(Schema.Type.LONG) );
-    Utils.createJsonNodeFor("fail!", schema);
-  }
-
-  @Test
-  public void testArrayOfBooleans() {
-    String value = "true false false true";
-
-    Schema schema = Schema.createArray( Schema.create(Schema.Type.BOOLEAN) );
-
-    JsonNode result = Utils.createJsonNodeFor(value, schema);
-
-    assertTrue(result instanceof ArrayNode);
-
-    Iterator<JsonNode> iter = result.getElements();
-
-    assertTrue(  iter.next().asBoolean() );
-    assertFalse( iter.next().asBoolean() );
-    assertFalse( iter.next().asBoolean() );
-    assertTrue(  iter.next().asBoolean() );
-    assertFalse( iter.hasNext() );
-
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testInvalidArrayOfBooleans() {
-    Schema schema = Schema.createArray( Schema.create(Schema.Type.BOOLEAN) );
-    Utils.createJsonNodeFor("fail! fail! fail!", schema);
+  public void testCreateDecimalSchema() {
+    XmlSchemaTypeInfo decimalType =
+        new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DECIMAL);
+    decimalType.setUserRecognizedType(Constants.XSD_DECIMAL);
+
+    Schema decimalSchema =
+        Utils.getAvroSchemaFor(decimalType, Constants.XSD_DECIMAL, false);
+
+    assertEquals(Schema.Type.BYTES, decimalSchema.getType());
+    assertEquals("decimal", decimalSchema.getJsonProp("logicalType").asText());
+
+    assertEquals(MathContext.DECIMAL128.getPrecision(),
+                 decimalSchema.getJsonProp("precision").asInt());
   }
 }

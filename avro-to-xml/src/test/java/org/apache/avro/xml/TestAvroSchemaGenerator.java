@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -54,36 +55,7 @@ public class TestAvroSchemaGenerator {
     ArrayList<File> schemaFiles = new ArrayList<File>(1);
     schemaFiles.add(file);
 
-    XmlSchemaCollection collection = null;
-    FileReader fileReader = null;
-    AvroSchemaGenerator visitor =
-        new AvroSchemaGenerator(null, null, schemaFiles);
-    try {
-      fileReader = new FileReader(file);
-
-      collection = new XmlSchemaCollection();
-      collection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
-      collection.read(new StreamSource(fileReader, file.getAbsolutePath()));
-
-    } finally {
-      if (fileReader != null) {
-        try {
-          fileReader.close();
-        } catch (IOException ioe) {
-          ioe.printStackTrace();
-        }
-      }
-    }
-
-    XmlSchemaElement elem = getElementOf(collection, "root");
-    XmlSchemaWalker walker = new XmlSchemaWalker(collection, visitor);
-    walker.setUserRecognizedTypes( Utils.getAvroRecognizedTypes() );
-    walker.walk(elem);
-
-    Schema schema = visitor.getSchema();
-
-    visitor.clear();
-    walker.clear();
+    Schema schema = createSchemaOf(file, "root");
 
     UtilsForTests.assertEquivalent(getExpectedTestSchema(), schema);
   }
@@ -97,6 +69,16 @@ public class TestAvroSchemaGenerator {
             "resources",
             "complex_schema.xsd");
 
+    Schema schema = createSchemaOf(file, "root");
+
+    FileWriter writer = new FileWriter("complex_schema.avsc");
+    writer.write( schema.toString(true) );
+    writer.close();
+
+    UtilsForTests.assertEquivalent(getExpectedComplexSchema(), schema);
+  }
+
+  private Schema createSchemaOf(File file, String rootName) throws Exception {
     ArrayList<File> schemaFiles = new ArrayList<File>(1);
     schemaFiles.add(file);
 
@@ -121,7 +103,7 @@ public class TestAvroSchemaGenerator {
       }
     }
 
-    XmlSchemaElement elem = getElementOf(collection, "root");
+    XmlSchemaElement elem = getElementOf(collection, rootName);
     XmlSchemaWalker walker = new XmlSchemaWalker(collection, visitor);
     walker.setUserRecognizedTypes( Utils.getAvroRecognizedTypes() );
     walker.walk(elem);
@@ -131,7 +113,7 @@ public class TestAvroSchemaGenerator {
     visitor.clear();
     walker.clear();
 
-    UtilsForTests.assertEquivalent(getExpectedComplexSchema(), schema);
+    return schema;
   }
 
   private static XmlSchemaElement getElementOf(
@@ -171,10 +153,7 @@ public class TestAvroSchemaGenerator {
 
     Schema optionalBooleanSchema = getOptionalBooleanSchema();
 
-    List<Schema> optionalBinaryTypes = new ArrayList<Schema>(2);
-    optionalBinaryTypes.add( Schema.create(Schema.Type.BYTES) );
-    optionalBinaryTypes.add( Schema.create(Schema.Type.NULL) );
-    Schema optionalBinarySchema = Schema.createUnion(optionalBinaryTypes);
+    Schema optionalBinarySchema = getOptionalBinarySchema();
 
     List<Schema> optionalFloatTypes = new ArrayList<Schema>(2);
     optionalFloatTypes.add( Schema.create(Schema.Type.FLOAT) );
@@ -236,13 +215,13 @@ public class TestAvroSchemaGenerator {
     rootFields.add(
         new Schema.Field("entities", optionalStringArraySchema, null, null));
     rootFields.add(
-        new Schema.Field("integer", optionalDoubleSchema, null, null));
+        new Schema.Field("integer", optionalBinarySchema, null, null));
     rootFields.add(
-        new Schema.Field("negativeInteger", optionalDoubleSchema, null, null));
+        new Schema.Field("negativeInteger", optionalBinarySchema, null, null));
     rootFields.add(
-        new Schema.Field("positiveInteger", optionalDoubleSchema, null, null));
+        new Schema.Field("positiveInteger", optionalBinarySchema, null, null));
     rootFields.add(
-        new Schema.Field("unsignedLong", optionalDoubleSchema, null, null));
+        new Schema.Field("unsignedLong", optionalBinarySchema, null, null));
     rootFields.add(
         new Schema.Field("long", optionalLongSchema, null, null));
     rootFields.add(
@@ -264,7 +243,7 @@ public class TestAvroSchemaGenerator {
     rootFields.add(
         new Schema.Field("hexBinary", optionalBinarySchema, null, null));
     rootFields.add(
-        new Schema.Field("decimal", optionalDoubleSchema, null, null));
+        new Schema.Field("decimal", optionalBinarySchema, null, null));
     rootFields.add(
         new Schema.Field("float", optionalFloatSchema, null, null));
     rootFields.add(
@@ -280,14 +259,14 @@ public class TestAvroSchemaGenerator {
     rootFields.add(
         new Schema.Field(
             "nonPositiveInteger",
-            optionalDoubleSchema,
+            optionalBinarySchema,
             null,
             null));
 
     rootFields.add(
         new Schema.Field(
             "nonNegativeInteger",
-            optionalDoubleSchema,
+            optionalBinarySchema,
             null,
             null));
 
@@ -389,7 +368,7 @@ public class TestAvroSchemaGenerator {
             "Children of {http://avro.apache.org/AvroTest}list",
             null));
     listFields.add(
-        new Schema.Field("size", optionalDoubleSchema, null, null));
+        new Schema.Field("size", optionalBinarySchema, null, null));
 
     listSchema.setFields(listFields);
 
@@ -497,19 +476,18 @@ public class TestAvroSchemaGenerator {
             "default",
             Schema.create(Schema.Type.STRING),
             null,
-            Utils.createJsonNodeFor("hello",
-                                    Schema.create(Schema.Type.STRING))));
+            null));
 
     simpleRestrictionFields.add(
         new Schema.Field(
             "fixed",
             Schema.create(Schema.Type.INT),
             null,
-            Utils.createJsonNodeFor("65534", Schema.create(Schema.Type.INT))));
+            null));
 
     List<Schema> simpleRestrictionTypes = new ArrayList<Schema>(2);
     simpleRestrictionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
-    simpleRestrictionTypes.add( Schema.create(Schema.Type.DOUBLE) );
+    simpleRestrictionTypes.add( Schema.create(Schema.Type.BYTES) );
 
     simpleRestrictionFields.add(
         new Schema.Field(
@@ -529,19 +507,18 @@ public class TestAvroSchemaGenerator {
             "default",
             Schema.create(Schema.Type.STRING),
             null,
-            Utils.createJsonNodeFor("hello",
-                                    Schema.create(Schema.Type.STRING))));
+            null));
 
     simpleExtensionFields.add(
         new Schema.Field(
             "fixed",
             Schema.create(Schema.Type.INT),
             null,
-            Utils.createJsonNodeFor("65534", Schema.create(Schema.Type.INT))));
+            null));
 
     List<Schema> simpleExtensionTypes = new ArrayList<Schema>();
     simpleExtensionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
-    simpleExtensionTypes.add( Schema.create(Schema.Type.DOUBLE) );
+    simpleExtensionTypes.add( Schema.create(Schema.Type.BYTES) );
 
     simpleExtensionFields.add(
         new Schema.Field(
@@ -572,10 +549,9 @@ public class TestAvroSchemaGenerator {
     fixedSchemaFields.add(
         new Schema.Field(
             "fixed",
-            Schema.create(Schema.Type.DOUBLE),
+            Schema.create(Schema.Type.BYTES),
             "Simple type {http://www.w3.org/2001/XMLSchema}decimal",
-            Utils.createJsonNodeFor("100",
-                                    Schema.create(Schema.Type.DOUBLE))));
+            null));
 
     Schema fixedSchema = Schema.createRecord("fixed", null, namespace, false);
     fixedSchema.setFields(fixedSchemaFields);
@@ -599,11 +575,11 @@ public class TestAvroSchemaGenerator {
     firstMapValueFields.add(
         new Schema.Field(
             "value",
-            getOptionalDoubleSchema(),
+            getOptionalBinarySchema(),
             "Simple type {http://www.w3.org/2001/XMLSchema}decimal",
-            Utils.createJsonNodeFor("1234567.0",
-                                    Schema.create(Schema.Type.DOUBLE))));
-    firstMapValue.setFields(firstMapValueFields);
+            null));
+
+        firstMapValue.setFields(firstMapValueFields);
 
     List<Schema> firstMapChildren = new ArrayList<Schema>();
     firstMapChildren.add(firstMapValue);
@@ -667,12 +643,11 @@ public class TestAvroSchemaGenerator {
             "truth",
             Schema.create(Schema.Type.BOOLEAN),
             null,
-            Utils.createJsonNodeFor("true",
-                                    Schema.create(Schema.Type.BOOLEAN))));
+            null));
 
     List<Schema> listOfNumbersTypes = new ArrayList<Schema>(2);
     listOfNumbersTypes.add( Schema.create(Schema.Type.INT) );
-    listOfNumbersTypes.add( Schema.create(Schema.Type.DOUBLE) );
+    listOfNumbersTypes.add( Schema.create(Schema.Type.BYTES) );
     Schema listOfNumbersSchema =
         Schema.createArray(Schema.createUnion(listOfNumbersTypes));
 
@@ -681,9 +656,7 @@ public class TestAvroSchemaGenerator {
             "listOfNumbers",
             listOfNumbersSchema,
             null,
-            Utils.createJsonNodeFor(
-                "127 -32768 1.8446744073709552E19 -1.8446744073709552E19",
-                listOfNumbersSchema)));
+            null));
 
     allTheThingsFields.add(
         new Schema.Field(
@@ -753,7 +726,7 @@ public class TestAvroSchemaGenerator {
     unsignedLongListFields.add(
         new Schema.Field(
             "unsignedLongList",
-            Schema.createArray(Schema.create(Schema.Type.DOUBLE)),
+            Schema.createArray(Schema.create(Schema.Type.BYTES)),
             "Simple type null",
             null));
     unsignedLongList.setFields(unsignedLongListFields);
@@ -762,7 +735,7 @@ public class TestAvroSchemaGenerator {
         Schema.createRecord("listOfUnion", null, namespace, false);
 
     List<Schema> listOfUnionTypes = new ArrayList<Schema>();
-    listOfUnionTypes.add( Schema.create(Schema.Type.DOUBLE) );
+    listOfUnionTypes.add( Schema.create(Schema.Type.BYTES) );
     listOfUnionTypes.add( Schema.create(Schema.Type.BOOLEAN) );
     listOfUnionTypes.add( Schema.create(Schema.Type.INT) );
     listOfUnionTypes.add( Schema.create(Schema.Type.STRING) );
@@ -833,8 +806,7 @@ public class TestAvroSchemaGenerator {
             "defaulted",
             Schema.create(Schema.Type.STRING),
             null,
-            Utils.createJsonNodeFor("hello",
-                                    Schema.create(Schema.Type.STRING))));
+            null));
 
     List<Schema> complexExtensionChildren = new ArrayList<Schema>(3);
     complexExtensionChildren.add(unsignedLongList);
@@ -880,24 +852,21 @@ public class TestAvroSchemaGenerator {
             "month",
             Schema.create(Schema.Type.STRING),
             null,
-            Utils.createJsonNodeFor("--08",
-                                    Schema.create(Schema.Type.STRING))));
+            null));
 
     realRootSchemaFields.add(
         new Schema.Field(
           "year",
           Schema.create(Schema.Type.STRING),
           null,
-          Utils.createJsonNodeFor("2014",
-                                  Schema.create(Schema.Type.STRING))));
+          null));
 
     realRootSchemaFields.add(
         new Schema.Field(
             "day",
             Schema.create(Schema.Type.STRING),
             null,
-            Utils.createJsonNodeFor("---12",
-                                    Schema.create(Schema.Type.STRING))));
+            null));
 
     List<Schema> realRootChildren = new ArrayList<Schema>();
     realRootChildren.add(backtrackSchema);
@@ -973,5 +942,12 @@ public class TestAvroSchemaGenerator {
     optionalIntTypes.add( Schema.create(Schema.Type.INT) );
     optionalIntTypes.add( Schema.create(Schema.Type.NULL) );
     return Schema.createUnion(optionalIntTypes);
+  }
+
+  private static Schema getOptionalBinarySchema() {
+    List<Schema> optionalBinaryTypes = new ArrayList<Schema>(2);
+    optionalBinaryTypes.add( Schema.create(Schema.Type.BYTES) );
+    optionalBinaryTypes.add( Schema.create(Schema.Type.NULL) );
+    return Schema.createUnion(optionalBinaryTypes);
   }
 }

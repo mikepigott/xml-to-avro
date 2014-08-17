@@ -723,10 +723,15 @@ public class TestSchemaWalker {
     attrGroupAttrs.add( new Attribute("base64Binary", "base64Binary", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.BIN_BASE64, true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
     attrGroupAttrs.add( new Attribute("hexBinary",    "hexBinary",    XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.BIN_HEX,    true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
     attrGroupAttrs.add( new Attribute("float",        "float",        XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.FLOAT,      true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
-    attrGroupAttrs.add( new Attribute("decimal",      "decimal",      XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL,    true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
     attrGroupAttrs.add( new Attribute("double",       "double",       XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DOUBLE,     true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
     attrGroupAttrs.add( new Attribute("anyURI",       "anyURI",       XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.ANYURI,     true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
     attrGroupAttrs.add( new Attribute("qname",        "QName",        XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.QNAME,      true, (Set<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone()) );
+
+    HashSet<XmlSchemaRestriction> decimalFacets = (HashSet<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone();
+    decimalFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.DIGITS_FRACTION, new Integer(0), false) );
+
+    attrGroupAttrs.add( new Attribute("decimal",      null,      XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL,    true, decimalFacets) );
+
 
     HashSet<XmlSchemaRestriction> integerFacets = (HashSet<XmlSchemaRestriction>) whiteSpaceCollapseFixedRestrictions.clone();
     integerFacets.add( new XmlSchemaRestriction(new XmlSchemaFractionDigitsFacet(new Integer(0), true)));

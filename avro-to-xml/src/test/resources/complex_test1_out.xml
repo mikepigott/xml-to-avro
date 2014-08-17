@@ -5,7 +5,7 @@
     <ns0:avroEnum>avro</ns0:avroEnum>
     <ns0:xmlEnum>thrift</ns0:xmlEnum>
     <ns0:xmlEnum>rest.li</ns0:xmlEnum>
-    <ns0:unsignedLongList>1 2 345 67890 1234567890 12345678901234567168</ns0:unsignedLongList>
+    <ns0:unsignedLongList>1 2 345 67890 1234567890 12345678901234567890</ns0:unsignedLongList>
     <ns0:listOfUnion>true false hello goodbye 1234567890 -2147483648 2147483649</ns0:listOfUnion>
   </ns0:backtrack>
   <ns0:allTheThings id="idvalue0" listOfNumbers="127 -32768 18446744073709551615 -18446744073709551616" truth="true">
