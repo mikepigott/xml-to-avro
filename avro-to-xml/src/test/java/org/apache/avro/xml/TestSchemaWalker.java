@@ -230,8 +230,10 @@ public class TestSchemaWalker {
     }
 
     @Override
-    public void onEnterElement(XmlSchemaElement element,
-        XmlSchemaTypeInfo typeInfo, boolean previouslyVisited) {
+    public void onEnterElement(
+        XmlSchemaElement element,
+        XmlSchemaTypeInfo typeInfo,
+        boolean previouslyVisited) {
 
       StackEntry next = pop();
       if (next.type != Type.ELEMENT) {
@@ -273,53 +275,7 @@ public class TestSchemaWalker {
       checkMinAndMaxOccurs(next, element);
 
       if (typeInfo != null) {
-        final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
-          facets = typeInfo.getFacets();
-
-        if ((facets == null) && (next.facets != null)) {
-          throw new IllegalStateException(
-              "Expected "
-              + next.facets.size()
-              + " facets for element \""
-              + next.name
-              + "\" but received null facets.");
-
-        } else if ((facets != null)
-                   && facets.isEmpty()
-                   && (next.facets != null)
-                   && !next.facets.isEmpty()) {
-          throw new IllegalStateException(
-              "Expected "
-              + next.facets.size()
-              + " facets for element \""
-              + next.name
-              + "\" but found none.");
-
-        } else if ((facets != null)
-                   && !facets.isEmpty()
-                   && (next.facets != null)
-                   && next.facets.isEmpty()) {
-
-          throw new IllegalStateException(
-              "Element " + next.name + " has facets, but none were expected.");
-        }
-
-        if (facets != null) {
-          for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
-               facetsForType : facets.entrySet()) {
-
-            for (XmlSchemaRestriction facet : facetsForType.getValue()) {
-              if (!next.facets.remove(facet)) {
-                throw new IllegalStateException(
-                    "Element \""
-                    + next.name
-                    + "\" has unexpected facet \""
-                    + facet
-                    + "\".");
-              }
-            }
-          }
-        }
+        checkFacets(next.name, typeInfo, next.facets);
 
         if ((next.baseType == null)
             && (typeInfo.getBaseType() != null)
@@ -398,8 +354,10 @@ public class TestSchemaWalker {
     }
 
     @Override
-    public void onVisitAttribute(XmlSchemaElement element,
-        XmlSchemaAttribute attribute, XmlSchemaTypeInfo attributeType) {
+    public void onVisitAttribute(
+        XmlSchemaElement element,
+        XmlSchemaAttribute attribute,
+        XmlSchemaTypeInfo attributeType) {
 
       if ( !attributes.containsKey( element.getName() ) ) {
         throw new IllegalStateException(
@@ -520,6 +478,9 @@ public class TestSchemaWalker {
                 + attributeType.getChildTypes().get(0).getBaseType());
 
           } else {
+
+            checkFacets(attr.name, attributeType, attr.facets);
+
             found = true;
             break;
           }
@@ -770,19 +731,19 @@ public class TestSchemaWalker {
     positiveIntegerFacets.add( new XmlSchemaRestriction(new XmlSchemaMinInclusiveFacet(new Integer(1), false)) );
     attrGroupAttrs.add( new Attribute("positiveInteger", "positiveInteger", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, positiveIntegerFacets) );
 
-    HashSet<XmlSchemaRestriction> unsignedLongFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
+    HashSet<XmlSchemaRestriction> unsignedLongFacets = (HashSet<XmlSchemaRestriction>) nonNegativeIntegerFacets.clone();
     unsignedLongFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new BigInteger("18446744073709551615"), false) ) );
     attrGroupAttrs.add( new Attribute("unsignedLong", "unsignedLong", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, unsignedLongFacets) );
 
-    HashSet<XmlSchemaRestriction> unsignedIntFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
+    HashSet<XmlSchemaRestriction> unsignedIntFacets = (HashSet<XmlSchemaRestriction>) nonNegativeIntegerFacets.clone();
     unsignedIntFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new Long(4294967295L), false) ) );
     attrGroupAttrs.add( new Attribute("unsignedInt", "unsignedInt", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, unsignedIntFacets) );
 
-    HashSet<XmlSchemaRestriction> unsignedShortFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
+    HashSet<XmlSchemaRestriction> unsignedShortFacets = (HashSet<XmlSchemaRestriction>) nonNegativeIntegerFacets.clone();
     unsignedShortFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new Integer(65535), false) ) );
     attrGroupAttrs.add( new Attribute("unsignedShort", "unsignedShort", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, unsignedShortFacets) );
 
-    HashSet<XmlSchemaRestriction> unsignedByteFacets = (HashSet<XmlSchemaRestriction>) integerFacets.clone();
+    HashSet<XmlSchemaRestriction> unsignedByteFacets = (HashSet<XmlSchemaRestriction>) nonNegativeIntegerFacets.clone();
     unsignedByteFacets.add( new XmlSchemaRestriction( new XmlSchemaMaxInclusiveFacet(new Short((short) 255), false) ) );
     attrGroupAttrs.add( new Attribute("unsignedByte", "unsignedByte", XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.DECIMAL, true, unsignedByteFacets) );
 
@@ -816,10 +777,10 @@ public class TestSchemaWalker {
 
     attrGroupAttrs.add( new Attribute("id",       "ID",       XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
     attrGroupAttrs.add( new Attribute("idref",    "IDREF",    XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
-    attrGroupAttrs.add( new Attribute("idrefs",   "IDREFS",   XmlSchemaTypeInfo.Type.LIST,   XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
+    attrGroupAttrs.add( new Attribute("idrefs",   "IDREFS",   XmlSchemaTypeInfo.Type.LIST,   XmlSchemaBaseSimpleType.STRING, true, null) );
     attrGroupAttrs.add( new Attribute("entity",   "ENTITY",   XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
-    attrGroupAttrs.add( new Attribute("entities", "ENTITIES", XmlSchemaTypeInfo.Type.LIST,   XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
-    attrGroupAttrs.add( new Attribute("nmtokens", "NMTOKENS", XmlSchemaTypeInfo.Type.LIST,   XmlSchemaBaseSimpleType.STRING, true, (Set<XmlSchemaRestriction>) ncNameFacets.clone()) );
+    attrGroupAttrs.add( new Attribute("entities", "ENTITIES", XmlSchemaTypeInfo.Type.LIST,   XmlSchemaBaseSimpleType.STRING, true, null) );
+    attrGroupAttrs.add( new Attribute("nmtokens", "NMTOKENS", XmlSchemaTypeInfo.Type.LIST,   XmlSchemaBaseSimpleType.STRING, true, null) );
 
     HashSet<XmlSchemaRestriction> nonNullPrimitiveTypeFacets =
         new HashSet<XmlSchemaRestriction>(14);
@@ -936,6 +897,60 @@ public class TestSchemaWalker {
     }
 
     Assert.assertTrue( stack.isEmpty() );
+  }
+
+  private static void checkFacets(
+      String nextName,
+      XmlSchemaTypeInfo typeInfo,
+      Set<XmlSchemaRestriction> nextFacets) {
+    final HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
+    facets = typeInfo.getFacets();
+
+  if ((facets == null) && (nextFacets != null)) {
+    throw new IllegalStateException(
+        "Expected "
+        + nextFacets.size()
+        + " facets for element \""
+        + nextName
+        + "\" but received null facets.");
+
+  } else if ((facets != null)
+             && facets.isEmpty()
+             && (nextFacets != null)
+             && !nextFacets.isEmpty()) {
+    throw new IllegalStateException(
+        "Expected "
+        + nextFacets.size()
+        + " facets for element \""
+        + nextName
+        + "\" but found none.");
+
+  } else if ((facets != null)
+             && !facets.isEmpty()
+             && (nextFacets != null)
+             && nextFacets.isEmpty()) {
+
+    throw new IllegalStateException(
+        "Element " + nextName + " has facets, but none were expected.");
+  }
+
+  if (facets != null) {
+    for (Map.Entry<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>>
+         facetsForType : facets.entrySet()) {
+
+      for (XmlSchemaRestriction facet : facetsForType.getValue()) {
+        if (!nextFacets.remove(facet)) {
+          throw new IllegalStateException(
+              "Element \""
+              + nextName
+              + "\" has unexpected facet \""
+              + facet
+              + "\".");
+        }
+      }
+    }
+  }
+
   }
 
   private static XmlSchemaElement getElementOf(XmlSchemaCollection collection, String name) {
