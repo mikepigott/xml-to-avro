@@ -43,7 +43,7 @@ import org.xml.sax.helpers.DefaultHandler;
  * Reads an XML {@link Document} and writes it to an {@link Encoder}.
  * <p>
  * Generates an Avro {@link Schema} on the fly from the XML Schema itself. 
- * That {@link Schema can be retrieved by calling {@link #getSchema()}.
+ * That {@link Schema} can be retrieved by calling {@link #getSchema()}.
  * </p>
  */
 public class XmlDatumWriter implements DatumWriter<Document> {
