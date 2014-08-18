@@ -13,6 +13,7 @@ import java.net.URLClassLoader;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -46,7 +47,7 @@ public class Main {
      return classpath.toString();
   }
 
-  public static void numericMain() throws Exception {
+  public static void numericMain(String[] args) throws Exception {
     BigInteger value = new BigInteger("123456789123456789123456789");
     BigDecimal decimal = new BigDecimal(value, Integer.MIN_VALUE);
     System.out.println(decimal);
@@ -98,19 +99,21 @@ public class Main {
     reader.setSchema(avroSchema);
 
     final Document doc = reader.read(null, jd);
+    inStream.close();
 
     TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    transformerFactory.setAttribute("indent-number", 7);
     Transformer transformer = transformerFactory.newTransformer();
+    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
     DOMSource source = new DOMSource(doc);
  
     // Output to console for testing
     FileOutputStream xbrlOutStream = new FileOutputStream("new_xbrl.xml");
     StreamResult result = new StreamResult(xbrlOutStream);
-    xbrlOutStream.close();
 
     transformer.transform(source, result);
 
-    inStream.close();
+    xbrlOutStream.close();
 
     XMLUnit.setIgnoreWhitespace(true);
     XMLUnit.setIgnoreAttributeOrder(true);
