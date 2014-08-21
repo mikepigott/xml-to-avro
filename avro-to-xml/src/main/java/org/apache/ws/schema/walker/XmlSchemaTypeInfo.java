@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,7 +35,7 @@ import javax.xml.namespace.QName;
  * be directly converted to Avro counterparts.
  * </p>
  */
-final class XmlSchemaTypeInfo {
+public final class XmlSchemaTypeInfo {
 
   private Type type;
   private HashMap<XmlSchemaRestriction.Type,List<XmlSchemaRestriction>> facets;
@@ -44,14 +44,14 @@ final class XmlSchemaTypeInfo {
   private QName userRecognizedType;
   private List<XmlSchemaTypeInfo> childTypes;
 
-  enum Type {
+  public enum Type {
     LIST,
     UNION,
     ATOMIC,
     COMPLEX;
   }
 
-  XmlSchemaTypeInfo(XmlSchemaTypeInfo listType) {
+  public XmlSchemaTypeInfo(XmlSchemaTypeInfo listType) {
     type = Type.LIST;
     childTypes = new ArrayList<XmlSchemaTypeInfo>(1);
     childTypes.add(listType);
@@ -61,14 +61,14 @@ final class XmlSchemaTypeInfo {
     userRecognizedType = null;
   }
 
-  XmlSchemaTypeInfo(
+  public XmlSchemaTypeInfo(
       XmlSchemaTypeInfo listType,
       HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
     this(listType);
     this.facets = facets;
   }
 
-  XmlSchemaTypeInfo(List<XmlSchemaTypeInfo> unionTypes) {
+  public XmlSchemaTypeInfo(List<XmlSchemaTypeInfo> unionTypes) {
     type = Type.UNION;
     childTypes = unionTypes;
 
@@ -77,14 +77,14 @@ final class XmlSchemaTypeInfo {
     userRecognizedType = null;
   }
 
-  XmlSchemaTypeInfo(
+  public XmlSchemaTypeInfo(
       List<XmlSchemaTypeInfo> unionTypes,
       HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
     this(unionTypes);
     this.facets = facets;
   }
 
-  XmlSchemaTypeInfo(XmlSchemaBaseSimpleType baseSimpleType) {
+  public XmlSchemaTypeInfo(XmlSchemaBaseSimpleType baseSimpleType) {
     if (baseSimpleType.equals(XmlSchemaBaseSimpleType.ANYTYPE)) {
       type = Type.COMPLEX;
     } else {
@@ -99,7 +99,7 @@ final class XmlSchemaTypeInfo {
     userRecognizedType = null;
   }
 
-  XmlSchemaTypeInfo(
+  public XmlSchemaTypeInfo(
       XmlSchemaBaseSimpleType baseSimpleType,
       HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> facets) {
 
@@ -107,7 +107,7 @@ final class XmlSchemaTypeInfo {
     this.facets = facets;
   }
 
-  XmlSchemaTypeInfo(boolean isMixed) {
+  public XmlSchemaTypeInfo(boolean isMixed) {
     type = Type.COMPLEX;
     baseSimpleType = XmlSchemaBaseSimpleType.ANYTYPE;
     this.isMixed = isMixed;
@@ -117,31 +117,31 @@ final class XmlSchemaTypeInfo {
     userRecognizedType = null;
   }
 
-  HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> getFacets() {
+  public HashMap<XmlSchemaRestriction.Type, List<XmlSchemaRestriction>> getFacets() {
     return facets;
   }
 
-  XmlSchemaBaseSimpleType getBaseType() {
+  public XmlSchemaBaseSimpleType getBaseType() {
     return baseSimpleType;
   }
 
-  Type getType() {
+  public Type getType() {
     return type;
   }
 
-  List<XmlSchemaTypeInfo> getChildTypes() {
+  public List<XmlSchemaTypeInfo> getChildTypes() {
     return childTypes;
   }
 
-  QName getUserRecognizedType() {
+  public QName getUserRecognizedType() {
     return userRecognizedType;
   }
 
-  boolean isMixed() {
+  public boolean isMixed() {
     return isMixed;
   }
 
-  void setUserRecognizedType(QName userRecType) {
+  public void setUserRecognizedType(QName userRecType) {
     userRecognizedType = userRecType;
   }
 

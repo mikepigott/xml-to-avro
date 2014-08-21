@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,7 +47,7 @@ import org.apache.ws.commons.schema.XmlSchemaType;
  * Walks an {@link XmlSchema} from a starting {@link XmlSchemaElement},
  * notifying attached visitors as it descends.
  */
-final class XmlSchemaWalker {
+public final class XmlSchemaWalker {
 
   private Set<QName> userRecognizedTypes;
 
@@ -63,7 +63,7 @@ final class XmlSchemaWalker {
    * {@link XmlScheamCollection} to reference when following
    * an {@link XmlSchemaElement}.
    */
-  XmlSchemaWalker(XmlSchemaCollection xmlSchemas) {
+  public XmlSchemaWalker(XmlSchemaCollection xmlSchemas) {
     if (xmlSchemas == null) {
       throw new IllegalArgumentException(
           "Input XmlSchemaCollection cannot be null.");
@@ -96,40 +96,40 @@ final class XmlSchemaWalker {
     userRecognizedTypes = null;
   }
 
-  XmlSchemaWalker(XmlSchemaCollection xmlSchemas, XmlSchemaVisitor visitor) {
+  public XmlSchemaWalker(XmlSchemaCollection xmlSchemas, XmlSchemaVisitor visitor) {
     this(xmlSchemas);
     if (visitor != null) {
       visitors.add(visitor);
     }
   }
 
-  XmlSchemaWalker addVisitor(XmlSchemaVisitor visitor) {
+  public XmlSchemaWalker addVisitor(XmlSchemaVisitor visitor) {
     visitors.add(visitor);
     return this;
   }
 
-  XmlSchemaWalker removeVisitor(XmlSchemaVisitor visitor) {
+  public XmlSchemaWalker removeVisitor(XmlSchemaVisitor visitor) {
     if (visitor != null) {
       visitors.remove(visitor);
     }
     return this;
   }
 
-  void clear() {
+  public void clear() {
     scopeCache.clear();
     visitedElements.clear();
   }
 
-  void setUserRecognizedTypes(Set<QName> userRecognizedTypes) {
+  public void setUserRecognizedTypes(Set<QName> userRecognizedTypes) {
     this.userRecognizedTypes = userRecognizedTypes;
   }
 
-  Set<QName> getUserRecognizedTypes() {
+  public Set<QName> getUserRecognizedTypes() {
     return userRecognizedTypes;
   }
 
   // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
-  void walk(XmlSchemaElement element) {
+  public void walk(XmlSchemaElement element) {
     element = getElement(element, false);
 
     final XmlSchemaElement substGroupElem = element;

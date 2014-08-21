@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +30,7 @@ import java.util.TreeMap;
  * representing where the XML document's elements fall in the XML Schema's
  * sequences, choices, and all groups.
  */
-final class XmlSchemaDocumentNode<U> {
+public final class XmlSchemaDocumentNode<U> {
 
   private XmlSchemaStateMachineNode stateMachineNode;
   private XmlSchemaDocumentNode parent;
@@ -47,15 +47,15 @@ final class XmlSchemaDocumentNode<U> {
     set(parent, stateMachineNode);
   }
 
-  XmlSchemaStateMachineNode getStateMachineNode() {
+  public XmlSchemaStateMachineNode getStateMachineNode() {
     return stateMachineNode;
   }
 
-  XmlSchemaDocumentNode getParent() {
+  public XmlSchemaDocumentNode getParent() {
     return parent;
   }
 
-  SortedMap<Integer, XmlSchemaDocumentNode<U>> getChildren() {
+  public SortedMap<Integer, XmlSchemaDocumentNode<U>> getChildren() {
     if (children == null) {
       return null;
     } else {
@@ -63,7 +63,7 @@ final class XmlSchemaDocumentNode<U> {
     }
   }
 
-  SortedMap<Integer, XmlSchemaDocumentNode<U>> getChildren(int iteration) {
+  public SortedMap<Integer, XmlSchemaDocumentNode<U>> getChildren(int iteration) {
     if ((children == null)
           || (children.size() < iteration)
           || (iteration < 1)) {
@@ -158,7 +158,7 @@ final class XmlSchemaDocumentNode<U> {
     return true;
   }
 
-  int getIteration() {
+  public int getIteration() {
     if ((children != null) && (children.size() != visitors.size())) {
       throw new IllegalStateException(
           "The number of occurrences ("
@@ -170,11 +170,11 @@ final class XmlSchemaDocumentNode<U> {
     return visitors.size();
   }
 
-  long getMinOccurs() {
+  public long getMinOccurs() {
     return stateMachineNode.getMinOccurs();
   }
 
-  long getMaxOccurs() {
+  public long getMaxOccurs() {
     return stateMachineNode.getMaxOccurs();
   }
 
@@ -212,11 +212,11 @@ final class XmlSchemaDocumentNode<U> {
     }
   }
 
-  U getUserDefinedContent() {
+  public U getUserDefinedContent() {
     return userDefinedContent;
   }
 
-  void setUserDefinedContent(U userDefinedContent) {
+  public void setUserDefinedContent(U userDefinedContent) {
     this.userDefinedContent = userDefinedContent;
   }
 }

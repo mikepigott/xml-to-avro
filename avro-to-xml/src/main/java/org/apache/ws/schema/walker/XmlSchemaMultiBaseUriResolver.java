@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +32,7 @@ import org.xml.sax.InputSource;
  * {@link org.apache.ws.commons.schema.XmlSchemaCollection}
  * to resolve schemas from multiple base URIs.
  */
-class XmlSchemaMultiBaseUriResolver extends DefaultURIResolver {
+public class XmlSchemaMultiBaseUriResolver extends DefaultURIResolver {
 
   private List<String> baseUris;
 

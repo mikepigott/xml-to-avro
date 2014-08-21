@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.io.File;
 import java.io.FileReader;
@@ -34,12 +34,6 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.junit.Assert;
 
-import org.apache.avro.xml.XmlSchemaBaseSimpleType;
-import org.apache.avro.xml.XmlSchemaMultiBaseUriResolver;
-import org.apache.avro.xml.XmlSchemaRestriction;
-import org.apache.avro.xml.XmlSchemaTypeInfo;
-import org.apache.avro.xml.XmlSchemaVisitor;
-import org.apache.avro.xml.XmlSchemaWalker;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
@@ -56,6 +50,12 @@ import org.apache.ws.commons.schema.XmlSchemaPatternFacet;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
 import org.apache.ws.commons.schema.XmlSchemaUse;
 import org.apache.ws.commons.schema.XmlSchemaWhiteSpaceFacet;
+import org.apache.ws.schema.walker.XmlSchemaBaseSimpleType;
+import org.apache.ws.schema.walker.XmlSchemaMultiBaseUriResolver;
+import org.apache.ws.schema.walker.XmlSchemaRestriction;
+import org.apache.ws.schema.walker.XmlSchemaTypeInfo;
+import org.apache.ws.schema.walker.XmlSchemaVisitor;
+import org.apache.ws.schema.walker.XmlSchemaWalker;
 import org.junit.Test;
 
 public class TestSchemaWalker {

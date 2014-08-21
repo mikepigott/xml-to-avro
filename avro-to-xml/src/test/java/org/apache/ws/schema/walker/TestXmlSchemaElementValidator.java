@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import static org.junit.Assert.*;
 
@@ -32,16 +32,16 @@ import javax.xml.bind.ValidationException;
 import javax.xml.namespace.QName;
 
 
-import org.apache.avro.xml.XmlSchemaBaseSimpleType;
-import org.apache.avro.xml.XmlSchemaElementValidator;
-import org.apache.avro.xml.XmlSchemaNamespaceContext;
-import org.apache.avro.xml.XmlSchemaRestriction;
-import org.apache.avro.xml.XmlSchemaStateMachineNode;
-import org.apache.avro.xml.XmlSchemaTypeInfo;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
+import org.apache.ws.schema.walker.XmlSchemaBaseSimpleType;
+import org.apache.ws.schema.walker.XmlSchemaElementValidator;
+import org.apache.ws.schema.walker.XmlSchemaNamespaceContext;
+import org.apache.ws.schema.walker.XmlSchemaRestriction;
+import org.apache.ws.schema.walker.XmlSchemaStateMachineNode;
+import org.apache.ws.schema.walker.XmlSchemaTypeInfo;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.xml.sax.Attributes;

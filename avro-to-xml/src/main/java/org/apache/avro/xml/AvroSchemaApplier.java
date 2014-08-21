@@ -33,6 +33,10 @@ import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
+import org.apache.ws.schema.walker.XmlSchemaDocumentNode;
+import org.apache.ws.schema.walker.XmlSchemaPathNode;
+import org.apache.ws.schema.walker.XmlSchemaStateMachineNode;
+import org.apache.ws.schema.walker.XmlSchemaTypeInfo;
 
 /**
  * Applies an Avro schema to a tree described by

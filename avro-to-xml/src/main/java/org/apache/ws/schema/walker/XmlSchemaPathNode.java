@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 /**
  * This represents a node in the path when walking an XML or Avro document.
@@ -25,7 +25,7 @@ package org.apache.avro.xml;
  * {@link XmlSchemaDocumentNode}s representing where the XML document's
  * elements fall in the XML Schema's sequences, choices, and all groups.
  */
-final class XmlSchemaPathNode<U, V> {
+public final class XmlSchemaPathNode<U, V> {
 
   private Direction direction;
   private XmlSchemaDocumentNode<U> documentNode;
@@ -37,7 +37,7 @@ final class XmlSchemaPathNode<U, V> {
   private XmlSchemaPathNode<U, V> prevNode;
   private XmlSchemaPathNode<U, V> nextNode;
 
-  enum Direction {
+  public enum Direction {
     PARENT(2),
     CHILD(0),
     CONTENT(3),
@@ -71,15 +71,15 @@ final class XmlSchemaPathNode<U, V> {
     update(dir, previous, stateMachine);
   }
 
-  XmlSchemaDocumentNode<U> getDocumentNode() {
+  public XmlSchemaDocumentNode<U> getDocumentNode() {
     return documentNode;
   }
 
-  XmlSchemaStateMachineNode getStateMachineNode() {
+  public XmlSchemaStateMachineNode getStateMachineNode() {
     return stateMachineNode;
   }
 
-  Direction getDirection() {
+  public Direction getDirection() {
     return direction;
   }
 
@@ -87,19 +87,19 @@ final class XmlSchemaPathNode<U, V> {
     return nextNodeStateIndex;
   }
 
-  int getIteration() {
+  public int getIteration() {
     return iterationNum;
   }
 
-  long getMinOccurs() {
+  public long getMinOccurs() {
     return stateMachineNode.getMinOccurs();
   }
 
-  long getMaxOccurs() {
+  public long getMaxOccurs() {
     return stateMachineNode.getMaxOccurs();
   }
 
-  int getDocIteration() {
+  public int getDocIteration() {
     if (documentNode == null) {
       return 0;
     } else {
@@ -115,11 +115,11 @@ final class XmlSchemaPathNode<U, V> {
     }
   }
 
-  XmlSchemaPathNode getPrevious() {
+  public XmlSchemaPathNode getPrevious() {
     return prevNode;
   }
 
-  XmlSchemaPathNode getNext() {
+  public XmlSchemaPathNode getNext() {
     return nextNode;
   }
 
@@ -252,11 +252,11 @@ final class XmlSchemaPathNode<U, V> {
     userDefinedContent = null;
   }
 
-  V getUserDefinedContent() {
+  public V getUserDefinedContent() {
     return userDefinedContent;
   }
 
-  void setUserDefinedContent(V content) {
+  public void setUserDefinedContent(V content) {
     userDefinedContent = content;
   }
 }

@@ -19,6 +19,9 @@ package org.apache.avro.xml;
 
 import javax.xml.namespace.QName;
 
+import org.apache.ws.schema.walker.XmlSchemaPathNode;
+import org.apache.ws.schema.walker.XmlSchemaStateMachineNode;
+
 /**
  * Information about a {@link XmlSchemaPathNode} representing
  * an Avro MAP or a CONTENT node in a mixed-content element.

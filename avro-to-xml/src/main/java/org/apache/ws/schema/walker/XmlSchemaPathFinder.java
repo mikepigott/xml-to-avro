@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +36,7 @@ import org.xml.sax.helpers.DefaultHandler;
  * interpretation ("path") that best matches both the XML Schema and the
  * Avro Schema.
  */
-final class XmlSchemaPathFinder extends DefaultHandler {
+public final class XmlSchemaPathFinder extends DefaultHandler {
 
   /* If a group loops back on itself, we don't want to loop
    * until the stack overflows looking for a valid match.
@@ -415,7 +415,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
    * least the minimum number of children have been added, or completely
    * fulfilled, meaning no more children can be introduced.
    */
-  enum Fulfillment {
+  private enum Fulfillment {
     NOT,
     PARTIAL,
     COMPLETE
@@ -425,7 +425,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
    * Creates a new <code>XmlToAvroPathCreator</code> with the root
    * {@link XmlSchemaStateMachineNode} to start from when evaluating documents.
    */
-  XmlSchemaPathFinder(XmlSchemaStateMachineNode root) {
+  public XmlSchemaPathFinder(XmlSchemaStateMachineNode root) {
     pathMgr = new XmlSchemaPathManager();
     nsContext = new XmlSchemaNamespaceContext();
 
@@ -991,7 +991,7 @@ final class XmlSchemaPathFinder extends DefaultHandler {
     }
   }
 
-  XmlSchemaPathNode getXmlSchemaDocumentPath() {
+  public XmlSchemaPathNode getXmlSchemaDocumentPath() {
     return rootPathNode;
   }
 

@@ -33,6 +33,9 @@ import javax.xml.namespace.QName;
 
 import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.constants.Constants;
+import org.apache.ws.schema.walker.XmlSchemaBaseSimpleType;
+import org.apache.ws.schema.walker.XmlSchemaRestriction;
+import org.apache.ws.schema.walker.XmlSchemaTypeInfo;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.IntNode;
 import org.codehaus.jackson.node.NumericNode;

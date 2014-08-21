@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import org.apache.ws.commons.schema.XmlSchemaEnumerationFacet;
 import org.apache.ws.commons.schema.XmlSchemaFacet;
@@ -38,13 +38,13 @@ import org.apache.ws.commons.schema.XmlSchemaWhiteSpaceFacet;
  * {@link #hashCode()} reflect that only enumerations and patterns can have
  * multiple facets.
  */
-class XmlSchemaRestriction {
+public class XmlSchemaRestriction {
 
   private Type type;
   private Object value;
   private boolean isFixed;
 
-  enum Type {
+  public enum Type {
 		ENUMERATION,
 		EXCLUSIVE_MIN,
 		EXCLUSIVE_MAX,
@@ -93,35 +93,35 @@ class XmlSchemaRestriction {
 	  isFixed = facet.isFixed();
   }
 
-	XmlSchemaRestriction(Type type) {
+	public XmlSchemaRestriction(Type type) {
 		this.type = type;
 		this.value = null;
 		this.isFixed = false;
 	}
 
-	XmlSchemaRestriction(Type type, Object value, boolean isFixed) {
+	public XmlSchemaRestriction(Type type, Object value, boolean isFixed) {
 		this.type = type;
 		this.value = value;
 		this.isFixed = isFixed;
 	}
 
-	Type getType() {
+	public Type getType() {
 		return type;
 	}
 
-	Object getValue() {
+	public Object getValue() {
 		return value;
 	}
 
-	boolean isFixed() {
+	public boolean isFixed() {
 		return isFixed;
 	}
 
-	void setValue(Object value) {
+	public void setValue(Object value) {
 		this.value = value;
 	}
 
-	void setFixed(boolean isFixed) {
+	public void setFixed(boolean isFixed) {
 		this.isFixed = isFixed;
 	}
 

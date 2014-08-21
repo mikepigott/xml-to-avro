@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -40,7 +40,7 @@ import org.xml.sax.Attributes;
  * Methods to confirm that an XML element and
  * its attributes all conform to its XML Schema.
  */
-final class XmlSchemaElementValidator {
+public final class XmlSchemaElementValidator {
 
   private static DatatypeFactory datatypeFactory = null;
 

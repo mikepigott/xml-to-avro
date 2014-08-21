@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
@@ -30,7 +30,7 @@ import org.apache.ws.commons.schema.XmlSchemaSequence;
  * Defines a visitor interface for notifications when walking
  * an {@link XmlSchema} using the {@link XmlSchemaWalker}.
  */
-interface XmlSchemaVisitor {
+public interface XmlSchemaVisitor {
 
   void onEnterElement(
       XmlSchemaElement element,

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import static org.junit.Assert.*;
 
@@ -25,8 +25,8 @@ import java.util.List;
 
 import javax.xml.namespace.QName;
 
-import org.apache.avro.xml.XmlSchemaBaseSimpleType;
 import org.apache.ws.commons.schema.constants.Constants;
+import org.apache.ws.schema.walker.XmlSchemaBaseSimpleType;
 import org.junit.BeforeClass;
 import org.junit.Test;
 

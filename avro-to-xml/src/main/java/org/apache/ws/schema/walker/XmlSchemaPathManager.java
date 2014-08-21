@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -26,7 +26,7 @@ import java.util.Map;
  * for recycling and abstracts away the complexity of walking through
  * an XML Schema.
  */
-final class XmlSchemaPathManager<U, V> {
+public final class XmlSchemaPathManager<U, V> {
 
   private ArrayList<XmlSchemaPathNode<U, V>> unusedPathNodes;
   private ArrayList<XmlSchemaDocumentNode<U>> unusedDocNodes;

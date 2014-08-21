@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.io.File;
 import java.io.FileReader;
@@ -27,8 +27,8 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.stream.StreamSource;
 
-import org.apache.avro.xml.DomBuilderFromSax;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
+import org.apache.ws.schema.walker.DomBuilderFromSax;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;

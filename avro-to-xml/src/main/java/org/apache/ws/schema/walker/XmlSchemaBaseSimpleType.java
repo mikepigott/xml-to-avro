@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.HashMap;
 
@@ -28,7 +28,7 @@ import org.apache.ws.commons.schema.constants.Constants;
  * Represents the set of simple types defined by XML Schema, and
  * conversions between them and their respective {@link QName}s.
  */
-enum XmlSchemaBaseSimpleType {
+public enum XmlSchemaBaseSimpleType {
   ANYTYPE(Constants.XSD_ANYTYPE),
   ANYSIMPLETYPE(Constants.XSD_ANYSIMPLETYPE),
   DURATION(Constants.XSD_DURATION),

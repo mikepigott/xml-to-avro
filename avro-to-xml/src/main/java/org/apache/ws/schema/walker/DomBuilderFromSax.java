@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -43,7 +43,7 @@ import org.xml.sax.helpers.DefaultHandler;
  * Builds an XML {@link org.w3c.dom.Document}
  * from an XML Schema during a SAX walk.
  */
-final class DomBuilderFromSax extends DefaultHandler {
+public final class DomBuilderFromSax extends DefaultHandler {
 
   private static final String XSI_NS =
       "http://www.w3.org/2001/XMLSchema-instance";
@@ -63,7 +63,7 @@ final class DomBuilderFromSax extends DefaultHandler {
   private final XmlSchemaCollection schemas;
   private final Set<String> globalNamespaces;
 
-  DomBuilderFromSax() throws ParserConfigurationException {
+  public DomBuilderFromSax() throws ParserConfigurationException {
     this(null);
   }
 
@@ -73,7 +73,7 @@ final class DomBuilderFromSax extends DefaultHandler {
    * @throws ParserConfigurationException If unable to create a
    *                                      {@link DocumentBuilder}. 
    */
-  DomBuilderFromSax(XmlSchemaCollection xmlSchemaCollection)
+  public DomBuilderFromSax(XmlSchemaCollection xmlSchemaCollection)
       throws ParserConfigurationException {
 
     if (xmlSchemaCollection == null) {
@@ -344,23 +344,23 @@ final class DomBuilderFromSax extends DefaultHandler {
     content.delete(0, content.length());
   }
 
-  Document getDocument() {
+  public Document getDocument() {
     return document;
   }
 
-  Map<String, String> getNamespaceToLocationMapping() {
+  public Map<String, String> getNamespaceToLocationMapping() {
     return namespaceToLocationMapping;
   }
 
-  void setNamespaceToLocationMapping(Map<String, String> nsToLocMapping) {
+  public void setNamespaceToLocationMapping(Map<String, String> nsToLocMapping) {
     namespaceToLocationMapping = nsToLocMapping;
   }
 
-  Map<QName, XmlSchemaElement> getElementsByQName() {
+  public Map<QName, XmlSchemaElement> getElementsByQName() {
     return elementsByQName;
   }
 
-  void setElementsByQName(Map<QName, XmlSchemaElement> elemsByQName) {
+  public void setElementsByQName(Map<QName, XmlSchemaElement> elemsByQName) {
     elementsByQName = elemsByQName;
   }
 

@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 
-import org.apache.avro.xml.XmlSchemaRestriction;
-import org.apache.avro.xml.XmlSchemaScope;
 import org.apache.ws.commons.schema.XmlSchemaEnumerationFacet;
 import org.apache.ws.commons.schema.XmlSchemaFacet;
 import org.apache.ws.commons.schema.XmlSchemaFractionDigitsFacet;
@@ -37,6 +35,8 @@ import org.apache.ws.commons.schema.XmlSchemaMinLengthFacet;
 import org.apache.ws.commons.schema.XmlSchemaPatternFacet;
 import org.apache.ws.commons.schema.XmlSchemaTotalDigitsFacet;
 import org.apache.ws.commons.schema.XmlSchemaWhiteSpaceFacet;
+import org.apache.ws.schema.walker.XmlSchemaRestriction;
+import org.apache.ws.schema.walker.XmlSchemaScope;
 import org.junit.Test;
 
 public class TestXmlSchemaRestriction {

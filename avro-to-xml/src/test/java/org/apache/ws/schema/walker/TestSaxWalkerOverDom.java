@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import org.apache.avro.xml.SaxWalkerOverDom;
+import org.apache.ws.schema.walker.SaxWalkerOverDom;
 import org.junit.Test;
 
 /**

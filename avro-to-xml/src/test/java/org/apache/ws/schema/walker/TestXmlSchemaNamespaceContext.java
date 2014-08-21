@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import static org.junit.Assert.*;
 
@@ -26,8 +26,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.avro.xml.XmlSchemaNamespaceContext;
 import org.apache.ws.commons.schema.constants.Constants;
+import org.apache.ws.schema.walker.XmlSchemaNamespaceContext;
 import org.junit.Test;
 
 public class TestXmlSchemaNamespaceContext {

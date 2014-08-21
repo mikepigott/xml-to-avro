@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,7 +38,7 @@ import org.apache.ws.commons.schema.XmlSchemaSequence;
  * {@link org.apache.ws.commons.schema.XmlSchema}
  * representing how to walk through the schema when parsing an XML document.
  */
-final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
+public final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
 
   private List<XmlSchemaStateMachineNode> stack;
   private XmlSchemaStateMachineNode startNode;
@@ -72,11 +72,11 @@ final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     startNode = null;
   }
 
-  XmlSchemaStateMachineNode getStartNode() {
+  public XmlSchemaStateMachineNode getStartNode() {
     return startNode;
   }
 
-  Map<QName, XmlSchemaStateMachineNode> getStateMachineNodesByQName() {
+  public Map<QName, XmlSchemaStateMachineNode> getStateMachineNodesByQName() {
     final HashMap<QName, XmlSchemaStateMachineNode> nodes =
         new HashMap<QName, XmlSchemaStateMachineNode>();
 

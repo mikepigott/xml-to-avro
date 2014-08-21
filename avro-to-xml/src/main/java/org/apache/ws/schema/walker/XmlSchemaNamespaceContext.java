@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,11 +36,11 @@ import org.apache.ws.commons.schema.utils.NamespacePrefixList;
  * Implemented as a series of scope-based stacks, one per prefix.
  * </p>
  */
-final class XmlSchemaNamespaceContext implements NamespacePrefixList {
+public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
 
   private Map<String, List<String>> namespacesByPrefixStack;
 
-  XmlSchemaNamespaceContext() {
+  public XmlSchemaNamespaceContext() {
     namespacesByPrefixStack = new HashMap<String, List<String>>();
 
     namespacesByPrefixStack.put(
@@ -126,7 +126,7 @@ final class XmlSchemaNamespaceContext implements NamespacePrefixList {
    * Adds a new prefix mapping to the context.  Returns true
    * if the mapping is new, and <code>false</code> if it already existed. 
    */
-  void addNamespace(String prefix, String namespaceUri) {
+  public void addNamespace(String prefix, String namespaceUri) {
     if ((prefix == null)
         || (namespaceUri == null)
         || namespaceUri.isEmpty()) {
@@ -144,7 +144,7 @@ final class XmlSchemaNamespaceContext implements NamespacePrefixList {
     namespaceStack.add(namespaceUri);
   }
 
-  void removeNamespace(String prefix) {
+  public void removeNamespace(String prefix) {
     final List<String> namespaceStack = namespacesByPrefixStack.get(prefix);
     if ((namespaceStack == null) || namespaceStack.isEmpty()) {
       throw new IllegalStateException(
@@ -158,7 +158,7 @@ final class XmlSchemaNamespaceContext implements NamespacePrefixList {
     }
   }
 
-  void clear() {
+  public void clear() {
     namespacesByPrefixStack.clear();
   }
 }

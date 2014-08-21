@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,7 +55,7 @@ import org.xml.sax.SAXException;
  * </ul>
  * </p>
  */
-final class SaxWalkerOverDom {
+public final class SaxWalkerOverDom {
 
   private List<ContentHandler> listeners;
 
@@ -243,7 +243,7 @@ final class SaxWalkerOverDom {
   /**
    * Constructs a new <code>SaxWalkerOverDom</code>.
    */
-  SaxWalkerOverDom() {
+  public SaxWalkerOverDom() {
     listeners = null;
   }
 
@@ -253,7 +253,7 @@ final class SaxWalkerOverDom {
    *
    * @param contentHandler The content handler to send events to.
    */
-  SaxWalkerOverDom(ContentHandler contentHandler) {
+  public SaxWalkerOverDom(ContentHandler contentHandler) {
     this();
     listeners = new ArrayList<ContentHandler>(1);
     listeners.add(contentHandler);
@@ -265,7 +265,7 @@ final class SaxWalkerOverDom {
    *
    * @param contentHandlers The list of content handlers to send events to.
    */
-  SaxWalkerOverDom(List<ContentHandler> contentHandlers) {
+  public SaxWalkerOverDom(List<ContentHandler> contentHandlers) {
     this();
     listeners = contentHandlers;
   }
@@ -277,7 +277,7 @@ final class SaxWalkerOverDom {
    *
    * @param contentHandler The content handler to send events to.
    */
-  void addContentHandler(ContentHandler contentHandler) {
+  public void addContentHandler(ContentHandler contentHandler) {
     if (listeners == null) {
       listeners = new ArrayList<ContentHandler>(1);
     }
@@ -292,7 +292,7 @@ final class SaxWalkerOverDom {
    * @param contentHandler The content handler to stop sending events to.
    * @return <code>true</code> if it was found, <code>false</code> if not.
    */
-  boolean removeContentHandler(ContentHandler contentHandler) {
+  public boolean removeContentHandler(ContentHandler contentHandler) {
     if (listeners != null) {
       return listeners.remove(contentHandler);
     }
@@ -308,7 +308,7 @@ final class SaxWalkerOverDom {
    * @param systemId The system ID of this {@link Document}.
    * @throws SAXException if an exception occurs when notifying the handlers.
    */
-  void walk(Document document) throws SAXException {
+  public void walk(Document document) throws SAXException {
     if (document == null) {
       throw new IllegalArgumentException("Document cannot be null.");
     }

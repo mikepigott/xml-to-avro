@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.avro.xml;
+package org.apache.ws.schema.walker;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +50,7 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
  * the elements while following that path. 
  * </p>
  */
-final class XmlSchemaStateMachineNode {
+public final class XmlSchemaStateMachineNode {
 
   private final Type nodeType;
   private final XmlSchemaElement element;
@@ -62,7 +62,7 @@ final class XmlSchemaStateMachineNode {
 
   private List<XmlSchemaStateMachineNode> possibleNextStates;
 
-  enum Type {
+  public enum Type {
     ELEMENT,
     SUBSTITUTION_GROUP,
     ALL,
@@ -71,17 +71,17 @@ final class XmlSchemaStateMachineNode {
     ANY
   }
 
-  static class Attribute {
+  public static class Attribute {
     Attribute(XmlSchemaAttribute attribute, XmlSchemaTypeInfo attrType) {
       this.attribute = attribute;
       this.attrType = attrType;
     }
 
-    XmlSchemaAttribute getAttribute() {
+    public XmlSchemaAttribute getAttribute() {
       return attribute;
     }
 
-    XmlSchemaTypeInfo getType() {
+    public XmlSchemaTypeInfo getType() {
       return attrType;
     }
 
@@ -180,7 +180,7 @@ final class XmlSchemaStateMachineNode {
    * The XML Schema node {@link Type} this
    * <code>SchemaStateMachineNode</code> represents.
    */
-  Type getNodeType() {
+  public Type getNodeType() {
     return nodeType;
   }
 
@@ -189,7 +189,7 @@ final class XmlSchemaStateMachineNode {
    * {@link XmlSchemaElement}, the <code>XmlSchemaElement</code>
    * it represents.
    */
-  XmlSchemaElement getElement() {
+  public XmlSchemaElement getElement() {
     return element;
   }
 
@@ -198,7 +198,7 @@ final class XmlSchemaStateMachineNode {
    * {@link XmlSchemaElement}, the {@link XmlSchemaTypeInfo}
    * of the element it represents.
    */
-  XmlSchemaTypeInfo getElementType() {
+  public XmlSchemaTypeInfo getElementType() {
     return typeInfo;
   }
 
@@ -207,7 +207,7 @@ final class XmlSchemaStateMachineNode {
    * {@link XmlSchemaElement}, the set of {@link Attribute}s
    * associated with the element it represents.
    */
-  List<Attribute> getAttributes() {
+  public List<Attribute> getAttributes() {
     return attributes;
   }
 
@@ -215,7 +215,7 @@ final class XmlSchemaStateMachineNode {
    * The minimum number of times this <code>SchemaStateMachineNode</code>
    * may appear in succession.
    */
-  long getMinOccurs() {
+  public long getMinOccurs() {
     return minOccurs;
   }
 
@@ -223,7 +223,7 @@ final class XmlSchemaStateMachineNode {
    * The maximum number of times this <code>SchemaStateMachineNode</code>
    * may appear in succession.
    */
-  long getMaxOccurs() {
+  public long getMaxOccurs() {
     return maxOccurs;
   }
 
@@ -231,7 +231,7 @@ final class XmlSchemaStateMachineNode {
    * Returns the {@link XmlSchemaAny} associated
    * with this node, or <code>null</code if none.
    */
-  XmlSchemaAny getAny() {
+  public XmlSchemaAny getAny() {
     return any;
   }
 
