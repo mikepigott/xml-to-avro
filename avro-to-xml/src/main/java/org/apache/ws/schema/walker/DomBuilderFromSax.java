@@ -171,6 +171,12 @@ public final class DomBuilderFromSax extends DefaultHandler {
     newPrefixes.clear();
 
     // Add Attributes
+    final QName elemQName = new QName(uri, localName);
+    XmlSchemaStateMachineNode stateMachine = null;
+    if (elementsByQName != null) {
+      stateMachine = elementsByQName.get(elemQName);
+    }
+
     for (int attrIndex = 0; attrIndex < atts.getLength(); ++attrIndex) {
       String attrUri = atts.getURI(attrIndex);
       if ( attrUri.isEmpty() ) {
@@ -179,36 +185,20 @@ public final class DomBuilderFromSax extends DefaultHandler {
 
       boolean isGlobal = globalNamespaces.contains(attrUri);
       if ((attrUri != null) && !isGlobal) {
-
-        /* TODO: This is not quite correct.  The default namespace does not
-         *       apply to attributes - so if an element defines an attribute,
-         *       it is considered to have no namespace, and likewise should
-         *       not have a prefix.
-         *
-         *       However, that no-namespace attribute may conflict with an
-         *       attribute of the same name in the global namespace.  The only
-         *       way to resolve this would be to keep track of where we are in
-         *       the schema, and then walk the element's type hierarchy to find
-         *       its attributes.  Then we would be able to determine if an
-         *       attribute is in the global namespace by calling
-         *       XmlSchemaAttribute.isTopLevel().
-         *
-         *       This cannot be done using XmlSchemaWalker (and by extension,
-         *       XmlSchemaStateMachineNodes) because XmlSchemaWalker creates
-         *       copies of the existing XmlSchemaAttributes in the schema in
-         *       order to properly merge a globally-defined attribute with its
-         *       references defined in the element type hierarchies.
-         *
-         *       The tests can be easily modified to check this behavior; just
-         *       rename avro:mapId to avro:id in test_schema.xsd and update its
-         *       implementation documents test1_root.xml, test2_children.xml,
-         *       and test3_grandchildren.xml.  The attribute name avro:id will
-         *       conflict with the id attribute defined in avro:root.
-         */
         final QName attrQName =
             new QName(attrUri, atts.getLocalName(attrIndex));
 
-        if (schemas.getAttributeByQName(attrQName) != null) {
+        boolean found = false;
+        if (stateMachine != null) {
+          for (XmlSchemaAttrInfo attrInfo : stateMachine.getAttributes()) {
+            if (attrInfo.getAttribute().getQName().equals(attrQName)) {
+              found = true;
+              isGlobal = attrInfo.isTopLevel();
+            }
+          }
+        }
+
+        if (!found && (schemas.getAttributeByQName(attrQName) != null)) {
           isGlobal = true;
         }
       }

@@ -864,7 +864,7 @@ public class TestSchemaWalker {
     HashSet<XmlSchemaRestriction> mapAttrFacets = (HashSet<XmlSchemaRestriction>) ncNameFacets.clone();
     mapAttrFacets.add( new XmlSchemaRestriction(XmlSchemaRestriction.Type.LENGTH_MIN, 1, false) );
     ArrayList<Attribute> mapAttributes = new ArrayList<Attribute>(1);
-    mapAttributes.add( new Attribute("mapId", null, XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, mapAttrFacets) );
+    mapAttributes.add( new Attribute("id", null, XmlSchemaTypeInfo.Type.ATOMIC, XmlSchemaBaseSimpleType.STRING, mapAttrFacets) );
     attributes.put("map", mapAttributes);
 
     // Compare against the actual.

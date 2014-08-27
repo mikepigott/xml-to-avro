@@ -54,7 +54,7 @@
   }, {
     "map" : {
       "id1" : {
-        "mapId" : "id1",
+        "id" : "id1",
         "map" : [ {
           "org.apache.avro.AvroTest.primitive" : {
             "primitive" : "double"
@@ -66,7 +66,7 @@
         } ]
       },
       "id2" : {
-        "mapId" : "id2",
+        "id" : "id2",
         "map" : [ {
           "org.apache.avro.AvroTest.primitive" : {
             "primitive" : "null"
@@ -85,7 +85,7 @@
   }, {
     "map" : {
       "id3" : {
-        "mapId" : "id3",
+        "id" : "id3",
         "map" : [ {
           "org.apache.avro.AvroTest.primitive" : {
             "primitive" : "string"
@@ -93,7 +93,7 @@
         }, {
           "map" : {
             "id4" : {
-              "mapId" : "id4",
+              "id" : "id4",
               "map" : [ {
                 "org.apache.avro.AvroTest.nonNullPrimitive" : {
                   "nonNullPrimitive" : "string"
@@ -101,7 +101,7 @@
               } ]
             },
             "id5" : {
-              "mapId" : "id5",
+              "id" : "id5",
               "map" : [ {
                 "org.apache.avro.AvroTest.primitive" : {
                   "primitive" : "long"
