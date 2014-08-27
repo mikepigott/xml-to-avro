@@ -33,8 +33,8 @@ import javax.xml.namespace.QName;
 import org.apache.avro.Schema;
 import org.apache.avro.xml.Utils;
 import org.apache.ws.commons.schema.constants.Constants;
-import org.apache.ws.schema.walker.XmlSchemaBaseSimpleType;
-import org.apache.ws.schema.walker.XmlSchemaTypeInfo;
+import org.apache.ws.commons.schema.walker.XmlSchemaBaseSimpleType;
+import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
 import org.junit.BeforeClass;
 import org.junit.Test;
 

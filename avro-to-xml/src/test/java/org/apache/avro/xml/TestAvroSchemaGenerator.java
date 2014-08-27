@@ -34,8 +34,8 @@ import org.apache.avro.xml.Utils;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
-import org.apache.ws.schema.walker.XmlSchemaMultiBaseUriResolver;
-import org.apache.ws.schema.walker.XmlSchemaWalker;
+import org.apache.ws.commons.schema.walker.XmlSchemaMultiBaseUriResolver;
+import org.apache.ws.commons.schema.walker.XmlSchemaWalker;
 import org.junit.Test;
 
 /**
