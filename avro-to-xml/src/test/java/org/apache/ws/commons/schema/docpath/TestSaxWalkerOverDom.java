@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.docpath;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -36,8 +36,8 @@ import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import org.apache.ws.commons.schema.docpath.SaxWalkerOverDom;
 import org.apache.ws.commons.schema.testutils.UtilsForTests;
-import org.apache.ws.commons.schema.walker.SaxWalkerOverDom;
 import org.junit.Test;
 
 /**

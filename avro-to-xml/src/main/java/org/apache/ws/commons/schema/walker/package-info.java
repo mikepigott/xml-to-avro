@@ -23,7 +23,7 @@
  * 
  * <ol>
  *   <li>Simplifies walking an XML Schema using the Visitor Pattern.</li>
- *   <li>Performs a SAX-based walk </li>
+ *   <li>Performs a SAX-based walk over an existing {@link org.w3c.dom.Document}.</li>
  * </ol>
  * 
  * <h2>Walking an XML Schema</h2>
