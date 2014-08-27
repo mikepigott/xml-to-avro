@@ -19,23 +19,23 @@
 /**
  * <h1>Walking XML Schemas</h1>
  *
- * This package serves two major purposes:
- * 
- * <ol>
- *   <li>Simplifies walking an XML Schema using the Visitor Pattern.</li>
- *   <li>Performs a SAX-based walk over an existing {@link org.w3c.dom.Document}.</li>
- * </ol>
- * 
+ * This package simplifies walking over an
+ * {@link org.apache.ws.commons.schema.XmlSchemaCollection}.
+ *
  * <h2>Walking an XML Schema</h2>
  * 
  * {@link org.apache.ws.commons.schema.walker.XmlSchemaWalker} walks through an
  * {@link org.apache.ws.commons.schema.XmlSchemaCollection} given a starting
  * {@link org.apache.ws.commons.schema.XmlSchemaElement} representing the root.
- * Instances of {@link org.apache.ws.commons.schema.walker.XmlSchemaVisitor} can be
- * attached to received notifications when each element, attribute, and group
- * is reached.
+ * Instances of {@link org.apache.ws.commons.schema.walker.XmlSchemaVisitor}
+ * can be attached to receive notifications when each element, attribute, and
+ * group (subsitution group, choice group, all group, or sequence) is reached.
  *
- * <h2>Building a State Machine<
+ * <h2>Schemas with Multiple Namespaces</h2>
  *
+ * {@link org.apache.ws.commons.schema.walker.XmlSchemaMultiBaseUriResolver}
+ * can be used to resolve partial schema paths across multiple base URIs.  All
+ * of the base URIs seen so far will be checked in search of a schema with the
+ * same name.
  */
 package org.apache.ws.commons.schema.walker;

@@ -27,7 +27,7 @@ import java.util.Map;
  * for recycling and abstracts away the complexity of walking through
  * an XML Schema.
  */
-public final class XmlSchemaPathManager<U, V> {
+final class XmlSchemaPathManager<U, V> {
 
   private ArrayList<XmlSchemaPathNode<U, V>> unusedPathNodes;
   private ArrayList<XmlSchemaDocumentNode<U>> unusedDocNodes;
@@ -35,7 +35,7 @@ public final class XmlSchemaPathManager<U, V> {
   /**
    * Constructs the document path node factory.
    */
-  public XmlSchemaPathManager() {
+  XmlSchemaPathManager() {
     unusedPathNodes = new ArrayList<XmlSchemaPathNode<U, V>>();
     unusedDocNodes = new ArrayList<XmlSchemaDocumentNode<U>>();
   }

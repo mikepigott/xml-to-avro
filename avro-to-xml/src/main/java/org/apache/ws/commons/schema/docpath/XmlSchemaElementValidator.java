@@ -43,7 +43,7 @@ import org.xml.sax.Attributes;
  * Methods to confirm that an XML element and
  * its attributes all conform to its XML Schema.
  */
-public final class XmlSchemaElementValidator {
+final class XmlSchemaElementValidator {
 
   private static DatatypeFactory datatypeFactory = null;
 
