@@ -223,7 +223,7 @@ public final class XmlSchemaWalker {
             final XmlSchemaTypeInfo attrTypeInfo = attrScope.getTypeInfo();
       
             for (XmlSchemaVisitor visitor : visitors) {
-              visitor.onVisitAttribute(element, attr, attrTypeInfo);
+              visitor.onVisitAttribute(element, new XmlSchemaAttrInfo(attr, attrTypeInfo));
             }
           }
         }

@@ -28,7 +28,6 @@ import javax.xml.namespace.QName;
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;
-import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
@@ -61,8 +60,8 @@ public final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
       this.stateMachineNode = null;
     }
 
-    void addAttribute(XmlSchemaAttribute attr, XmlSchemaTypeInfo attrType) {
-      attributes.add(new XmlSchemaAttrInfo(attr, attrType));
+    void addAttribute(XmlSchemaAttrInfo attrInfo) {
+      attributes.add(attrInfo);
     }
   }
 
@@ -187,13 +186,12 @@ public final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   }
 
   /**
-   * @see XmlSchemaVisitor#onVisitAttribute(XmlSchemaElement, XmlSchemaAttribute, XmlSchemaTypeInfo)
+   * @see XmlSchemaVisitor#onVisitAttribute(XmlSchemaElement, XmlSchemaAttrInfo)
    */
   @Override
   public void onVisitAttribute(
       XmlSchemaElement element,
-      XmlSchemaAttribute attribute,
-      XmlSchemaTypeInfo attributeType) {
+      XmlSchemaAttrInfo attrInfo) {
 
     final ElementInfo elemInfo = elementInfoByQName.get(element.getQName());
     if (elemInfo == null) {
@@ -201,7 +199,7 @@ public final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
           "No record exists for element " + element.getQName());
     }
 
-    elemInfo.addAttribute(attribute, attributeType);
+    elemInfo.addAttribute(attrInfo);
   }
 
   @Override

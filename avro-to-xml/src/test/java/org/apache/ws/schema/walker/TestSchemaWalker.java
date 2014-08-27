@@ -358,8 +358,10 @@ public class TestSchemaWalker {
     @Override
     public void onVisitAttribute(
         XmlSchemaElement element,
-        XmlSchemaAttribute attribute,
-        XmlSchemaTypeInfo attributeType) {
+        XmlSchemaAttrInfo attrInfo) {
+
+      final XmlSchemaAttribute attribute = attrInfo.getAttribute();
+      final XmlSchemaTypeInfo attributeType = attrInfo.getType();
 
       if ( !attributes.containsKey( element.getName() ) ) {
         throw new IllegalStateException(

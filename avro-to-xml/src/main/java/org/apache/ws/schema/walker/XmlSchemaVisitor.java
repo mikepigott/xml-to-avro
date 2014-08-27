@@ -21,7 +21,6 @@ package org.apache.ws.schema.walker;
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;
-import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
@@ -44,8 +43,7 @@ public interface XmlSchemaVisitor {
 
   void onVisitAttribute(
       XmlSchemaElement element,
-      XmlSchemaAttribute attribute,
-      XmlSchemaTypeInfo attributeType);
+      XmlSchemaAttrInfo attrInfo);
 
   void onEndAttributes(
       XmlSchemaElement element,

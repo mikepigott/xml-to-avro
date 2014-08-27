@@ -44,6 +44,7 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
 import org.apache.ws.commons.schema.XmlSchemaUse;
 import org.apache.ws.commons.schema.constants.Constants;
+import org.apache.ws.schema.walker.XmlSchemaAttrInfo;
 import org.apache.ws.schema.walker.XmlSchemaTypeInfo;
 import org.apache.ws.schema.walker.XmlSchemaVisitor;
 import org.codehaus.jackson.node.ArrayNode;
@@ -424,18 +425,20 @@ final class AvroSchemaGenerator implements XmlSchemaVisitor {
    * Processes the attribute of the provided element,
    * adding it as a field to the corresponding record.
    *
-   * @see XmlSchemaVisitor#onVisitAttribute(XmlSchemaElement, XmlSchemaAttribute, XmlSchemaTypeInfo)
+   * @see XmlSchemaVisitor#onVisitAttribute(XmlSchemaElement, XmlSchemaAttrInfo)
    */
   @Override
   public void onVisitAttribute(
       XmlSchemaElement element,
-      XmlSchemaAttribute attribute,
-      XmlSchemaTypeInfo attributeType) {
+      XmlSchemaAttrInfo attrInfo) {
 
     if ((getSubstitutionGroup() != null) && element.isAbstract()) {
       // Abstract elements are ignored.
       return;
     }
+
+    final XmlSchemaAttribute attribute = attrInfo.getAttribute();
+    final XmlSchemaTypeInfo attributeType = attrInfo.getType();
 
     if ( attribute.getUse().equals(XmlSchemaUse.PROHIBITED) ) {
       // This attribute is prohibited and cannot be part of the record.
