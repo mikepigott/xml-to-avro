@@ -77,7 +77,7 @@ final class XmlSchemaScope {
   private Map<QName, XmlSchemaScope> scopeCache;
 
   private XmlSchemaTypeInfo typeInfo;
-  private HashMap<QName, XmlSchemaAttribute> attributes;
+  private HashMap<QName, XmlSchemaAttrInfo> attributes;
   private XmlSchemaParticle child;
   private XmlSchemaAnyAttribute anyAttr;
   private Set<QName> userRecognizedTypes;
@@ -342,7 +342,7 @@ final class XmlSchemaScope {
     return typeInfo;
   }
 
-  Collection<XmlSchemaAttribute> getAttributesInScope() {
+  Collection<XmlSchemaAttrInfo> getAttributesInScope() {
     if (attributes == null) {
       return null;
     }
@@ -579,17 +579,12 @@ final class XmlSchemaScope {
          * straight add.
          */
         parentScope = getScope(baseType);
-        final Collection<XmlSchemaAttribute> parentAttrs =
-            parentScope.getAttributesInScope();
-
         attributes = createAttributeMap( ext.getAttributes() );
 
         if (attributes == null) {
-          attributes = createAttributeMap(parentAttrs);
-        } else if (parentAttrs != null) {
-          for (XmlSchemaAttribute parentAttr : parentAttrs) {
-            attributes.put(parentAttr.getQName(), parentAttr);
-          }
+          attributes = parentScope.attributes;
+        } else if (parentScope.attributes != null) {
+          attributes.putAll(parentScope.attributes);
         }
 
         baseParticle = parentScope.getParticle();
@@ -730,15 +725,10 @@ final class XmlSchemaScope {
         final XmlSchemaScope parentScope = getScope(baseType);
         typeInfo = parentScope.getTypeInfo();
 
-        final Collection<XmlSchemaAttribute> parentAttrs =
-            parentScope.getAttributesInScope();
-
         if (attributes == null) {
-          attributes = createAttributeMap(parentAttrs);
-        } else if (parentAttrs != null) {
-          for (XmlSchemaAttribute parentAttr : parentAttrs) {
-            attributes.put(parentAttr.getQName(), parentAttr);
-          }
+          attributes = parentScope.attributes;
+        } else if (parentScope.attributes != null) {
+          attributes.putAll(parentScope.attributes);
         }
       }
 
@@ -774,7 +764,7 @@ final class XmlSchemaScope {
     }
   }
 
-  private ArrayList<XmlSchemaAttribute> getAttributesOf(
+  private ArrayList<XmlSchemaAttrInfo> getAttributesOf(
       XmlSchemaAttributeGroupRef groupRef) {
 
     XmlSchemaAttributeGroup attrGroup = groupRef.getRef().getTarget();
@@ -786,11 +776,11 @@ final class XmlSchemaScope {
     return getAttributesOf(attrGroup);
   }
 
-  private ArrayList<XmlSchemaAttribute> getAttributesOf(
+  private ArrayList<XmlSchemaAttrInfo> getAttributesOf(
       XmlSchemaAttributeGroup attrGroup) {
 
-    ArrayList<XmlSchemaAttribute> attrs =
-        new ArrayList<XmlSchemaAttribute>( attrGroup.getAttributes().size() );
+    ArrayList<XmlSchemaAttrInfo> attrs =
+        new ArrayList<XmlSchemaAttrInfo>( attrGroup.getAttributes().size() );
 
     for (XmlSchemaAttributeGroupMember member : attrGroup.getAttributes()) {
       if (member instanceof XmlSchemaAttribute) {
@@ -814,7 +804,7 @@ final class XmlSchemaScope {
     return attrs;
   }
 
-  private XmlSchemaAttribute getAttribute(
+  private XmlSchemaAttrInfo getAttribute(
       XmlSchemaAttribute attribute,
       boolean forceCopy) {
 
@@ -826,11 +816,12 @@ final class XmlSchemaScope {
         attribute.setUse(XmlSchemaUse.OPTIONAL);
       }
 
-      return attribute;
+      return new XmlSchemaAttrInfo(attribute);
     }
 
     XmlSchemaAttribute globalAttr = null;
     QName attrQName = null;
+
     if ( attribute.isRef() ) {
       attrQName = attribute.getRefBase().getTargetQName();
     } else {
@@ -902,33 +893,33 @@ final class XmlSchemaScope {
     copy.setUnhandledAttributes( globalAttr.getUnhandledAttributes() );
     copy.setUse(attrUsage);
 
-    return copy;
+    return new XmlSchemaAttrInfo(copy, globalAttr.isTopLevel());
   }
 
-  private HashMap<QName, XmlSchemaAttribute> createAttributeMap(
+  private HashMap<QName, XmlSchemaAttrInfo> createAttributeMap(
       Collection<? extends XmlSchemaAttributeOrGroupRef> attrs) {
 
     if ((attrs == null) || attrs.isEmpty()) {
       return null;
     }
 
-    HashMap<QName, XmlSchemaAttribute> attributes =
-        new HashMap<QName, XmlSchemaAttribute>();
+    HashMap<QName, XmlSchemaAttrInfo> attributes =
+        new HashMap<QName, XmlSchemaAttrInfo>();
 
     for (XmlSchemaAttributeOrGroupRef attr : attrs) {
 
       if (attr instanceof XmlSchemaAttribute) {
-        XmlSchemaAttribute attribute =
+        XmlSchemaAttrInfo attribute =
             getAttribute((XmlSchemaAttribute) attr, false);
 
-        attributes.put(attribute.getQName(), attribute);
+        attributes.put(attribute.getAttribute().getQName(), attribute);
 
       } else if (attr instanceof XmlSchemaAttributeGroupRef) {
-        final List<XmlSchemaAttribute> attrList =
+        final List<XmlSchemaAttrInfo> attrList =
             getAttributesOf((XmlSchemaAttributeGroupRef) attr);
 
-        for (XmlSchemaAttribute attribute : attrList) {
-          attributes.put(attribute.getQName(), attribute);
+        for (XmlSchemaAttrInfo attribute : attrList) {
+          attributes.put(attribute.getAttribute().getQName(), attribute);
         }
       }
     }
@@ -936,9 +927,9 @@ final class XmlSchemaScope {
     return attributes;
   }
 
-  private HashMap<QName, XmlSchemaAttribute> mergeAttributes(
-      HashMap<QName, XmlSchemaAttribute> parentAttrs,
-      HashMap<QName, XmlSchemaAttribute> childAttrs) {
+  private HashMap<QName, XmlSchemaAttrInfo> mergeAttributes(
+      HashMap<QName, XmlSchemaAttrInfo> parentAttrs,
+      HashMap<QName, XmlSchemaAttrInfo> childAttrs) {
 
     if ((parentAttrs == null) || parentAttrs.isEmpty()) {
       return childAttrs;
@@ -946,39 +937,39 @@ final class XmlSchemaScope {
       return parentAttrs;
     }
 
-    HashMap<QName, XmlSchemaAttribute> newAttrs =
-        (HashMap<QName, XmlSchemaAttribute>) parentAttrs.clone();
+    HashMap<QName, XmlSchemaAttrInfo> newAttrs =
+        (HashMap<QName, XmlSchemaAttrInfo>) parentAttrs.clone();
 
     /* Child attributes inherit all parent attributes, but may
      * change the type, usage, default value, or fixed value.
      */
-    for (Map.Entry<QName, XmlSchemaAttribute> parentAttrEntry :
+    for (Map.Entry<QName, XmlSchemaAttrInfo> parentAttrEntry :
            parentAttrs.entrySet()) {
 
-      XmlSchemaAttribute parentAttr = parentAttrEntry.getValue();
-      XmlSchemaAttribute childAttr = childAttrs.get(parentAttrEntry.getKey());
+      XmlSchemaAttrInfo parentAttr = parentAttrEntry.getValue();
+      XmlSchemaAttrInfo childAttr = childAttrs.get(parentAttrEntry.getKey());
       if (childAttr != null) {
-        XmlSchemaAttribute newAttr = getAttribute(parentAttr, true);
+        XmlSchemaAttrInfo newAttr = getAttribute(parentAttr.getAttribute(), true);
 
-        if (childAttr.getSchemaType() != null) {
-          newAttr.setSchemaType( childAttr.getSchemaType() );
+        if (childAttr.getAttribute().getSchemaType() != null) {
+          newAttr.getAttribute().setSchemaType( childAttr.getAttribute().getSchemaType() );
         }
 
-        if (childAttr.getUse() != XmlSchemaUse.NONE) {
-          newAttr.setUse( childAttr.getUse() );
+        if (childAttr.getAttribute().getUse() != XmlSchemaUse.NONE) {
+          newAttr.getAttribute().setUse( childAttr.getAttribute().getUse() );
         }
 
         // Attribute values may be defaulted or fixed, but not both.
-        if (childAttr.getDefaultValue() != null) {
-          newAttr.setDefaultValue( childAttr.getDefaultValue() );
-          newAttr.setFixedValue(null);
+        if (childAttr.getAttribute().getDefaultValue() != null) {
+          newAttr.getAttribute().setDefaultValue( childAttr.getAttribute().getDefaultValue() );
+          newAttr.getAttribute().setFixedValue(null);
 
-        } else if (childAttr.getFixedValue() != null) {
-          newAttr.setFixedValue( childAttr.getFixedValue() );
-          newAttr.setDefaultValue(null);
+        } else if (childAttr.getAttribute().getFixedValue() != null) {
+          newAttr.getAttribute().setFixedValue( childAttr.getAttribute().getFixedValue() );
+          newAttr.getAttribute().setDefaultValue(null);
         }
 
-        newAttrs.put(newAttr.getQName(), newAttr);
+        newAttrs.put(newAttr.getAttribute().getQName(), newAttr);
       }
     }
 

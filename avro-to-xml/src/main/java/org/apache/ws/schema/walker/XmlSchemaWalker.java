@@ -30,7 +30,6 @@ import javax.xml.namespace.QName;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAll;
 import org.apache.ws.commons.schema.XmlSchemaAny;
-import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
@@ -179,7 +178,7 @@ public final class XmlSchemaWalker {
       }
 
       // 1. Fetch all attributes as a List<XmlSchemaAttribute>.
-      final Collection<XmlSchemaAttribute> attrs =
+      final Collection<XmlSchemaAttrInfo> attrs =
           scope.getAttributesInScope();
       final XmlSchemaTypeInfo typeInfo = scope.getTypeInfo();
 
@@ -201,8 +200,8 @@ public final class XmlSchemaWalker {
 
         // 3. Walk the attributes in the element, retrieving type information.
         if (attrs != null) {
-          for (XmlSchemaAttribute attr : attrs) {
-            XmlSchemaType attrType = attr.getSchemaType();
+          for (XmlSchemaAttrInfo attr : attrs) {
+            XmlSchemaType attrType = attr.getAttribute().getSchemaType();
             XmlSchemaScope attrScope = null;
             if ((attrType.getQName() != null)
                 && scopeCache.containsKey( attrType.getQName() )) {
@@ -210,7 +209,7 @@ public final class XmlSchemaWalker {
             } else {
               attrScope =
                   new XmlSchemaScope(
-                      attr.getSchemaType(),
+                      attr.getAttribute().getSchemaType(),
                       schemasByNamespace,
                       scopeCache,
                       userRecognizedTypes);
@@ -221,9 +220,10 @@ public final class XmlSchemaWalker {
             }
     
             final XmlSchemaTypeInfo attrTypeInfo = attrScope.getTypeInfo();
+            attr.setType(attrTypeInfo);
       
             for (XmlSchemaVisitor visitor : visitors) {
-              visitor.onVisitAttribute(element, new XmlSchemaAttrInfo(attr, attrTypeInfo));
+              visitor.onVisitAttribute(element, attr);
             }
           }
         }
