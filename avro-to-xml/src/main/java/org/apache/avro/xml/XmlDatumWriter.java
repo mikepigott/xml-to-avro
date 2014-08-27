@@ -36,6 +36,7 @@ import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.constants.Constants;
+import org.apache.ws.schema.walker.XmlSchemaAttrInfo;
 import org.apache.ws.schema.walker.SaxWalkerOverDom;
 import org.apache.ws.schema.walker.XmlSchemaBaseSimpleType;
 import org.apache.ws.schema.walker.XmlSchemaDocumentNode;
@@ -173,7 +174,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
 
         Schema avroSchema = recordInfo.getAvroSchema();
 
-        final List<XmlSchemaStateMachineNode.Attribute> attributes =
+        final List<XmlSchemaAttrInfo> attributes =
             doc.getStateMachineNode().getAttributes();
 
         final HashMap<String, XmlSchemaTypeInfo> attrTypes =
@@ -182,7 +183,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         final HashMap<String, XmlSchemaAttribute> schemaAttrs =
             new HashMap<String, XmlSchemaAttribute>();
 
-        for (XmlSchemaStateMachineNode.Attribute attribute : attributes) {
+        for (XmlSchemaAttrInfo attribute : attributes) {
           attrTypes.put(
               attribute.getAttribute().getName(),
               attribute.getType());

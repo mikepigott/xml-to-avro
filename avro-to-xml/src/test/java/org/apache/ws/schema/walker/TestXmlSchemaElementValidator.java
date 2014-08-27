@@ -325,7 +325,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testAttributesWithNoAttributes() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BOOLEAN));
 
     XmlSchemaElementValidator.validateAttributes(
@@ -339,7 +339,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testAttributesWithNoNamespaceContext() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BOOLEAN));
 
     XmlSchemaElementValidator.validateAttributes(
@@ -367,7 +367,7 @@ public class TestXmlSchemaElementValidator {
     stateMachine =
         new XmlSchemaStateMachineNode(
             xmlElement,
-            Collections.<XmlSchemaStateMachineNode.Attribute>emptyList(),
+            Collections.<XmlSchemaAttrInfo>emptyList(),
             new XmlSchemaTypeInfo(true));
 
     XmlSchemaElementValidator.validateAttributes(
@@ -437,9 +437,9 @@ public class TestXmlSchemaElementValidator {
     XmlSchemaTypeInfo attrType =
         new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.STRING);
 
-    List<XmlSchemaStateMachineNode.Attribute> attrs =
-      Collections.<XmlSchemaStateMachineNode.Attribute>singletonList(
-          new XmlSchemaStateMachineNode.Attribute(attr, attrType));
+    List<XmlSchemaAttrInfo> attrs =
+      Collections.<XmlSchemaAttrInfo>singletonList(
+          new XmlSchemaAttrInfo(attr, attrType));
 
     XmlSchemaStateMachineNode stateMachine =
         new XmlSchemaStateMachineNode(
@@ -455,7 +455,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testProhibitedAttribute() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BOOLEAN));
 
     SaxAttributes saxAttrs = new SaxAttributes();
@@ -474,7 +474,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testEmptyProhibitedAttribute() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BOOLEAN));
 
     SaxAttributes saxAttrs = new SaxAttributes();
@@ -493,11 +493,11 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testOptionalAttribute() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
-        new ArrayList<XmlSchemaStateMachineNode.Attribute>(1);
+    ArrayList<XmlSchemaAttrInfo> attrs =
+        new ArrayList<XmlSchemaAttrInfo>(1);
 
     attrs.add(
-        new XmlSchemaStateMachineNode.Attribute(
+        new XmlSchemaAttrInfo(
             optionalAttribute,
             new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DOUBLE)));
 
@@ -512,11 +512,11 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testRequiredAttribute() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
-        new ArrayList<XmlSchemaStateMachineNode.Attribute>(1);
+    ArrayList<XmlSchemaAttrInfo> attrs =
+        new ArrayList<XmlSchemaAttrInfo>(1);
 
     attrs.add(
-        new XmlSchemaStateMachineNode.Attribute(
+        new XmlSchemaAttrInfo(
             requiredAttribute,
             new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DOUBLE)));
 
@@ -534,11 +534,11 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testUnsatisfiedRequiredAttribute() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
-        new ArrayList<XmlSchemaStateMachineNode.Attribute>(1);
+    ArrayList<XmlSchemaAttrInfo> attrs =
+        new ArrayList<XmlSchemaAttrInfo>(1);
 
     attrs.add(
-        new XmlSchemaStateMachineNode.Attribute(
+        new XmlSchemaAttrInfo(
             requiredAttribute,
             new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DOUBLE)));
 
@@ -553,11 +553,11 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testEmptyRequiredAttribute() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
-        new ArrayList<XmlSchemaStateMachineNode.Attribute>(1);
+    ArrayList<XmlSchemaAttrInfo> attrs =
+        new ArrayList<XmlSchemaAttrInfo>(1);
 
     attrs.add(
-        new XmlSchemaStateMachineNode.Attribute(
+        new XmlSchemaAttrInfo(
             requiredAttribute,
             new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DOUBLE)));
 
@@ -575,7 +575,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void onlyOneAttrRequired() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DOUBLE));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -592,7 +592,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void oneUnsatisfiedRequiredAttr() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DOUBLE));
 
     XmlSchemaElementValidator.validateAttributes(
@@ -606,7 +606,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void optionalAttrsSetRequiredNot() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DOUBLE));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -623,7 +623,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void attributeHasComplexType() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(true));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -640,7 +640,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidDuration() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DURATION));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -657,7 +657,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidDuration() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DURATION));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -674,7 +674,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidDateTime() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DATETIME));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -691,7 +691,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidDateTime() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DATETIME));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -708,7 +708,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidTime() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.TIME));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -725,7 +725,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidTime() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.TIME));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -742,7 +742,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidDate() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DATE));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -759,7 +759,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidDate() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DATE));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -776,7 +776,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidYearMonth() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.YEARMONTH));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -793,7 +793,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidYearMonth() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.YEARMONTH));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -810,7 +810,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidYear() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.YEAR));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -827,7 +827,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidYear() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.YEAR));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -844,7 +844,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidMonthDay() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.MONTHDAY));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -861,7 +861,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidMonthDay() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.MONTHDAY));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -878,7 +878,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidDay() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DAY));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -895,7 +895,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidDay() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DAY));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -912,7 +912,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidMonth() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.MONTH));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -929,7 +929,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidMonth() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.MONTH));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -946,7 +946,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidBooleanTrue() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BOOLEAN));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -963,7 +963,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidBooleanFalse() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BOOLEAN));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -980,7 +980,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidBoolean() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BOOLEAN));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -997,7 +997,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidBase64() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BIN_BASE64));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1014,7 +1014,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidHexadecimal() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BIN_HEX));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1031,7 +1031,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidHexadecimal() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.BIN_HEX));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1048,7 +1048,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidFloat() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.FLOAT));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1065,7 +1065,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidFloat() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.FLOAT));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1101,9 +1101,9 @@ public class TestXmlSchemaElementValidator {
         XmlSchemaRestriction.Type.INCLUSIVE_MIN,
         Collections.<XmlSchemaRestriction>emptyList());
 
-    List<XmlSchemaStateMachineNode.Attribute> attrs =
+    List<XmlSchemaAttrInfo> attrs =
         Collections.singletonList(
-            new XmlSchemaStateMachineNode.Attribute(
+            new XmlSchemaAttrInfo(
                 requiredAttribute,
                 new XmlSchemaTypeInfo(
                     XmlSchemaBaseSimpleType.DECIMAL, facets)));
@@ -1122,7 +1122,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidDecimal() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DECIMAL));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1139,7 +1139,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidDouble() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DOUBLE));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1156,7 +1156,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidDouble() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DOUBLE));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1173,7 +1173,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidQName() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.QNAME));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1190,7 +1190,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidQName() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.QNAME));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1207,7 +1207,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test
   public void testValidNotation() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.NOTATION));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -1224,7 +1224,7 @@ public class TestXmlSchemaElementValidator {
 
   @Test(expected=ValidationException.class)
   public void testInvalidNotation() throws Exception {
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attrs =
+    ArrayList<XmlSchemaAttrInfo> attrs =
         buildAttrs(new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.NOTATION));
 
     SaxAttributes saxAttributes = new SaxAttributes();
@@ -2291,24 +2291,24 @@ public class TestXmlSchemaElementValidator {
         nsContext);
   }
 
-  private static ArrayList<XmlSchemaStateMachineNode.Attribute> buildAttrs(
+  private static ArrayList<XmlSchemaAttrInfo> buildAttrs(
       XmlSchemaTypeInfo attrType) {
 
-    ArrayList<XmlSchemaStateMachineNode.Attribute> attributes =
-        new ArrayList<XmlSchemaStateMachineNode.Attribute>(3);
+    ArrayList<XmlSchemaAttrInfo> attributes =
+        new ArrayList<XmlSchemaAttrInfo>(3);
 
     attributes.add(
-        new XmlSchemaStateMachineNode.Attribute(
+        new XmlSchemaAttrInfo(
             prohibitedAttribute,
             attrType));
 
     attributes.add(
-        new XmlSchemaStateMachineNode.Attribute(
+        new XmlSchemaAttrInfo(
             requiredAttribute,
             attrType));
 
     attributes.add(
-        new XmlSchemaStateMachineNode.Attribute(
+        new XmlSchemaAttrInfo(
             optionalAttribute,
             attrType));
 

@@ -40,6 +40,7 @@ import org.apache.avro.io.Decoder;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.schema.walker.XmlSchemaAttrInfo;
 import org.apache.ws.schema.walker.DomBuilderFromSax;
 import org.apache.ws.schema.walker.XmlSchemaMultiBaseUriResolver;
 import org.apache.ws.schema.walker.XmlSchemaNamespaceContext;
@@ -660,7 +661,7 @@ public class XmlDatumReader implements DatumReader<Document> {
           + ", not ELEMENT.");
     }
 
-    final List<XmlSchemaStateMachineNode.Attribute> expectedAttrs =
+    final List<XmlSchemaAttrInfo> expectedAttrs =
         stateMachine.getAttributes();
 
     final AvroAttributes attributes = new AvroAttributes();
@@ -800,14 +801,14 @@ public class XmlDatumReader implements DatumReader<Document> {
   }
 
   private AvroAttribute createAttribute(
-      List<XmlSchemaStateMachineNode.Attribute> expectedAttrs,
+      List<XmlSchemaAttrInfo> expectedAttrs,
       Schema.Field field,
       Decoder in)
   throws IOException {
 
     AvroAttribute attribute = null;
 
-    for (XmlSchemaStateMachineNode.Attribute attr : expectedAttrs) {
+    for (XmlSchemaAttrInfo attr : expectedAttrs) {
       final QName attrQName = attr.getAttribute().getQName();
       if (field.name().equals(attrQName.getLocalPart())) {
         try {

@@ -45,7 +45,7 @@ public final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
   private Map<QName, ElementInfo> elementInfoByQName;
 
   private static class ElementInfo {
-    final List<XmlSchemaStateMachineNode.Attribute> attributes;
+    final List<XmlSchemaAttrInfo> attributes;
     final XmlSchemaTypeInfo typeInfo;
     final XmlSchemaElement element;
 
@@ -57,12 +57,12 @@ public final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
 
       this.element = element;
       this.typeInfo = typeInfo;
-      this.attributes = new ArrayList<XmlSchemaStateMachineNode.Attribute>();
+      this.attributes = new ArrayList<XmlSchemaAttrInfo>();
       this.stateMachineNode = null;
     }
 
     void addAttribute(XmlSchemaAttribute attr, XmlSchemaTypeInfo attrType) {
-      attributes.add(new XmlSchemaStateMachineNode.Attribute(attr, attrType));
+      attributes.add(new XmlSchemaAttrInfo(attr, attrType));
     }
   }
 

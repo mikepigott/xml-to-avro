@@ -33,6 +33,7 @@ import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
+import org.apache.ws.schema.walker.XmlSchemaAttrInfo;
 import org.apache.ws.schema.walker.XmlSchemaDocumentNode;
 import org.apache.ws.schema.walker.XmlSchemaPathNode;
 import org.apache.ws.schema.walker.XmlSchemaStateMachineNode;
@@ -285,11 +286,11 @@ final class AvroSchemaApplier {
     Schema unionOfChildrenTypes = null;
 
     if (elemSchema != null) {
-      final List<XmlSchemaStateMachineNode.Attribute> attributes =
+      final List<XmlSchemaAttrInfo> attributes =
           doc.getStateMachineNode().getAttributes();
 
       // Match the element's attributes against the element's schema.
-      for (XmlSchemaStateMachineNode.Attribute attribute : attributes) {
+      for (XmlSchemaAttrInfo attribute : attributes) {
         processAttribute(
             element.getQName(),
             elemSchema,

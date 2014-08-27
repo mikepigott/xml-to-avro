@@ -75,7 +75,7 @@ public final class XmlSchemaElementValidator {
           + ((state == null) ? null : state.getNodeType()));
     }
 
-    final List<XmlSchemaStateMachineNode.Attribute> attributes =
+    final List<XmlSchemaAttrInfo> attributes =
         state.getAttributes();
 
     if ((attributes == null) || attributes.isEmpty()) {
@@ -85,7 +85,7 @@ public final class XmlSchemaElementValidator {
 
     final QName elemQName = state.getElement().getQName();
 
-    for (XmlSchemaStateMachineNode.Attribute attribute : attributes) {
+    for (XmlSchemaAttrInfo attribute : attributes) {
       final XmlSchemaAttribute xmlSchemaAttr = attribute.getAttribute();
       final QName attrQName = xmlSchemaAttr.getQName();
       final XmlSchemaUse use = xmlSchemaAttr.getUse();

@@ -54,7 +54,7 @@ public final class XmlSchemaStateMachineNode {
 
   private final Type nodeType;
   private final XmlSchemaElement element;
-  private final List<Attribute> attributes;
+  private final List<XmlSchemaAttrInfo> attributes;
   private final XmlSchemaTypeInfo typeInfo;
   private final long minOccurs;
   private final long maxOccurs;
@@ -69,24 +69,6 @@ public final class XmlSchemaStateMachineNode {
     CHOICE,
     SEQUENCE,
     ANY
-  }
-
-  public static class Attribute {
-    Attribute(XmlSchemaAttribute attribute, XmlSchemaTypeInfo attrType) {
-      this.attribute = attribute;
-      this.attrType = attrType;
-    }
-
-    public XmlSchemaAttribute getAttribute() {
-      return attribute;
-    }
-
-    public XmlSchemaTypeInfo getType() {
-      return attrType;
-    }
-
-    private final XmlSchemaAttribute attribute;
-    private final XmlSchemaTypeInfo attrType;
   }
 
   /**
@@ -142,7 +124,7 @@ public final class XmlSchemaStateMachineNode {
    */
   XmlSchemaStateMachineNode(
       XmlSchemaElement elem,
-      List<Attribute> attrs,
+      List<XmlSchemaAttrInfo> attrs,
       XmlSchemaTypeInfo typeInfo)
   {
     this.nodeType = Type.ELEMENT;
@@ -204,10 +186,10 @@ public final class XmlSchemaStateMachineNode {
 
   /**
    * If this <code>SchemaStateMachineNode</code> represents an
-   * {@link XmlSchemaElement}, the set of {@link Attribute}s
+   * {@link XmlSchemaElement}, the set of {@link XmlSchemaAttrInfo}s
    * associated with the element it represents.
    */
-  public List<Attribute> getAttributes() {
+  public List<XmlSchemaAttrInfo> getAttributes() {
     return attributes;
   }
 
