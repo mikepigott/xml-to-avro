@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.docpath;
 
 import static org.junit.Assert.*;
 
@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.ws.commons.schema.constants.Constants;
-import org.apache.ws.commons.schema.walker.XmlSchemaNamespaceContext;
+import org.apache.ws.commons.schema.docpath.XmlSchemaNamespaceContext;
 import org.junit.Test;
 
 public class TestXmlSchemaNamespaceContext {

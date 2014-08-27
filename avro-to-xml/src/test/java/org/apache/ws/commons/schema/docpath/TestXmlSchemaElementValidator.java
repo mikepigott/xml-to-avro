@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.docpath;
 
 import static org.junit.Assert.*;
 
@@ -36,11 +36,11 @@ import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
-import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
+import org.apache.ws.commons.schema.docpath.XmlSchemaElementValidator;
+import org.apache.ws.commons.schema.docpath.XmlSchemaNamespaceContext;
+import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineNode;
 import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
 import org.apache.ws.commons.schema.walker.XmlSchemaBaseSimpleType;
-import org.apache.ws.commons.schema.walker.XmlSchemaElementValidator;
-import org.apache.ws.commons.schema.walker.XmlSchemaNamespaceContext;
 import org.apache.ws.commons.schema.walker.XmlSchemaRestriction;
 import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
 import org.junit.BeforeClass;

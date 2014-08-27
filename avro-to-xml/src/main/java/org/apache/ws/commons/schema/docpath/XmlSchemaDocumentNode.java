@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.docpath;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
 
 /**
  * The <code>XmlSchemaDocumentNode</code> represents a node in the

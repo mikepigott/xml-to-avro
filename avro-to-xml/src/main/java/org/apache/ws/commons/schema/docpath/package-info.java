@@ -19,4 +19,4 @@
  *
  * @author  Mike Pigott
  */
-package org.apache.ws.commons.schema.statemachine;
+package org.apache.ws.commons.schema.docpath;

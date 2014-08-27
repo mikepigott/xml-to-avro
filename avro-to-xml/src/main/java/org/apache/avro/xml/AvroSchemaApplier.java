@@ -33,10 +33,10 @@ import org.apache.avro.Schema;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
-import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
+import org.apache.ws.commons.schema.docpath.XmlSchemaDocumentNode;
+import org.apache.ws.commons.schema.docpath.XmlSchemaPathNode;
+import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineNode;
 import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
-import org.apache.ws.commons.schema.walker.XmlSchemaDocumentNode;
-import org.apache.ws.commons.schema.walker.XmlSchemaPathNode;
 import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
 
 /**

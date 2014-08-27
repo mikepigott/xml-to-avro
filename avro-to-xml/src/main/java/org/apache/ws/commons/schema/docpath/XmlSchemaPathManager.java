@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.docpath;
 
 import java.util.ArrayList;
 import java.util.Map;
 
-import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
 
 /**
  * Factory for creating {@link XmlSchemaPathNode}s.  This allows

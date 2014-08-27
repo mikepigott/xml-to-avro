@@ -4,6 +4,14 @@ import org.apache.ws.commons.schema.XmlSchemaAttribute;
 
 public class XmlSchemaAttrInfo {
 
+  public XmlSchemaAttrInfo(
+      XmlSchemaAttribute attribute,
+      XmlSchemaTypeInfo attrType) {
+
+    this(attribute);
+    this.attrType = attrType;
+  }
+
   XmlSchemaAttrInfo(XmlSchemaAttribute attribute, boolean isTopLevel) {
     this.attribute = attribute;
     this.isTopLevel = isTopLevel;
@@ -12,11 +20,6 @@ public class XmlSchemaAttrInfo {
 
   XmlSchemaAttrInfo(XmlSchemaAttribute attribute) {
     this(attribute, attribute.isTopLevel());
-  }
-
-  XmlSchemaAttrInfo(XmlSchemaAttribute attribute, XmlSchemaTypeInfo attrType) {
-    this(attribute);
-    this.attrType = attrType;
   }
 
   public XmlSchemaAttribute getAttribute() {

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.docpath;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -34,7 +34,9 @@ import javax.xml.namespace.QName;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
-import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
+import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
+import org.apache.ws.commons.schema.walker.XmlSchemaRestriction;
+import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
 import org.xml.sax.Attributes;
 
 /**

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.ws.commons.schema.statemachine;
+package org.apache.ws.commons.schema.docpath;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -87,7 +87,7 @@ public final class XmlSchemaStateMachineNode {
    *                                  define an {@link Type#ELEMENT}
    *                                  or an {@link Type#ANY}.
    */
-  public XmlSchemaStateMachineNode(
+  XmlSchemaStateMachineNode(
       Type nodeType,
       long minOccurs,
       long maxOccurs) {
@@ -124,7 +124,7 @@ public final class XmlSchemaStateMachineNode {
    * @param typeInfo The type information, if the element has simple content.
    *                 <code>null</code> if not.
    */
-  public XmlSchemaStateMachineNode(
+  XmlSchemaStateMachineNode(
       XmlSchemaElement elem,
       List<XmlSchemaAttrInfo> attrs,
       XmlSchemaTypeInfo typeInfo)
@@ -147,7 +147,7 @@ public final class XmlSchemaStateMachineNode {
    *
    * @param any The <code>XmlSchemaAny</code> to construct the node from.
    */
-  public XmlSchemaStateMachineNode(XmlSchemaAny any) {
+  XmlSchemaStateMachineNode(XmlSchemaAny any) {
     this.nodeType = Type.ANY;
     this.any = any;
     this.minOccurs = any.getMinOccurs();
