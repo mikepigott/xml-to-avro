@@ -56,7 +56,7 @@ public final class DomBuilderFromSax extends DefaultHandler {
   private List<String> newPrefixes;
   private XmlSchemaNamespaceContext nsContext;
 
-  private Map<QName, XmlSchemaElement> elementsByQName;
+  private Map<QName, XmlSchemaStateMachineNode> elementsByQName;
 
   private final ArrayList<Element> elementStack;
   private final DocumentBuilder docBuilder;
@@ -315,7 +315,14 @@ public final class DomBuilderFromSax extends DefaultHandler {
           XmlSchemaElement schemaElem = null;
 
           if (elementsByQName != null) {
-            schemaElem = elementsByQName.get(elemQName);
+            final XmlSchemaStateMachineNode stateMachine =
+                elementsByQName.get(elemQName);
+            if ((stateMachine != null)
+                && stateMachine
+                     .getNodeType()
+                     .equals(XmlSchemaStateMachineNode.Type.ELEMENT)) {
+              schemaElem = stateMachine.getElement();
+            }
           }
 
           if (schemaElem == null) {
@@ -352,15 +359,17 @@ public final class DomBuilderFromSax extends DefaultHandler {
     return namespaceToLocationMapping;
   }
 
-  public void setNamespaceToLocationMapping(Map<String, String> nsToLocMapping) {
+  public void setNamespaceToLocationMapping(
+      Map<String, String> nsToLocMapping) {
     namespaceToLocationMapping = nsToLocMapping;
   }
 
-  public Map<QName, XmlSchemaElement> getElementsByQName() {
+  public Map<QName, XmlSchemaStateMachineNode> getStateMachinesByQName() {
     return elementsByQName;
   }
 
-  public void setElementsByQName(Map<QName, XmlSchemaElement> elemsByQName) {
+  public void setStateMachinesByQName(
+      Map<QName, XmlSchemaStateMachineNode> elemsByQName) {
     elementsByQName = elemsByQName;
   }
 
