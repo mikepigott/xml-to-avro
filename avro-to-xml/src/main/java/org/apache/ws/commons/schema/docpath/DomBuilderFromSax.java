@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.docpath;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -32,8 +32,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.constants.Constants;
-import org.apache.ws.commons.schema.docpath.XmlSchemaNamespaceContext;
-import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineNode;
+import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

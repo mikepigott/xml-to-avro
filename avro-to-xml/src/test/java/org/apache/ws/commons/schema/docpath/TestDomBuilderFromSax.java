@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.docpath;
 
 import java.io.File;
 import java.io.FileReader;
@@ -28,7 +28,8 @@ import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.ws.commons.schema.XmlSchemaCollection;
-import org.apache.ws.commons.schema.walker.DomBuilderFromSax;
+import org.apache.ws.commons.schema.docpath.DomBuilderFromSax;
+import org.apache.ws.commons.schema.testutils.UtilsForTests;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;

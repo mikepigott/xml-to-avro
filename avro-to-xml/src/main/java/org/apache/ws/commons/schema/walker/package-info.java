@@ -19,16 +19,11 @@
 /**
  * <h1>Walking XML Schemas</h1>
  *
- * This package serves four major purposes:
+ * This package serves two major purposes:
  * 
  * <ol>
  *   <li>Simplifies walking an XML Schema using the Visitor Pattern.</li>
- *   <li>Builds a state machine representing the XML Schema.</li>
  *   <li>Performs a SAX-based walk </li>
- *   <li>
- *     Given a conformant XML Document, finds a path through the
- *     XML Schema showing how the document conforms to the schema.
- *   </li>
  * </ol>
  * 
  * <h2>Walking an XML Schema</h2>

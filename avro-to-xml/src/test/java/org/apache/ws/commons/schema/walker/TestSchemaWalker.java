@@ -50,6 +50,7 @@ import org.apache.ws.commons.schema.XmlSchemaPatternFacet;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
 import org.apache.ws.commons.schema.XmlSchemaUse;
 import org.apache.ws.commons.schema.XmlSchemaWhiteSpaceFacet;
+import org.apache.ws.commons.schema.testutils.UtilsForTests;
 import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
 import org.apache.ws.commons.schema.walker.XmlSchemaBaseSimpleType;
 import org.apache.ws.commons.schema.walker.XmlSchemaMultiBaseUriResolver;

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.testutils;
 
 import static org.junit.Assert.assertTrue;
 
@@ -25,9 +25,9 @@ import org.custommonkey.xmlunit.DetailedDiff;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.w3c.dom.Document;
 
-final class UtilsForTests {
+public final class UtilsForTests {
 
-  static void assertEquivalent(Document expected, Document actual) {
+  public static void assertEquivalent(Document expected, Document actual) {
     XMLUnit.setIgnoreWhitespace(true);
     XMLUnit.setIgnoreAttributeOrder(true);
 
@@ -38,7 +38,7 @@ final class UtilsForTests {
         diff.similar());
   }
 
-  static File buildFile(String... parts) {
+  public static File buildFile(String... parts) {
     File file = null;
 
     for (String part : parts) {
