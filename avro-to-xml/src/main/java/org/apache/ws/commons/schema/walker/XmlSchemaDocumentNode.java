@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
+
 /**
  * The <code>XmlSchemaDocumentNode</code> represents a node in the
  * XML Schema as it is used by an XML document.  As {@link XmlSchemaPathFinder}

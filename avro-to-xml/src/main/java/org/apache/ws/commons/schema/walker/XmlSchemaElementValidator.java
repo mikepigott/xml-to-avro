@@ -34,6 +34,7 @@ import javax.xml.namespace.QName;
 import org.apache.ws.commons.schema.XmlSchemaAttribute;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaUse;
+import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
 import org.xml.sax.Attributes;
 
 /**

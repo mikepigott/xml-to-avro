@@ -18,6 +18,8 @@
 
 package org.apache.ws.commons.schema.walker;
 
+import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
+
 /**
  * This represents a node in the path when walking an XML or Avro document.
  * As {@link XmlSchemaPathFinder} walks through an XML document, it builds

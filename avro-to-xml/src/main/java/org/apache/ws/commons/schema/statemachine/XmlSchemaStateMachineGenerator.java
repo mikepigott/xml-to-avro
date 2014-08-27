@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.ws.commons.schema.walker;
+package org.apache.ws.commons.schema.statemachine;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,6 +31,9 @@ import org.apache.ws.commons.schema.XmlSchemaAnyAttribute;
 import org.apache.ws.commons.schema.XmlSchemaChoice;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.XmlSchemaSequence;
+import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
+import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
+import org.apache.ws.commons.schema.walker.XmlSchemaVisitor;
 
 /**
  * Builds a state machine from an

@@ -32,6 +32,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.constants.Constants;
+import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

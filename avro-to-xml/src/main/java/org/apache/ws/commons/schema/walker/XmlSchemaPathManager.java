@@ -21,6 +21,8 @@ package org.apache.ws.commons.schema.walker;
 import java.util.ArrayList;
 import java.util.Map;
 
+import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
+
 /**
  * Factory for creating {@link XmlSchemaPathNode}s.  This allows
  * for recycling and abstracts away the complexity of walking through

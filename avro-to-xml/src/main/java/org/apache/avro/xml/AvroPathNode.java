@@ -19,8 +19,8 @@ package org.apache.avro.xml;
 
 import javax.xml.namespace.QName;
 
+import org.apache.ws.commons.schema.statemachine.XmlSchemaStateMachineNode;
 import org.apache.ws.commons.schema.walker.XmlSchemaPathNode;
-import org.apache.ws.commons.schema.walker.XmlSchemaStateMachineNode;
 
 /**
  * Information about a {@link XmlSchemaPathNode} representing
