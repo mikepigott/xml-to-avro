@@ -38,13 +38,43 @@ public final class XmlSchemaPathNode<U, V> {
   private XmlSchemaPathNode<U, V> prevNode;
   private XmlSchemaPathNode<U, V> nextNode;
 
+  /**
+   * Represents a path's direction.  Paths may go in four directions:
+   *
+   * <ul>
+   *   <li>
+   *     {@link org.apache.ws.commons.schema.docpath.XmlSchemaPathNode.Direction#CHILD}:
+   *     The path moves from the current node in the tree (an element or group)
+   *     to one of its children.
+   *   <li>
+   *   <li>
+   *     {@link org.apache.ws.commons.schema.docpath.XmlSchemaPathNode.Direction#PARENT}:
+   *     The path moves from the current node in the tree to its parent.  If
+   *     moving to the parent of an element, this closes the tag.
+   *   </li>
+   *   <li>
+   *     {@link org.apache.ws.commons.schema.docpath.XmlSchemaPathNode.Direction#SIBLING}:
+   *     This initiates a new occurrence of the current (wildcard) element or
+   *     group.  If creating a sibling (wildcard) element, this closes the tag of
+   *     the existing element and opens a new one of the same name.
+   *   </li>
+   *   <li>
+   *     {@link org.apache.ws.commons.schema.docpath.XmlSchemaPathNode.Direction#CONTENT}:
+   *     This represents content inside an element (not children tags).  This
+   *     will either be the simple content of a simple element, or the text
+   *     contained inside a mixed element.  Mixed content may occur as either
+   *     a direct child of the owning element, or inside one of the owning
+   *     element's child groups.
+   *   </li>
+   * </ul>
+   */
   public enum Direction {
     PARENT(2),
     CHILD(0),
     CONTENT(3),
     SIBLING(1);
 
-    // CHILD < SIBLING < PARENT < CONTENT when comparing possible paths.
+    // CHILD < SIBLING < PARENT < CONTENT when comparing possible schema paths.
     Direction (int rank) {
       this.rank = rank;
     }
@@ -72,34 +102,65 @@ public final class XmlSchemaPathNode<U, V> {
     update(dir, previous, stateMachine);
   }
 
+  /**
+   * Retrieves the {@link XmlSchemaDocumentNode} this
+   * <code>XmlSchemaPathNode</code> is visiting.
+   */
   public XmlSchemaDocumentNode<U> getDocumentNode() {
     return documentNode;
   }
 
+  /**
+   * Retrieves the {@link XmlSchemaStateMachineNode} representing the XML
+   * Schema that this <code>XmlSchemaPathNode</code> is visiting.  This is
+   * equivalent to calling
+   * <code>getDocumentNode().getStateMachineNode()</code>.
+   */
   public XmlSchemaStateMachineNode getStateMachineNode() {
     return stateMachineNode;
   }
 
+  /**
+   * The direction this path travels.
+   */
   public Direction getDirection() {
     return direction;
   }
 
-  int getIndexOfNextNodeState() {
-    return nextNodeStateIndex;
-  }
-
+  /**
+   * The iteration through the underlying {@link XmlSchemaDocumentNode}.  If
+   * the path traverses the same <code>XmlSchemaDocumentNode</code> twice,
+   * {@link XmlSchemaDocumentNode#getIteration()} will return two, and one
+   * {@link #getIteration()} will return one, while the other will return
+   * two.
+   */
   public int getIteration() {
     return iterationNum;
   }
 
+  /**
+   * Shortcut for calling <code>getStateMachineNode().getMinOccurs()</code>.
+   *
+   * @see XmlSchemaStateMachineNode#getMinOccurs()
+   */
   public long getMinOccurs() {
     return stateMachineNode.getMinOccurs();
   }
 
+  /**
+   * Shortcut for calling <code>getStateMachineNode().getMaxOccurs()</code>.
+   *
+   * @see XmlSchemaStateMachineNode#getMaxOccurs()
+   */
   public long getMaxOccurs() {
     return stateMachineNode.getMaxOccurs();
   }
 
+  /**
+   * Shortcut for calling <code>getDocumentNode().getIteration()</code>.
+   *
+   * @see XmlSchemaDocumentNode#getIteration()
+   */
   public int getDocIteration() {
     if (documentNode == null) {
       return 0;
@@ -108,20 +169,32 @@ public final class XmlSchemaPathNode<U, V> {
     }
   }
 
+  /**
+   * The previous node in the path, or <code>null</code>
+   * if at the beginning of the path.
+   */
+  public XmlSchemaPathNode getPrevious() {
+    return prevNode;
+  }
+
+  /**
+   * The next node in the path, or <code>null</code>
+   * if at the end of the path.
+   */
+  public XmlSchemaPathNode getNext() {
+    return nextNode;
+  }
+
+  int getIndexOfNextNodeState() {
+    return nextNodeStateIndex;
+  }
+
   int getDocSequencePosition() {
     if (documentNode == null) {
       return 0;
     } else {
       return documentNode.getSequencePosition();
     }
-  }
-
-  public XmlSchemaPathNode getPrevious() {
-    return prevNode;
-  }
-
-  public XmlSchemaPathNode getNext() {
-    return nextNode;
   }
 
   void setIteration(int newIteration) {
@@ -253,10 +326,18 @@ public final class XmlSchemaPathNode<U, V> {
     userDefinedContent = null;
   }
 
+  /**
+   * Retrieves any user-defined content attached to this
+   * <code>XmlSchemaPathNode</code>, or <code>null</code>
+   * if none.
+   */
   public V getUserDefinedContent() {
     return userDefinedContent;
   }
 
+  /**
+   * Attaches user-defined content to this <code>XmlSchemaPathNode</code>.
+   */
   public void setUserDefinedContent(V content) {
     userDefinedContent = content;
   }
