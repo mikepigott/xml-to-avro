@@ -68,16 +68,36 @@ public final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     }
   }
 
+  /**
+   * Constructs a new <code>XmlSchemaStateMachineGenerator</code>, ready
+   * to start walking {@link org.apache.ws.commons.schema.XmlSchema}s.
+   */
   public XmlSchemaStateMachineGenerator() {
     stack = new ArrayList<XmlSchemaStateMachineNode>();
     elementInfoByQName = new HashMap<QName, ElementInfo>();
     startNode = null;
   }
 
+  /**
+   * Retrieves the start node of the state machine representing the most-recently
+   * walked {@link org.apache.ws.commons.schema.XmlSchema}.
+   */
   public XmlSchemaStateMachineNode getStartNode() {
     return startNode;
   }
 
+  /**
+   * Retrieves the {@link XmlSchemaStateMachineNode}s representing each
+   * {@link XmlSchemaElement} in the walked
+   * {@link org.apache.ws.commons.schema.XmlSchema}.
+   *
+   * <p>
+   * Only top-level {@link XmlSchemaElement}s can be retrieved by calling
+   * {@link org.apache.ws.commons.schema.XmlSchema#getElementByName(QName)};
+   * this allows all elements to be retrieved without walking the schema
+   * again.
+   * </p>
+   */
   public Map<QName, XmlSchemaStateMachineNode> getStateMachineNodesByQName() {
     final HashMap<QName, XmlSchemaStateMachineNode> nodes =
         new HashMap<QName, XmlSchemaStateMachineNode>();
@@ -205,6 +225,9 @@ public final class XmlSchemaStateMachineGenerator implements XmlSchemaVisitor {
     elemInfo.addAttribute(attrInfo);
   }
 
+  /**
+   * @see XmlSchemaVisitor#onEndAttributes(XmlSchemaElement, XmlSchemaTypeInfo)
+   */
   @Override
   public void onEndAttributes(
       XmlSchemaElement element,
