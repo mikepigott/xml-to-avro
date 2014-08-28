@@ -30,12 +30,5 @@
  * Instances of {@link org.apache.ws.commons.schema.walker.XmlSchemaVisitor}
  * can be attached to receive notifications when each element, attribute, and
  * group (subsitution group, choice group, all group, or sequence) is reached.
- *
- * <h2>Schemas with Multiple Namespaces</h2>
- *
- * {@link org.apache.ws.commons.schema.walker.XmlSchemaMultiBaseUriResolver}
- * can be used to resolve partial schema paths across multiple base URIs.  All
- * of the base URIs seen so far will be checked in search of a schema with the
- * same name.
  */
 package org.apache.ws.commons.schema.walker;
