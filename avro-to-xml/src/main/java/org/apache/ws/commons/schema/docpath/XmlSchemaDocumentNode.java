@@ -30,6 +30,18 @@ import java.util.TreeMap;
  * representing the path walked, and <code>XmlSchemaDocumentNode</code>s
  * representing where the XML document's elements fall in the XML Schema's
  * sequences, choices, and all groups.
+ *
+ * <p>
+ * While {@link XmlSchemaStateMachineNode}s may loop back on themselves, the
+ * <code>XmlSchemaDocumentNode</code>s will not.  Likewise, the document nodes
+ * form a tree that represent the XML Schema as it is applied to the document.
+ * </p>
+ *
+ * <p>
+ * If a single node has multiple occurrences, the children of each occurrence
+ * can be retrieved by calling {@link #getChildren(int)}.
+ * {@link #getChildren()} returns the child nodes for the final occurrence. 
+ * </p>
  */
 public final class XmlSchemaDocumentNode<U> {
 
@@ -48,14 +60,27 @@ public final class XmlSchemaDocumentNode<U> {
     set(parent, stateMachineNode);
   }
 
+  /**
+   * Returns the {@link XmlSchemaStateMachineNode} representing the
+   * place in the XML Schema that this <code>XmlSchemaDocumentNode</code>
+   * represents.
+   */
   public XmlSchemaStateMachineNode getStateMachineNode() {
     return stateMachineNode;
   }
 
+  /**
+   * The <code>XmlSchemaDocumentNode</code>
+   * representing this one's immediate parent.
+   */
   public XmlSchemaDocumentNode getParent() {
     return parent;
   }
 
+  /**
+   * Retrieves the children in the last occurrence of
+   * this node, mapped to their relative position.
+   */
   public SortedMap<Integer, XmlSchemaDocumentNode<U>> getChildren() {
     if (children == null) {
       return null;
@@ -64,6 +89,12 @@ public final class XmlSchemaDocumentNode<U> {
     }
   }
 
+  /**
+   * Retrieves the children in the provided occurrence
+   * of this node, mapped to their relative position.
+   *
+   * @param iteration The 1-based occurrence to retrieve children for.
+   */
   public SortedMap<Integer, XmlSchemaDocumentNode<U>> getChildren(int iteration) {
     if ((children == null)
           || (children.size() < iteration)
@@ -81,6 +112,10 @@ public final class XmlSchemaDocumentNode<U> {
     return receivedContent;
   }
 
+  /**
+   * Sets whether the element has text in it.
+   * @param receivedContent
+   */
   void setReceivedContent(boolean receivedContent) {
     this.receivedContent = receivedContent;
   }
@@ -159,6 +194,10 @@ public final class XmlSchemaDocumentNode<U> {
     return true;
   }
 
+  /**
+   * The total number of occurrences of this <code>XmlSchemaDocumentNode</code>
+   * in the underlying document.
+   */
   public int getIteration() {
     if ((children != null) && (children.size() != visitors.size())) {
       throw new IllegalStateException(
@@ -171,10 +210,20 @@ public final class XmlSchemaDocumentNode<U> {
     return visitors.size();
   }
 
+  /**
+   * Shortcut for calling <code>getStateMachineNode().getMinOccurs()</code>.
+   *
+   * @see XmlSchemaStateMachineNode#getMinOccurs()
+   */
   public long getMinOccurs() {
     return stateMachineNode.getMinOccurs();
   }
 
+  /**
+   * Shortcut for calling <code>getStateMachineNode().getMaxOccurs()</code>.
+   *
+   * @see XmlSchemaStateMachineNode#getMaxOccurs()
+   */
   public long getMaxOccurs() {
     return stateMachineNode.getMaxOccurs();
   }
@@ -213,10 +262,17 @@ public final class XmlSchemaDocumentNode<U> {
     }
   }
 
+  /**
+   * Retrieves any user-defined content attached to this
+   * <code>XmlSchemaDocumentNode</code>, or <code>null</code> if none.
+   */
   public U getUserDefinedContent() {
     return userDefinedContent;
   }
 
+  /**
+   * Attaches user-defined content to this <code>XmlSchemaDocumentNode</code>.
+   */
   public void setUserDefinedContent(U userDefinedContent) {
     this.userDefinedContent = userDefinedContent;
   }
