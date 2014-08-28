@@ -33,9 +33,22 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
- * Performs a SAX-based walk through the XML document, determining the
- * interpretation ("path") that best matches both the XML Schema and the
- * Avro Schema.
+ * Performs a SAX-based walk through the XML document, determining
+ * the interpretation ("path") that best matches the XML Schema.
+ *
+ * <p>
+ * This is a traditional {@link DefaultHandler} that can be attached
+ * to either a {@link javax.xml.parsers.SAXParser} during a parse, or
+ * to {@link SaxWalkerOverDom} to find paths through an
+ * {@link org.w3c.dom.Document}.
+ * </p>
+ *
+ * <p>
+ * Because this is a SAX-based walk, the source information need not be an XML
+ * document.  It can be any data that can be interpreted via a SAX walk.  This
+ * can be helpful when trying to confirm the source data can be converted back
+ * into XML.
+ * </p>
  */
 public final class XmlSchemaPathFinder extends DefaultHandler {
 
@@ -288,8 +301,7 @@ public final class XmlSchemaPathFinder extends DefaultHandler {
     }
   }
 
-  /**
-   * A <code>DescisionPoint</code> is a location in a document path where
+  /* A <code>DescisionPoint</code> is a location in a document path where
    * an element in the document can be reached by following two or more
    * different traversals through the XML Schema.
    *
@@ -440,6 +452,12 @@ public final class XmlSchemaPathFinder extends DefaultHandler {
     decisionPoints = null; // Hopefully there won't be any!
   }
 
+  /**
+   * Kick-starts a new SAX walk, building new <code>XmlSchemaPathNode</code>
+   * and <code>XmlSchemaDocumentNode</code> traversals in the process.
+   *
+   * @see DefaultHandler#startDocument()
+   */
   @Override
   public void startDocument() throws SAXException {
     currentPath = null;
@@ -452,6 +470,11 @@ public final class XmlSchemaPathFinder extends DefaultHandler {
     }
   }
 
+  /**
+   * Handles a new prefix mapping in the SAX walk.
+   *
+   * @see DefaultHandler#startPrefixMapping(String, String)
+   */
   @Override
   public void startPrefixMapping(String prefix, String uri)
       throws SAXException {
@@ -459,13 +482,19 @@ public final class XmlSchemaPathFinder extends DefaultHandler {
     nsContext.addNamespace(prefix, uri);
   }
 
+  /**
+   * Handles the end of a prefix mapping in the SAX walk.
+   *
+   * @see DefaultHandler#endPrefixMapping(String)
+   */
   @Override
   public void endPrefixMapping(String prefix) throws SAXException {
     nsContext.removeNamespace(prefix);
   }
 
   /**
-   * Find the path through the XML Schema that best matches this element.
+   * Find the path through the XML Schema that best matches this element,
+   * traversing any relevant groups, and backtracking if necessary.
    *
    * @see DefaultHandler#startElement(String, String, String, Attributes)
    */
@@ -774,7 +803,12 @@ public final class XmlSchemaPathFinder extends DefaultHandler {
   }
 
   /**
-   * 
+   * Adds a new {@link XmlSchemaPathNode.Direction#CONTENT}
+   * {@link XmlSchemaPathNode} to the path.  Throws an
+   * {@link IllegalStateException} if the owning element should
+   * not receive content, or the content is empty when it should
+   * not be.
+   *
    * @see org.xml.sax.helpers.DefaultHandler#characters(char[], int, int)
    */
   @Override
@@ -863,30 +897,9 @@ public final class XmlSchemaPathFinder extends DefaultHandler {
   }
 
   /**
-   * Confirm the current position matches the element we are ending.
-   * If not, throw an exception.
-   *
-   * If the number of occurrences is less than the minimum number of
-   * occurrences, do not move.  The next element must be an instance
-   * of this one.
-   *
-   * Otherwise, walk back up the tree to the next position.
-   *
-   * If the parent is a group of any kind, and its minimum number of
-   * occurrences is not fulfilled, stop there.
-   *
-   * Otherwise, if the parent is a choice group or substitution group,
-   * walk two levels up to the grandparent.  If the number of occurrences
-   * of this element, the choice group, or the substitution group are
-   * maxed out, and the grandparent is a sequence group or all group,
-   * update the information accordingly.
-   *
-   * If the parent is a sequence group or an all group, update it
-   * accordingly.  Again, if the number of occurrences is equal to
-   * the maximum number, advance the parent accordingly.
-   *
-   * If the parent (or grandparent) is an element, return to it.
-   * We expect the next call to be to endElement of that.
+   * Ends the current element.  If the current element is not of the
+   * provided <code>uri</code> and <code>localName</code>, throws an
+   * {@link IllegalStateException}.
    *
    * @see DefaultHandler#endElement(String, String, String)
    */
@@ -976,6 +989,14 @@ public final class XmlSchemaPathFinder extends DefaultHandler {
     }
   }
 
+  /**
+   * Called when the XML Document traversal is complete.
+   *
+   * <p>
+   * Confirms all open elements have been closed.
+   * If not, throws an {@link IllegalStateException}.
+   * </p>
+   */
   @Override
   public void endDocument() throws SAXException {
     if ( !elementStack.isEmpty() ) {
@@ -992,7 +1013,19 @@ public final class XmlSchemaPathFinder extends DefaultHandler {
     }
   }
 
-  public XmlSchemaPathNode getXmlSchemaDocumentPath() {
+  /**
+   * Once a traversal completes successfully, this method may be called
+   * to retrieve the relevant interpretation of the path through the
+   * {@link XmlSchemaStateMachineNode}s.
+   *
+   * <p>
+   * {@link XmlSchemaPathNode#getDocumentNode()} can be called to retrieve
+   * the interpretation of the XML Schema as applied to the document; meanwhile
+   * the walk through {@link XmlSchemaPathNode}s will show how that schema
+   * was traversed.
+   * </p>
+   */
+  public XmlSchemaPathNode getXmlSchemaTraversal() {
     return rootPathNode;
   }
 

@@ -139,7 +139,7 @@ public class TestAvroSchemaApplier {
     }
 
     XmlSchemaPathNode rootPath =
-        pathCreator.getXmlSchemaDocumentPath();
+        pathCreator.getXmlSchemaTraversal();
 
     XmlSchemaDocumentNode<AvroRecordInfo> rootDoc = rootPath.getDocumentNode();
 

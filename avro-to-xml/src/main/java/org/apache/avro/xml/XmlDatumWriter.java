@@ -1363,7 +1363,7 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       throw new IOException("Unable to parse the document.", se);
     }
     final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path =
-        pathFinder.getXmlSchemaDocumentPath();
+        pathFinder.getXmlSchemaTraversal();
 
     // 2. Apply Avro schema metadata on top of the document. 
     final AvroSchemaApplier applier = new AvroSchemaApplier(schema, false);
