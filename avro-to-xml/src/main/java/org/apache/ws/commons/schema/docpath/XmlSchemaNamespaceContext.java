@@ -40,6 +40,19 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
 
   private Map<String, List<String>> namespacesByPrefixStack;
 
+  /**
+   * Constructs a new <code>XmlSchemaNamespaceContext</code> with the following
+   * initial mappings:
+   * 
+   * <ul>
+   *   <li>
+   *     <code>xml</code> -> <code>http://www.w3.org/1999/namespace</code>
+   *   </li>
+   *   <li>
+   *     <code>xmlns</code> -> <code>http://www.w3.org/2000/xmlns/</code>
+   *   </li> 
+   * </ul>
+   */
   public XmlSchemaNamespaceContext() {
     namespacesByPrefixStack = new HashMap<String, List<String>>();
 
@@ -52,6 +65,9 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
         Collections.singletonList(Constants.XMLNS_ATTRIBUTE_NS_URI));
   }
 
+  /**
+   * @see NamespacePrefixList#getNamespaceURI(String)
+   */
   @Override
   public String getNamespaceURI(String prefix) {
     if (prefix == null) {
@@ -69,6 +85,9 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
     return namespace;
   }
 
+  /**
+   * @see NamespacePrefixList#getPrefix(String)
+   */
   @Override
   public String getPrefix(String namespaceUri) {
     if (namespaceUri == null) {
@@ -91,6 +110,9 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
     return null;
   }
 
+  /**
+   * @see NamespacePrefixList#getPrefixes(String)
+   */
   @Override
   public Iterator getPrefixes(String namespaceUri) {
     if (namespaceUri == null) {
@@ -116,6 +138,9 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
     return prefixes.iterator();
   }
 
+  /**
+   * @see NamespacePrefixList#getDeclaredPrefixes()
+   */
   @Override
   public String[] getDeclaredPrefixes() {
     final Set<String> prefixes = namespacesByPrefixStack.keySet();
@@ -123,8 +148,15 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
   }
 
   /**
-   * Adds a new prefix mapping to the context.  Returns true
-   * if the mapping is new, and <code>false</code> if it already existed. 
+   * Adds a new prefix mapping to the context.  The prefix may be an empty
+   * string to represent the default namespace, but it cannot be null.
+   * The namespace URI can never be empty or null.
+   *
+   * @param prefix The prefix to represent the namespace URI.
+   * @param namespaceUri the namespace URI represented by the prefix.
+   *
+   * @throws IllegalArgumentException if the prefix is null, or if the
+   *                                  namespace URI is null or empty.
    */
   public void addNamespace(String prefix, String namespaceUri) {
     if ((prefix == null)
@@ -144,6 +176,16 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
     namespaceStack.add(namespaceUri);
   }
 
+  /**
+   * Removes the most recent prefix-to-namespace mapping for the provided
+   * prefix.  The prior prefix-to-namespace mapping before it is restored.
+   *
+   * @param prefix The prefix to remove the current prefix-to-namespace
+   *               mapping of.
+   *
+   * @throws IllegalStateException If there is no current mapping for that
+   *                               prefix.
+   */
   public void removeNamespace(String prefix) {
     final List<String> namespaceStack = namespacesByPrefixStack.get(prefix);
     if ((namespaceStack == null) || namespaceStack.isEmpty()) {
@@ -158,7 +200,19 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
     }
   }
 
+  /**
+   * Clears the given namespace stack, restoring it to
+   * the original mappings defined by the constructor.
+   */
   public void clear() {
     namespacesByPrefixStack.clear();
+
+    namespacesByPrefixStack.put(
+        Constants.XML_NS_PREFIX,
+        Collections.singletonList(Constants.XML_NS_URI));
+
+    namespacesByPrefixStack.put(
+        Constants.XMLNS_ATTRIBUTE,
+        Collections.singletonList(Constants.XMLNS_ATTRIBUTE_NS_URI));
   }
 }
