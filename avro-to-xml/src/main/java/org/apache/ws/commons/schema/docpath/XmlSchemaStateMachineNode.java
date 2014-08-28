@@ -254,6 +254,10 @@ public final class XmlSchemaStateMachineNode {
     return possibleNextStates;
   }
 
+  /**
+   * Builds a {@link String} representing this
+   * <code>XmlSchemaStateMachineNode</code>.
+   */
   @Override
   public String toString() {
     StringBuilder name = new StringBuilder( nodeType.name() );

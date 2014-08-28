@@ -61,6 +61,21 @@ final class XmlSchemaElementValidator {
     return datatypeFactory;
   }
 
+  /**
+   * Confirms all of the SAX {@link Attributes} provided conform to their
+   * types listed in the {@link XmlSchemaStateMachineNode}.  If one of the
+   * types is a {@link QName}, uses the {@link NamespaceContext} to confirm
+   * its namespace is recognized.
+   *
+   * <p>
+   * Throws a {@link ValidationException} if the content is not valid.
+   * </p>
+   *
+   * @param state The state machine node containing the attribute types.
+   * @param attrs The attributes to verify.
+   * @param nsContext The namespace context to use to confirm QNames of.
+   * @throws ValidationException If the content is not valid.
+   */
   static void validateAttributes(
       XmlSchemaStateMachineNode state,
       Attributes attrs,
@@ -174,6 +189,25 @@ final class XmlSchemaElementValidator {
     }
   }
 
+  /**
+   * Confirms the provided content conforms to the element's expected content
+   * type.  If the expected content is a {@link QName}, uses the provided
+   * {@link NamespaceContext} to confirm the namespace is recognized and valid.
+   *
+   * <p>
+   * Throws a {@link ValidationException} if the element's content is invalid.
+   * </p>
+   *
+   * @param state The {@link XmlSchemaStateMachineNode} containing the type
+   *              information of the element's expected content.
+   *
+   * @param elementContent The element content to verify.
+   *
+   * @param nsContext The <code>NamespaceContext</code> to use to verify
+   *                  <code>QName</code>s are valid.
+   *
+   * @throws ValidationException if the element content is not valid.
+   */
   static void validateContent(
       XmlSchemaStateMachineNode state,
       String elementContent,
