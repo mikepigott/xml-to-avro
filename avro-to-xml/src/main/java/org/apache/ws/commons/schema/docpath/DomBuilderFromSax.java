@@ -64,10 +64,6 @@ public final class DomBuilderFromSax extends DefaultHandler {
   private final XmlSchemaCollection schemas;
   private final Set<String> globalNamespaces;
 
-  public DomBuilderFromSax() throws ParserConfigurationException {
-    this(null);
-  }
-
   /**
    * Creates a new <code>DocumentBuilderFromSax</code>.
    *
@@ -109,6 +105,9 @@ public final class DomBuilderFromSax extends DefaultHandler {
     document.setXmlStandalone(true);
   }
 
+  /**
+   * @see org.xml.sax.helpers.DefaultHandler#startPrefixMapping(String, String)
+   */
   @Override
   public void startPrefixMapping(String prefix, String uri)
       throws SAXException {
@@ -117,12 +116,18 @@ public final class DomBuilderFromSax extends DefaultHandler {
     newPrefixes.add(prefix);
   }
 
+  /**
+   * @see org.xml.sax.helpers.DefaultHandler#endPrefixMapping(String)
+   */
   @Override
   public void endPrefixMapping(String prefix) throws SAXException {
     nsContext.removeNamespace(prefix);
   }
 
   /**
+   * Starts a new element in the generated XML document.  If the previous
+   * element was not closed, adds this element as a child to that element.
+   *
    * @see DefaultHandler#startElement(String, String, String, Attributes)
    */
   @Override
@@ -226,7 +231,8 @@ public final class DomBuilderFromSax extends DefaultHandler {
   }
 
   /**
-   * 
+   * Adds content to the current element.
+   *
    * @see DefaultHandler#characters(char[], int, int)
    */
   @Override
@@ -240,6 +246,8 @@ public final class DomBuilderFromSax extends DefaultHandler {
   }
 
   /**
+   * Closes the current element in the generated XML document.
+   *
    * @see DefaultHandler#endElement(String, String, String)
    */
   @Override
@@ -342,26 +350,54 @@ public final class DomBuilderFromSax extends DefaultHandler {
     content.delete(0, content.length());
   }
 
+  /**
+   * Retrieves the document constructed from the SAX walk.
+   */
   public Document getDocument() {
     return document;
   }
 
+  /**
+   * Retrieves the XML Schema namespace -> location mapping set by
+   * the last call to {@link #setNamespaceToLocationMapping(Map)}.
+   */
   public Map<String, String> getNamespaceToLocationMapping() {
     return namespaceToLocationMapping;
   }
 
+  /**
+   * Sets the XML Schema namespace -> location mapping to use when defining
+   * the schemaLocation attribute in the generated XML document.
+   *
+   * @param nsToLocMapping The namespace -> location mapping.
+   */
   public void setNamespaceToLocationMapping(
       Map<String, String> nsToLocMapping) {
     namespaceToLocationMapping = nsToLocMapping;
   }
 
+  /**
+   * Retrieves the {@link QName} -> {@link XmlSchemaStateMachineNode}
+   * mapping defined by the call to {@link #setStateMachinesByQName(Map)}.
+   */
   public Map<QName, XmlSchemaStateMachineNode> getStateMachinesByQName() {
     return elementsByQName;
   }
 
+  /**
+   * Sets the mapping of {@link QName}s to {@link XmlSchemaStateMachineNode}s.
+   * This is used to disambiguate:
+   *
+   * <ul>
+   *   <li>Whether empty content indicates nil</li>
+   *   <li>If an element's attribute requires a namespace</li>
+   * </ul>
+   *
+   * @param statesByQName The state-machine-node-by-QName mapping.
+   */
   public void setStateMachinesByQName(
-      Map<QName, XmlSchemaStateMachineNode> elemsByQName) {
-    elementsByQName = elemsByQName;
+      Map<QName, XmlSchemaStateMachineNode> statesByQName) {
+    elementsByQName = statesByQName;
   }
 
   private void addNamespaceLocationMappings(Element rootElement) {
