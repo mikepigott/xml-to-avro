@@ -27,6 +27,10 @@ import org.apache.ws.commons.schema.constants.Constants;
 /**
  * Represents the set of simple types defined by XML Schema, and
  * conversions between them and their respective {@link QName}s.
+ * This set is limited to only <code>anyType</code>,
+ * <code>anySimpleType</code>, and the 
+ * <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes">
+ * primitive datatypes</a> defined by XML Schema.
  */
 public enum XmlSchemaBaseSimpleType {
   ANYTYPE(Constants.XSD_ANYTYPE),
@@ -53,11 +57,15 @@ public enum XmlSchemaBaseSimpleType {
 
   private QName qName;
 
-  XmlSchemaBaseSimpleType(QName qName) {
+  private XmlSchemaBaseSimpleType(QName qName) {
     this.qName = qName;
   }
 
-  QName getQName() {
+  /**
+   * The corresponding {@link QName} that the
+   * <code>XmlSchemaBaseSimpleType</code> represents in XML Schema.
+   */
+  public QName getQName() {
     return qName;
   }
 
@@ -71,11 +79,34 @@ public enum XmlSchemaBaseSimpleType {
     }
   }
 
-  static XmlSchemaBaseSimpleType getBaseSimpleTypeFor(QName qName) {
+  /**
+   * Returns the XML Schema base simple type for the provided {@link QName}.
+   * If the <code>QName</code> represents <code>anyType</code>,
+   * <code>anySimpleType</code>, or one of the
+   * <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes">
+   * primitive datatypes</a> defined by XML Schema, returns the corresponding
+   * <code>XmlSchemaBaseSimpleType</code>.  Otherwise, returns
+   * <code>null</code>.
+   *
+   * @param qName The {@link QName} of an XML Schema base simple type.
+   * @return The corresponding {@link XmlSchemaBaseSimpleType}.
+   */
+  public static XmlSchemaBaseSimpleType getBaseSimpleTypeFor(QName qName) {
     return reverseMap.get(qName);
   }
 
-  static boolean isBaseSimpleType(QName qName) {
+  /**
+   * Returns <code>true</code> if the provided {@link QName} references XML
+   * Schema's <code>anyType</code>, <code>anySimpleType</code>, or one of the
+   * <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes">
+   * primitive datatypes</a> defined by XML Schema.
+   *
+   * Otherwise, returns <code>false</code>.
+   *
+   * @param qName The {@link QName} of an XML Schema type to check.
+   * @return Whether that type is a XML Schema base simple type.
+   */
+  public static boolean isBaseSimpleType(QName qName) {
     return reverseMap.containsKey(qName);
   }
 }

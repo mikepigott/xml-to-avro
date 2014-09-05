@@ -36,7 +36,7 @@ import org.apache.ws.commons.schema.XmlSchemaWhiteSpaceFacet;
  * This represents an {@link XmlSchemaFacet}.  It uses an enum to more easily
  * work with different facets, and its {@link #equals(Object)} and
  * {@link #hashCode()} reflect that only enumerations and patterns can have
- * multiple facets.
+ * multiple constraints.
  */
 public class XmlSchemaRestriction {
 
@@ -44,6 +44,11 @@ public class XmlSchemaRestriction {
   private Object value;
   private boolean isFixed;
 
+  /**
+   * The facet type: one of the known
+   * <a href="http://www.w3.org/TR/xmlschema-2/#rf-facets">constraining
+   * facets</a> defined by XML Schema.
+   */
   public enum Type {
 		ENUMERATION,
 		EXCLUSIVE_MIN,
@@ -93,34 +98,65 @@ public class XmlSchemaRestriction {
 	  isFixed = facet.isFixed();
   }
 
+	/**
+	 * Constructs a new {@link XmlSchemaRestriction} from only the {@link Type}.
+	 *
+	 * @param type The facet's type.
+	 */
 	public XmlSchemaRestriction(Type type) {
 		this.type = type;
 		this.value = null;
 		this.isFixed = false;
 	}
 
+	/**
+	 * Constructs a new {@link XmlSchemaRestriction} from the {@link Type},
+	 * constraining value, and whether the facet may be overridden by child
+	 * type definitions.
+	 *
+	 * @param type    The constraining facet type.
+	 * @param value   The constraining value.
+	 * @param isFixed Whether the value may be overridden in child definitions.
+	 */
 	public XmlSchemaRestriction(Type type, Object value, boolean isFixed) {
 		this.type = type;
 		this.value = value;
 		this.isFixed = isFixed;
 	}
 
+	/**
+	 * The constraining facet's {@link Type}.
+	 */
 	public Type getType() {
 		return type;
 	}
 
+	/**
+	 * The facet's constraint value.
+	 */
 	public Object getValue() {
 		return value;
 	}
 
+	/**
+	 * Whether the constraint value may be overridden in child definitions
+	 * (<code>true</code> means it cannot).
+	 */
 	public boolean isFixed() {
 		return isFixed;
 	}
 
+	/**
+	 * Sets the constraint value.
+	 */
 	public void setValue(Object value) {
 		this.value = value;
 	}
 
+	/**
+	 * Sets whether the constraint value may be overridden in child definitions
+	 * (<code>true</code> means that it cannot).
+	 */
 	public void setFixed(boolean isFixed) {
 		this.isFixed = isFixed;
 	}
@@ -184,6 +220,9 @@ public class XmlSchemaRestriction {
 		return true;
 	}
 
+	/**
+	 * Returns a {@link String} representation of this facet.
+	 */
 	public String toString() {
 		return type.name() + ": " + value + " (Fixed: " + isFixed + ")";
 	}
