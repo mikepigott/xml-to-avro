@@ -178,11 +178,7 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
       namespaceStack = new ArrayList<String>(1);
       namespacesByPrefixStack.put(prefix, namespaceStack);
     }
-    try {
-      namespaceStack.add(namespaceUri);
-    } catch (UnsupportedOperationException uoe) {
-      throw new IllegalArgumentException("addNamespace(prefix=\"" + prefix + "\", namespaceUri=\"" + namespaceUri + "\") is not supported.", uoe);
-    }
+    namespaceStack.add(namespaceUri);
   }
 
   /**
