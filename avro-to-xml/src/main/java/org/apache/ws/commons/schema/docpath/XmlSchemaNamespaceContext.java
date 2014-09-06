@@ -166,14 +166,23 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
       throw new IllegalArgumentException(
           "The prefix may not be null, and the namespace URI "
           + "may neither be null nor empty.");
+
+    } else if (isRecognizedPrefix(prefix)) {
+      // These are already mapped.
+      return;
     }
+
 
     List<String> namespaceStack = namespacesByPrefixStack.get(prefix);
     if (namespaceStack == null) {
       namespaceStack = new ArrayList<String>(1);
       namespacesByPrefixStack.put(prefix, namespaceStack);
     }
-    namespaceStack.add(namespaceUri);
+    try {
+      namespaceStack.add(namespaceUri);
+    } catch (UnsupportedOperationException uoe) {
+      throw new IllegalArgumentException("addNamespace(prefix=\"" + prefix + "\", namespaceUri=\"" + namespaceUri + "\") is not supported.", uoe);
+    }
   }
 
   /**
@@ -193,7 +202,12 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
           "Prefix \""
           + prefix
           + "\" is not mapped to any namespaces.");
+
+    } else if (isRecognizedPrefix(prefix)) {
+      // These cannot be unmapped.
+      return;
     }
+
     namespaceStack.remove(namespaceStack.size() - 1);
     if (namespaceStack.isEmpty()) {
       namespacesByPrefixStack.remove(prefix);
@@ -214,5 +228,10 @@ public final class XmlSchemaNamespaceContext implements NamespacePrefixList {
     namespacesByPrefixStack.put(
         Constants.XMLNS_ATTRIBUTE,
         Collections.singletonList(Constants.XMLNS_ATTRIBUTE_NS_URI));
+  }
+
+  private static boolean isRecognizedPrefix(String prefix) {
+    return (Constants.XML_NS_PREFIX.equals(prefix)
+        || Constants.XMLNS_ATTRIBUTE.equals(prefix));
   }
 }
