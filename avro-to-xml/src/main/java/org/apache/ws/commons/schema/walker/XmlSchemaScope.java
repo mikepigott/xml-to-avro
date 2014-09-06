@@ -338,10 +338,16 @@ final class XmlSchemaScope {
     walk(type);
   }
 
+  /**
+   * The type information of the value in scope.
+   */
   XmlSchemaTypeInfo getTypeInfo() {
     return typeInfo;
   }
 
+  /**
+   * The attributes visible in the current scope.
+   */
   Collection<XmlSchemaAttrInfo> getAttributesInScope() {
     if (attributes == null) {
       return null;
@@ -349,10 +355,18 @@ final class XmlSchemaScope {
     return attributes.values();
   }
 
+  /**
+   * If the value is represented by a particle,
+   * returns that particle.  Otherwise returns
+   * <code>null</code>.
+   */
   XmlSchemaParticle getParticle() {
     return child;
   }
 
+  /**
+   * The wildcard attribute, if any.
+   */
   XmlSchemaAnyAttribute getAnyAttribute() {
     return anyAttr;
   }

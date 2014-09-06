@@ -95,18 +95,45 @@ public final class XmlSchemaWalker {
     userRecognizedTypes = null;
   }
 
-  public XmlSchemaWalker(XmlSchemaCollection xmlSchemas, XmlSchemaVisitor visitor) {
+  /**
+   * Initializes the <code>XmlSchemaWalker</code> with an
+   * {@link XmlSchemaVisitor} to notify as the schema is walked.
+   *
+   * <p>
+   * (Other visitors may continue to be added after this one.)
+   * </p>
+   *
+   * @param xmlSchemas The set of schemas to walk.
+   * @param visitor The visitor to visit during the walk.
+   */
+  public XmlSchemaWalker(
+      XmlSchemaCollection xmlSchemas,
+      XmlSchemaVisitor visitor) {
+
     this(xmlSchemas);
     if (visitor != null) {
       visitors.add(visitor);
     }
   }
 
+  /**
+   * Adds a new visitor to be notified as the XML Schemas are walked.
+   *
+   * @param visitor The visitor to be notified.
+   *
+   * @return This <code>XmlSchemaWalker</code> instance for method chaining.
+   */
   public XmlSchemaWalker addVisitor(XmlSchemaVisitor visitor) {
     visitors.add(visitor);
     return this;
   }
 
+  /**
+   * Removes the visitor to be notified as the XML Schemas are walked.
+   *
+   * @param visitor The visitor to remove.
+   * @return This <code>XmlSchemaWalker</code> instance for method chaining.
+   */
   public XmlSchemaWalker removeVisitor(XmlSchemaVisitor visitor) {
     if (visitor != null) {
       visitors.remove(visitor);
@@ -114,20 +141,55 @@ public final class XmlSchemaWalker {
     return this;
   }
 
+  /**
+   * Clears the internal state in preparation
+   * for another walk through the schema.
+   */
   public void clear() {
     scopeCache.clear();
     visitedElements.clear();
   }
 
+  /**
+   * Defines the set of types the calling code recognizes.  If one of the types
+   * are found during the walk through the XML Schema, it is attached to the
+   * relevant {@link XmlSchemaTypeInfo} that is passed to the
+   * {@link XmlSchemaVisitor}s, with lower types in the hierarchy taking
+   * precedence over higher types.
+   *
+   * <p>
+   * This information is useful when translating from XML Schema to another
+   * schema, as this automatically associates the destination type with the
+   * source XML Schema type.
+   * </p>
+   *
+   * @param userRecognizedTypes The set of types the user recognizes and would
+   *                            like recognized when traversed.
+   */
   public void setUserRecognizedTypes(Set<QName> userRecognizedTypes) {
     this.userRecognizedTypes = userRecognizedTypes;
   }
 
+  /**
+   * The user-defined types set with the call to
+   * {@link #setUserRecognizedTypes(Set)}, or <code>null</code> if none.
+   */
   public Set<QName> getUserRecognizedTypes() {
     return userRecognizedTypes;
   }
 
-  // Depth-first search.  Visitors will build a stack of XmlSchemaParticle.
+  /**
+   * Initiates a walk through the {@link XmlSchemaCollection} starting with
+   * the provided root {@link XmlSchemaElement}.  Any visitors will be notified
+   * as the walk progresses.
+   *
+   * <p>
+   * Once this method completes, call {@link #clear()} before starting another
+   * walk through the XML Schemas.
+   * </p>
+   *
+   * @param element The root element to start the walk from.
+   */
   public void walk(XmlSchemaElement element) {
     element = getElement(element, false);
 
