@@ -43,7 +43,6 @@ import org.apache.ws.commons.schema.docpath.XmlSchemaPathFinder;
 import org.apache.ws.commons.schema.docpath.XmlSchemaPathNode;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineGenerator;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineNode;
-import org.apache.ws.commons.schema.resolver.XmlSchemaMultiBaseUriResolver;
 import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
 import org.apache.ws.commons.schema.walker.XmlSchemaBaseSimpleType;
 import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
@@ -1277,7 +1276,6 @@ public class XmlDatumWriter implements DatumWriter<Document> {
     }
 
     xmlSchemaCollection = new XmlSchemaCollection();
-    xmlSchemaCollection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
     xmlSchemaCollection.setBaseUri(config.getBaseUri());
     for (StreamSource source : config.getSources()) {
       xmlSchemaCollection.read(source);

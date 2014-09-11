@@ -45,7 +45,6 @@ import org.apache.ws.commons.schema.docpath.XmlSchemaNamespaceContext;
 import org.apache.ws.commons.schema.docpath.XmlSchemaPathFinder;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineGenerator;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineNode;
-import org.apache.ws.commons.schema.resolver.XmlSchemaMultiBaseUriResolver;
 import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
 import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
 import org.apache.ws.commons.schema.walker.XmlSchemaWalker;
@@ -484,7 +483,6 @@ public class XmlDatumReader implements DatumReader<Document> {
 	  }
 
 	  xmlSchemaCollection = new XmlSchemaCollection();
-    xmlSchemaCollection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
     xmlSchemaCollection.setBaseUri(config.getBaseUri());
     try {
       for (StreamSource source : config.getSources()) {

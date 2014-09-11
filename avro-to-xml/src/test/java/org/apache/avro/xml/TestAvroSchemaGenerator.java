@@ -34,7 +34,6 @@ import org.apache.avro.xml.Utils;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
-import org.apache.ws.commons.schema.resolver.XmlSchemaMultiBaseUriResolver;
 import org.apache.ws.commons.schema.walker.XmlSchemaWalker;
 import org.junit.Test;
 
@@ -86,7 +85,6 @@ public class TestAvroSchemaGenerator {
       fileReader = new FileReader(file);
 
       collection = new XmlSchemaCollection();
-      collection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
       collection.read(new StreamSource(fileReader, file.getAbsolutePath()));
 
     } finally {

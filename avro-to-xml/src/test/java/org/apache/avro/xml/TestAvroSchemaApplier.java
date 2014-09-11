@@ -45,7 +45,6 @@ import org.apache.ws.commons.schema.docpath.XmlSchemaPathFinder;
 import org.apache.ws.commons.schema.docpath.XmlSchemaPathNode;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineGenerator;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineNode;
-import org.apache.ws.commons.schema.resolver.XmlSchemaMultiBaseUriResolver;
 import org.apache.ws.commons.schema.walker.XmlSchemaWalker;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -78,7 +77,6 @@ public class TestAvroSchemaApplier {
       fileReader = new FileReader(file);
 
       collection = new XmlSchemaCollection();
-      collection.setSchemaResolver(new XmlSchemaMultiBaseUriResolver());
       collection.read(new StreamSource(fileReader, file.getAbsolutePath()));
 
     } finally {
