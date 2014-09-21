@@ -72,8 +72,6 @@ import org.xml.sax.SAXException;
  */
 public class XmlDatumReader implements DatumReader<Document> {
 
-
-
   private Schema inputSchema;
   private XmlSchemaCollection xmlSchemaCollection;
   private HashMap<String, String> namespaceToLocationMapping;
