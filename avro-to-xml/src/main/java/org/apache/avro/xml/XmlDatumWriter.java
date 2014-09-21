@@ -22,10 +22,14 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.bind.DatatypeConverter;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.Duration;
 import javax.xml.namespace.QName;
 import javax.xml.transform.stream.StreamSource;
 
@@ -1002,6 +1006,28 @@ public class XmlDatumWriter implements DatumWriter<Document> {
             out.writeIndex(unionIndex);
           }
 
+          if ( XmlSchemaBaseSimpleType.DURATION.equals(baseType) ) {
+            final DatatypeFactory datatypeFactory = Utils.getDatatypeFactory();
+            final Duration xmlDuration = datatypeFactory.newDuration(data);
+            final int months =
+                xmlDuration.getYears() * 12 + xmlDuration.getMonths();
+            final int days = xmlDuration.getDays();
+            final int millis =
+                ((((xmlDuration.getHours() * 60)
+                    + xmlDuration.getMinutes()) * 60)
+                    + xmlDuration.getSeconds()) * 1000;
+            out.writeArrayStart();
+            out.setItemCount(3);
+            out.startItem();
+            out.writeInt(months);
+            out.startItem();
+            out.writeInt(days);
+            out.startItem();
+            out.writeInt(millis);
+            out.writeArrayEnd();
+            break;
+          }
+
           if ( xmlType.getType().equals(XmlSchemaTypeInfo.Type.UNION) ) {
             xmlType = Utils.chooseUnionType(xmlType, null, schema, unionIndex);
           }
@@ -1199,27 +1225,93 @@ public class XmlDatumWriter implements DatumWriter<Document> {
         }
       case LONG:
         {
-          try {
-            final long value = Long.parseLong(data);
-            if (unionIndex >= 0) {
-              out.writeIndex(unionIndex);
+          switch (baseType) {
+          case DECIMAL:
+            {
+              try {
+                final long value = Long.parseLong(data);
+                if (unionIndex >= 0) {
+                  out.writeIndex(unionIndex);
+                }
+                out.writeLong(value);
+              } catch (NumberFormatException nfe) {
+                throw new IOException("\"" + data + "\" is not a long.", nfe);
+              }
+              break;
             }
-            out.writeLong(value);
-          } catch (NumberFormatException nfe) {
-            throw new IOException("\"" + data + "\" is not a long.", nfe);
+          case DATETIME:
+            {
+              try {
+                Calendar timestampCal = DatatypeConverter.parseDateTime(data);
+                timestampCal.setTimeZone( Utils.getGmtTimeZone() );
+                final long value = timestampCal.getTimeInMillis();
+                if (unionIndex >= 0) {
+                  out.writeIndex(unionIndex);
+                }
+                out.writeLong(value);
+              } catch (IllegalArgumentException e) {
+                throw new IOException("\"" + data + "\" is not a datetime.", e);
+              }
+              break;
+            }
+          default:
+            throw new IOException("Unrecognized long type: " + baseType);
           }
           break;
         }
       case INT:
         {
-          try {
-            final int value = Integer.parseInt(data);
-            if (unionIndex >= 0) {
-              out.writeIndex(unionIndex);
+          switch (baseType) {
+          case DECIMAL:
+            {
+              try {
+                final int value = Integer.parseInt(data);
+                if (unionIndex >= 0) {
+                  out.writeIndex(unionIndex);
+                }
+                out.writeInt(value);
+              } catch (NumberFormatException nfe) {
+                throw new IOException("\"" + data + "\" is not an int.", nfe);
+              }
+              break;
             }
-            out.writeInt(value);
-          } catch (NumberFormatException nfe) {
-            throw new IOException("\"" + data + "\" is not an int.", nfe);
+          case DATE:
+            {
+              try {
+                final Calendar dateCal = DatatypeConverter.parseDate(data);
+                dateCal.setTimeZone( Utils.getGmtTimeZone() );
+                final long diffInMillis =
+                    dateCal.getTimeInMillis()
+                    - Utils.getUnixEpoch().getTimeInMillis();
+                final long diffInDays =
+                    TimeUnit.DAYS.convert(diffInMillis, TimeUnit.MILLISECONDS);
+
+                if (unionIndex >= 0) {
+                  out.writeIndex(unionIndex);
+                  out.writeInt((int) diffInDays);
+                }
+              } catch (IllegalArgumentException e) {
+                throw new IOException("\"" + data + "\" is not a date.", e);
+              }
+              break;
+            }
+          case TIME:
+            {
+              try {
+                final Calendar timeCal = DatatypeConverter.parseTime(data);
+                timeCal.setTimeZone( Utils.getGmtTimeZone() );
+                if (unionIndex >= 0) {
+                  out.writeIndex(unionIndex);
+                  out.writeInt((int) timeCal.getTimeInMillis());
+                }
+              } catch (IllegalArgumentException e) {
+                throw new IOException("\"" + data + "\" is not a time.", e);
+              }
+              break;
+            }
+          default:
+            throw new IOException(
+                "Unrecognized integer type " + baseType);
           }
           break;
         }

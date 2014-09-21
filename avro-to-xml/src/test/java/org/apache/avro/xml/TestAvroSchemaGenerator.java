@@ -149,6 +149,8 @@ public class TestAvroSchemaGenerator {
 
     Schema optionalBinarySchema = getOptionalBinarySchema();
 
+    Schema optionalDurationSchema = getOptionalDurationSchema();
+
     List<Schema> optionalFloatTypes = new ArrayList<Schema>(2);
     optionalFloatTypes.add( Schema.create(Schema.Type.FLOAT) );
     optionalFloatTypes.add( Schema.create(Schema.Type.NULL) );
@@ -163,13 +165,13 @@ public class TestAvroSchemaGenerator {
     rootFields.add(
         new Schema.Field("anySimpleType", optionalStringSchema, null, null) );
     rootFields.add(
-        new Schema.Field("duration", optionalStringSchema, null, null) );
+        new Schema.Field("duration", optionalDurationSchema, null, null) );
     rootFields.add(
-        new Schema.Field("dateTime", optionalStringSchema, null, null) );
+        new Schema.Field("dateTime", optionalLongSchema, null, null) );
     rootFields.add(
-        new Schema.Field("date", optionalStringSchema, null, null) );
+        new Schema.Field("date", optionalIntSchema, null, null) );
     rootFields.add(
-        new Schema.Field("time", optionalStringSchema, null, null) );
+        new Schema.Field("time", optionalIntSchema, null, null) );
     rootFields.add(
         new Schema.Field("gYearMonth", optionalStringSchema, null, null) );
     rootFields.add(
@@ -940,5 +942,13 @@ public class TestAvroSchemaGenerator {
     optionalBinaryTypes.add( Schema.create(Schema.Type.BYTES) );
     optionalBinaryTypes.add( Schema.create(Schema.Type.NULL) );
     return Schema.createUnion(optionalBinaryTypes);
+  }
+
+  private static Schema getOptionalDurationSchema() {
+    List<Schema> optionalDurationTypes = new ArrayList<Schema>(2);
+    optionalDurationTypes.add(
+        Schema.createArray(Schema.create(Schema.Type.INT)));
+    optionalDurationTypes.add(Schema.create(Schema.Type.NULL));
+    return Schema.createUnion(optionalDurationTypes);
   }
 }

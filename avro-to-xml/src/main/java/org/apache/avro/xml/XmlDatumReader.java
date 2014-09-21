@@ -25,11 +25,15 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.bind.DatatypeConverter;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.Duration;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.stream.StreamSource;
@@ -46,6 +50,7 @@ import org.apache.ws.commons.schema.docpath.XmlSchemaPathFinder;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineGenerator;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineNode;
 import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
+import org.apache.ws.commons.schema.walker.XmlSchemaBaseSimpleType;
 import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
 import org.apache.ws.commons.schema.walker.XmlSchemaWalker;
 import org.codehaus.jackson.JsonNode;
@@ -66,6 +71,8 @@ import org.xml.sax.SAXException;
  * </p>
  */
 public class XmlDatumReader implements DatumReader<Document> {
+
+
 
   private Schema inputSchema;
   private XmlSchemaCollection xmlSchemaCollection;
@@ -871,6 +878,39 @@ public class XmlDatumReader implements DatumReader<Document> {
     switch ( schema.getType() ) {
     case ARRAY:
       {
+        if (XmlSchemaBaseSimpleType.DURATION.equals(xmlType.getBaseType())) {
+          final int[] durationArray = new int[3];
+          int durationIndex = 0;
+
+          for (long arrayBlockSize = in.readArrayStart();
+              arrayBlockSize > 0;
+              arrayBlockSize = in.arrayNext()) {
+            for (long itemNum = 0; itemNum < arrayBlockSize; ++itemNum) {
+              durationArray[durationIndex++] = in.readInt();
+            }
+          }
+
+          final DatatypeFactory xmlDatatypeFactory = Utils.getDatatypeFactory();
+
+          final int years   = durationArray[0] / 12;
+          final int months  = durationArray[0] % 12;
+          final int hours   = durationArray[2] / 1000 / 60 / 60;
+          final int minutes = durationArray[2] / 1000 / 60 % 60;
+          final int seconds = durationArray[2] / 1000 % 60;
+
+          final Duration duration =
+              xmlDatatypeFactory.newDuration(
+                  true,
+                  years,
+                  months,
+                  durationArray[1],
+                  hours,
+                  minutes,
+                  seconds);
+
+          return duration.toString();
+        }
+
         if (!xmlType.getType().equals(XmlSchemaTypeInfo.Type.LIST)) {
           throw new IllegalStateException(
               "Avro Schema is of type ARRAY, but the XML Schema is of type "
@@ -979,10 +1019,58 @@ public class XmlDatumReader implements DatumReader<Document> {
       return DatatypeConverter.printFloat( in.readFloat() );
 
     case INT:
-      return DatatypeConverter.printInt( in.readInt() );
+      {
+        switch ( xmlType.getBaseType() ) {
+        case DECIMAL:
+          return DatatypeConverter.printInt( in.readInt() );
 
+        case DATE:
+          {
+            final long millisOfDuration =
+                TimeUnit.MILLISECONDS.convert(in.readInt(), TimeUnit.DAYS);
+            final long newDate =
+                Utils.getUnixEpoch().getTimeInMillis() + millisOfDuration;
+            final Calendar newDateCal =
+                Calendar.getInstance( Utils.getGmtTimeZone() );
+            newDateCal.setTimeInMillis(newDate);
+
+            return DatatypeConverter.printDate(newDateCal);
+          }
+        case TIME:
+          {
+            final Calendar timeCal =
+                Calendar.getInstance( Utils.getGmtTimeZone() );
+            timeCal.setTimeInMillis( in.readInt() );
+
+            return DatatypeConverter.printTime(timeCal);
+          }
+        default:
+          throw new IllegalStateException(
+              "Avro Scehma is of type INT, but the XML Schema is of type "
+              + xmlType.getBaseType() + '.');
+        }
+      }
     case LONG:
-      return DatatypeConverter.printLong( in.readLong() );
+      {
+        switch (xmlType.getBaseType()) {
+        case DECIMAL:
+          return DatatypeConverter.printLong( in.readLong() );
+
+        case DATETIME:
+          {
+            final Calendar timestampCal =
+                Calendar.getInstance( Utils.getGmtTimeZone() );
+            timestampCal.setTimeInMillis( in.readLong() );
+            return DatatypeConverter.printDateTime(timestampCal);
+          }
+
+        default:
+          throw new IllegalStateException(
+              "Avro Scehma is of type LONG, but the XML Schema is of type "
+              + xmlType.getBaseType() + '.');
+        }
+      
+      }
 
     case STRING:
       return DatatypeConverter.printString( in.readString() );

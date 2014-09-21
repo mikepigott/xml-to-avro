@@ -33,7 +33,7 @@
     "string" : "2014"
   },
   "time" : {
-    "string" : "12:47:30"
+    "int" : 46050000
   },
   "gMonthDay" : {
     "string" : "--07-27"
@@ -51,7 +51,7 @@
     "long" : 9223372036854775807
   },
   "date" : {
-    "string" : "2014-07-27"
+    "int" : 16277
   },
   "float" : {
     "float" : 0.0
@@ -70,7 +70,7 @@
   },
   "entity" : null,
   "dateTime" : {
-    "string" : "2014-07-27T12:47:30"
+    "long" : 1406465250000
   },
   "gYearMonth" : {
     "string" : "2014-07"
@@ -95,7 +95,7 @@
     "string" : "NCName"
   },
   "duration" : {
-    "string" : "P1D"
+    "array" : [ 27, 29, 51135000 ]
   },
   "positiveInteger" : {
     "bytes" : "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"

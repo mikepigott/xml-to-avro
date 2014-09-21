@@ -80,13 +80,19 @@ public class TestAvroToXmlAndBack {
     final File xmlFile =
         UtilsForTests.buildFile("src", "test", "resources", "test1_root.xml");
 
+    final File expected =
+        UtilsForTests.buildFile("src",
+            "test",
+            "resources",
+            "test1_root_out.xml");
+
     final XmlDatumConfig config =
         new XmlDatumConfig(
             schemaFile,
             "http://avro.apache.org/AvroTest",
             root);
 
-    runTest(config, xmlFile);
+    runTest(config, xmlFile, expected);
   }
 
   @Test
@@ -107,7 +113,13 @@ public class TestAvroToXmlAndBack {
             "http://avro.apache.org/AvroTest",
             root);
 
-    runTest(config, xmlFile);
+    final File expected =
+        UtilsForTests.buildFile("src",
+            "test",
+            "resources",
+            "test2_children_out.xml");
+
+    runTest(config, xmlFile, expected);
   }
 
   @Test
@@ -154,19 +166,13 @@ public class TestAvroToXmlAndBack {
         new XmlDatumConfig(complexSchemaFile, "urn:avro:complex_schema", root);
     config.addSchemaFile(testSchemaFile);
 
-    final Document xmlDoc = docBuilder.parse(xmlFile);
-
-    final Document outDoc = convertToAvroAndBack(config, xmlDoc);
-
     final File expectedXml =
         UtilsForTests.buildFile("src",
                                 "test",
                                 "resources",
                                 "complex_test1_out.xml");
 
-    final Document expectedDoc = docBuilder.parse(expectedXml);
-
-    UtilsForTests.assertEquivalent(expectedDoc, outDoc);
+    runTest(config, xmlFile, expectedXml);
   }
 
   private static Document convertToAvroAndBack(
@@ -198,11 +204,23 @@ public class TestAvroToXmlAndBack {
   }
 
   private void runTest(XmlDatumConfig config, File xmlFile) throws Exception {
+    runTest(config, xmlFile, xmlFile);
+  }
 
-    final Document xmlDoc = docBuilder.parse(xmlFile);
+  private void runTest(
+      XmlDatumConfig config,
+      File inXmlFile,
+      File expOutXmlFile) throws Exception {
+
+    final Document xmlDoc = docBuilder.parse(inXmlFile);
 
     final Document outDoc = convertToAvroAndBack(config, xmlDoc);
 
-    UtilsForTests.assertEquivalent(xmlDoc, outDoc);
+    Document expDoc = xmlDoc;
+    if (!inXmlFile.equals(expOutXmlFile)) {
+      expDoc = docBuilder.parse(expOutXmlFile);
+    }
+
+    UtilsForTests.assertEquivalent(expDoc, outDoc);
   }
 }

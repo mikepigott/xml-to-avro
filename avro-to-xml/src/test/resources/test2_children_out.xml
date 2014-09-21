@@ -18,11 +18,11 @@
   base64Binary="MA=="
   boolean="true"
   byte="57"
-  date="2014-07-27"
-  dateTime="2014-07-27T12:47:30"
+  date="2014-07-27Z"
+  dateTime="2014-07-27T12:47:30Z"
   decimal="65536"
   double="32768.32768"
-  duration="P2Y3M29DT14H12M15S"
+  duration="P0Y0M1DT0H0M0S"
   float="0.0"
   gDay="---27"
   gMonth="--07"
@@ -48,8 +48,8 @@
   positiveInteger="9223372036854775808"
   qname="QName"
   short="-32768"
-  string="hello"
-  time="12:47:30"
+  string=""
+  time="12:47:30Z"
   token="xmlSchema"
   unsignedByte="255"
   unsignedInt="4294967295"
@@ -59,4 +59,21 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://avro.apache.org/AvroTest test_schema.xsd ">
 
+	<avro:primitive>null</avro:primitive>
+	<avro:primitive>boolean</avro:primitive>
+	<avro:primitive>int</avro:primitive>
+	<avro:primitive>long</avro:primitive>
+	<avro:primitive>float</avro:primitive>
+	<avro:primitive>double</avro:primitive>
+	<avro:primitive>decimal</avro:primitive>
+	<avro:primitive>bytes</avro:primitive>
+	<avro:primitive>string</avro:primitive>
+	<avro:nonNullPrimitive>boolean</avro:nonNullPrimitive>
+	<avro:nonNullPrimitive>int</avro:nonNullPrimitive>
+	<avro:nonNullPrimitive>long</avro:nonNullPrimitive>
+	<avro:nonNullPrimitive>float</avro:nonNullPrimitive>
+	<avro:nonNullPrimitive>double</avro:nonNullPrimitive>
+	<avro:nonNullPrimitive>decimal</avro:nonNullPrimitive>
+	<avro:nonNullPrimitive>bytes</avro:nonNullPrimitive>
+	<avro:nonNullPrimitive>string</avro:nonNullPrimitive>
 </avro:root>

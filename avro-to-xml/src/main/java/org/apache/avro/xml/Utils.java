@@ -24,11 +24,15 @@ import java.net.URISyntaxException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
 import javax.xml.namespace.QName;
 
 import org.apache.avro.Schema;
@@ -50,31 +54,67 @@ class Utils {
   private static final int UNDERSCORE_CP = '_';
   private static final int PERIOD_CP = '.';
 
-  private static final Map<QName, Schema.Type> xmlToAvroTypeMap =
+  // We need to set all time zones to GMT to avoid date conversions.
+  private static final TimeZone GMT_TIME_ZONE = TimeZone.getTimeZone("GMT");
+  private static final Calendar UNIX_EPOCH =
+      Calendar.getInstance(GMT_TIME_ZONE);
+
+  private static final Map<QName, Schema.Type> XML_TO_AVRO_TYPE_MAP =
       new HashMap<QName, Schema.Type>();
 
+  private static DatatypeFactory xmlDatatypeFactory = null;
+
   static {
-    xmlToAvroTypeMap.put(Constants.XSD_ANYTYPE,       Schema.Type.STRING);
-    xmlToAvroTypeMap.put(Constants.XSD_BOOLEAN,       Schema.Type.BOOLEAN);
-    xmlToAvroTypeMap.put(Constants.XSD_DECIMAL,       Schema.Type.BYTES);
-    xmlToAvroTypeMap.put(Constants.XSD_DOUBLE,        Schema.Type.DOUBLE);
-    xmlToAvroTypeMap.put(Constants.XSD_FLOAT,         Schema.Type.FLOAT);
-    xmlToAvroTypeMap.put(Constants.XSD_BASE64,        Schema.Type.BYTES);
-    xmlToAvroTypeMap.put(Constants.XSD_HEXBIN,        Schema.Type.BYTES);
-    xmlToAvroTypeMap.put(Constants.XSD_LONG,          Schema.Type.LONG);
-    xmlToAvroTypeMap.put(Constants.XSD_ID,            Schema.Type.STRING);
-    xmlToAvroTypeMap.put(Constants.XSD_INT,           Schema.Type.INT);
-    xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDINT,   Schema.Type.LONG);
-    xmlToAvroTypeMap.put(Constants.XSD_UNSIGNEDSHORT, Schema.Type.INT);
-    xmlToAvroTypeMap.put(Constants.XSD_QNAME,         Schema.Type.RECORD);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_ANYTYPE,       Schema.Type.STRING);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_BOOLEAN,       Schema.Type.BOOLEAN);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_DECIMAL,       Schema.Type.BYTES);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_DOUBLE,        Schema.Type.DOUBLE);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_FLOAT,         Schema.Type.FLOAT);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_BASE64,        Schema.Type.BYTES);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_HEXBIN,        Schema.Type.BYTES);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_LONG,          Schema.Type.LONG);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_ID,            Schema.Type.STRING);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_INT,           Schema.Type.INT);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_UNSIGNEDINT,   Schema.Type.LONG);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_UNSIGNEDSHORT, Schema.Type.INT);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_QNAME,         Schema.Type.RECORD);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_DATE,          Schema.Type.INT);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_TIME,          Schema.Type.INT);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_DATETIME,      Schema.Type.LONG);
+    XML_TO_AVRO_TYPE_MAP.put(Constants.XSD_DURATION,      Schema.Type.ARRAY);
+
+    UNIX_EPOCH.set(1970, 0, 1, 0, 0, 0);
+    UNIX_EPOCH.set(Calendar.MILLISECOND, 0);
+  }
+
+  static TimeZone getGmtTimeZone() {
+    return GMT_TIME_ZONE;
+  }
+
+  static Calendar getUnixEpoch() {
+    return UNIX_EPOCH;
+  }
+
+  static DatatypeFactory getDatatypeFactory(){
+    if (xmlDatatypeFactory == null) {
+      try {
+        xmlDatatypeFactory = DatatypeFactory.newInstance();
+      } catch (DatatypeConfigurationException e) {
+        throw new IllegalStateException(
+            "Unable to create the DatatypeFactory for writing XML Schema "
+            + "durations.",
+            e);
+      }
+    }
+    return xmlDatatypeFactory;
   }
 
   static Set<QName> getAvroRecognizedTypes() {
-    return xmlToAvroTypeMap.keySet();
+    return XML_TO_AVRO_TYPE_MAP.keySet();
   }
 
   static Schema.Type getAvroSchemaTypeFor(QName qName) {
-    return xmlToAvroTypeMap.get(qName);
+    return XML_TO_AVRO_TYPE_MAP.get(qName);
   }
 
   static Schema getAvroSchemaFor(
@@ -149,10 +189,18 @@ class Utils {
               Schema.createRecord("qName", "Qualified Name", ns, false);
           schema.setFields(fields);
 
+        } else if (typeInfo
+                    .getBaseType()
+                    .equals(XmlSchemaBaseSimpleType.DURATION)) {
+
+          // Duration is a logical type.
+          schema = Schema.createArray(Schema.create(Schema.Type.INT));
+          schema.addProp("logicalType", new TextNode("duration"));
+
         } else {
 
           final Schema.Type avroType =
-            xmlToAvroTypeMap.get( typeInfo.getUserRecognizedType() );
+            XML_TO_AVRO_TYPE_MAP.get( typeInfo.getUserRecognizedType() );
   
           if (avroType == null) {
             throw new IllegalArgumentException(
@@ -230,6 +278,22 @@ class Utils {
             schema.addProp("scale", new IntNode(scale));
 
             schema.addProp("precision", new IntNode(precision));
+
+          } else if (schema.getType().equals(Schema.Type.INT)) {
+            // DATE and TIME are logical types.
+            switch (typeInfo.getBaseType()) {
+            case DATE:
+              schema.addProp("logicalType", new TextNode("date"));
+              break;
+            case TIME:
+              schema.addProp("logicalType", new TextNode("time"));
+              break;
+            default:
+            }
+
+          } else if (schema.getType().equals(Schema.Type.LONG)) {
+            // DATETIME is a logical type.
+            schema.addProp("logicalType", new TextNode("timestamp"));
           }
         }
 
@@ -359,8 +423,8 @@ class Utils {
         }
       }
     }
-    return xmlElemType;
 
+    return xmlElemType;
   }
 
   static String getAvroNamespaceFor(String xmlSchemaNamespace)
