@@ -282,4 +282,21 @@ public class TestUtils {
 
     assertEquals("time", timeSchema.getJsonProp("logicalType").asText());
   }
+
+  @Test
+  public void testCreateDuration() {
+    XmlSchemaTypeInfo durationType =
+        new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DURATION);
+    durationType.setUserRecognizedType(Constants.XSD_DURATION);
+
+    Schema datetimeSchema =
+        Utils.getAvroSchemaFor(durationType, Constants.XSD_DURATION, false);
+
+    assertEquals(Schema.Type.ARRAY, datetimeSchema.getType());
+    assertEquals(Schema.Type.INT, datetimeSchema.getElementType().getType());
+
+    assertEquals(
+        "duration",
+        datetimeSchema.getJsonProp("logicalType").asText());
+  }
 }
