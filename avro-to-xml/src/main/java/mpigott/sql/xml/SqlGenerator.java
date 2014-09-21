@@ -64,6 +64,20 @@ public class SqlGenerator {
     stateMachineNodesByQName = stateMachineGen.getStateMachineNodesByQName();
   }
 
+  // ****
+  // TODO: Make this the public interface, but delegate
+  //       the work to package-protected classes.
+  //
+  // TODO: Do we want to return the statements to run,
+  //       or should we just run them ourselves?
+  //
+  // TODO: How should this fit in with Apache Camel, where
+  //       we only need to generate the SQL statements and
+  //       populate the headers with their values?
+  //
+  // TODO: Determine what the XML Schema recognized types are for SQL.
+  // ****
+
   public List<PreparedStatement> createSchema(Connection conn) {
     return null;
   }
