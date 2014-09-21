@@ -110,10 +110,6 @@ public class TestUtils {
     avroUnrecognizedTypes.add(Constants.XSD_TOKEN);
     avroUnrecognizedTypes.add(Constants.XSD_UNSIGNEDBYTE);
     avroUnrecognizedTypes.add(Constants.XSD_ANYSIMPLETYPE);
-    avroUnrecognizedTypes.add(Constants.XSD_DURATION);
-    avroUnrecognizedTypes.add(Constants.XSD_DATETIME);
-    avroUnrecognizedTypes.add(Constants.XSD_TIME);
-    avroUnrecognizedTypes.add(Constants.XSD_DATE);
     avroUnrecognizedTypes.add(Constants.XSD_YEARMONTH);
     avroUnrecognizedTypes.add(Constants.XSD_YEAR);
     avroUnrecognizedTypes.add(Constants.XSD_MONTHDAY);
@@ -142,6 +138,10 @@ public class TestUtils {
     assertTrue( recTypes.contains(Constants.XSD_UNSIGNEDINT) );
     assertTrue( recTypes.contains(Constants.XSD_UNSIGNEDSHORT) );
     assertTrue( recTypes.contains(Constants.XSD_QNAME) );
+    assertTrue( recTypes.contains(Constants.XSD_DURATION) );
+    assertTrue( recTypes.contains(Constants.XSD_DATETIME) );
+    assertTrue( recTypes.contains(Constants.XSD_TIME) );
+    assertTrue( recTypes.contains(Constants.XSD_DATE) );
 
     for (QName unrecognizedType : avroUnrecognizedTypes) {
       assertFalse( recTypes.contains(unrecognizedType) );
@@ -202,6 +202,22 @@ public class TestUtils {
         Schema.Type.RECORD,
         Utils.getAvroSchemaTypeFor(Constants.XSD_QNAME));
 
+    assertEquals(
+        Schema.Type.ARRAY,
+        Utils.getAvroSchemaTypeFor(Constants.XSD_DURATION));
+
+    assertEquals(
+        Schema.Type.LONG,
+        Utils.getAvroSchemaTypeFor(Constants.XSD_DATETIME));
+
+    assertEquals(
+        Schema.Type.INT,
+        Utils.getAvroSchemaTypeFor(Constants.XSD_TIME));
+
+    assertEquals(
+        Schema.Type.INT,
+        Utils.getAvroSchemaTypeFor(Constants.XSD_DATE));
+
     for (QName unrecognizedType : avroUnrecognizedTypes) {
       assertNull( Utils.getAvroSchemaTypeFor(unrecognizedType) );
     }
@@ -221,5 +237,49 @@ public class TestUtils {
 
     assertEquals(MathContext.DECIMAL128.getPrecision(),
                  decimalSchema.getJsonProp("precision").asInt());
+  }
+
+  @Test
+  public void testCreateDateTime() {
+    XmlSchemaTypeInfo datetimeType =
+        new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DATETIME);
+    datetimeType.setUserRecognizedType(Constants.XSD_DATETIME);
+
+    Schema datetimeSchema =
+        Utils.getAvroSchemaFor(datetimeType, Constants.XSD_DATETIME, false);
+
+    assertEquals(Schema.Type.LONG, datetimeSchema.getType());
+
+    assertEquals(
+        "timestamp",
+        datetimeSchema.getJsonProp("logicalType").asText());
+  }
+
+  @Test
+  public void testCreateDate() {
+    XmlSchemaTypeInfo dateType =
+        new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.DATE);
+    dateType.setUserRecognizedType(Constants.XSD_DATE);
+
+    Schema dateSchema =
+        Utils.getAvroSchemaFor(dateType, Constants.XSD_DATE, false);
+
+    assertEquals(Schema.Type.INT, dateSchema.getType());
+
+    assertEquals("date", dateSchema.getJsonProp("logicalType").asText());
+  }
+
+  @Test
+  public void testCreateTime() {
+    XmlSchemaTypeInfo timeType =
+        new XmlSchemaTypeInfo(XmlSchemaBaseSimpleType.TIME);
+    timeType.setUserRecognizedType(Constants.XSD_TIME);
+
+    Schema timeSchema =
+        Utils.getAvroSchemaFor(timeType, Constants.XSD_TIME, false);
+
+    assertEquals(Schema.Type.INT, timeSchema.getType());
+
+    assertEquals("time", timeSchema.getJsonProp("logicalType").asText());
   }
 }

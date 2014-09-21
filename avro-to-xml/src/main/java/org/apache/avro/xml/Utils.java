@@ -54,6 +54,8 @@ class Utils {
   private static final int UNDERSCORE_CP = '_';
   private static final int PERIOD_CP = '.';
 
+  private static final String LOGICAL_TYPE = "logicalType";
+
   // We need to set all time zones to GMT to avoid date conversions.
   private static final TimeZone GMT_TIME_ZONE = TimeZone.getTimeZone("GMT");
   private static final Calendar UNIX_EPOCH =
@@ -195,7 +197,7 @@ class Utils {
 
           // Duration is a logical type.
           schema = Schema.createArray(Schema.create(Schema.Type.INT));
-          schema.addProp("logicalType", new TextNode("duration"));
+          schema.addProp(LOGICAL_TYPE, new TextNode("duration"));
 
         } else {
 
@@ -273,7 +275,7 @@ class Utils {
               }
             }
 
-            schema.addProp("logicalType", new TextNode("decimal"));
+            schema.addProp(LOGICAL_TYPE, new TextNode("decimal"));
 
             schema.addProp("scale", new IntNode(scale));
 
@@ -283,17 +285,21 @@ class Utils {
             // DATE and TIME are logical types.
             switch (typeInfo.getBaseType()) {
             case DATE:
-              schema.addProp("logicalType", new TextNode("date"));
+              schema.addProp(LOGICAL_TYPE, new TextNode("date"));
               break;
             case TIME:
-              schema.addProp("logicalType", new TextNode("time"));
+              schema.addProp(LOGICAL_TYPE, new TextNode("time"));
               break;
             default:
+              // Not a logical type.
             }
 
-          } else if (schema.getType().equals(Schema.Type.LONG)) {
+          } else if (schema.getType().equals(Schema.Type.LONG)
+              && typeInfo
+                   .getBaseType()
+                   .equals(XmlSchemaBaseSimpleType.DATETIME)) {
             // DATETIME is a logical type.
-            schema.addProp("logicalType", new TextNode("timestamp"));
+            schema.addProp(LOGICAL_TYPE, new TextNode("timestamp"));
           }
         }
 
@@ -530,7 +536,7 @@ class Utils {
   }
 
   private static void confirmIsValidDecimal(Schema schema) {
-    final JsonNode logicalTypeNode = schema.getJsonProp("logicalType");
+    final JsonNode logicalTypeNode = schema.getJsonProp(LOGICAL_TYPE);
     if (logicalTypeNode == null) {
       throw new IllegalStateException(
           "Attempted to read an XML Schema DECIMAL as an Avro "
