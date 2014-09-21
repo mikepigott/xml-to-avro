@@ -25,5 +25,5 @@ import java.util.Map;
  */
 public final class SqlTable {
 
-  private Map<SqlRelationship, SqlTable> relationships;
+  Map<SqlRelationship, SqlTable> relationships;
 }
