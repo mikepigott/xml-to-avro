@@ -16,6 +16,7 @@
 
 package mpigott.sql.xml;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,4 +27,5 @@ import java.util.Map;
 public final class SqlTable {
 
   Map<SqlRelationship, SqlTable> relationships;
+  List<SqlAttribute> attributes;
 }
