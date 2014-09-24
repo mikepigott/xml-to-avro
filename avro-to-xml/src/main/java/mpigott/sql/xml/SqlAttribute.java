@@ -29,8 +29,6 @@ public final class SqlAttribute {
     TINYINT,           // XSD_BYTE
     DECIMAL,           // XSD_DECIMAL
     NUMERIC,           // XSD_DECIMAL
-    MONEY,             // modified XSD_LONG (4 decimal places)
-    SMALLMONEY,        // modified XSD_INT  (4 decimal places)
     FLOAT,             // XSD_FLOAT
     REAL,              // XSD_DOUBLE
     DATETIME,          // XSD_DATETIME
