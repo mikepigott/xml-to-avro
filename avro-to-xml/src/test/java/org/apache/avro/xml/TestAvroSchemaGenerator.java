@@ -20,7 +20,6 @@ package org.apache.avro.xml;
 
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,10 +64,6 @@ public class TestAvroSchemaGenerator {
             "complex_schema.xsd");
 
     Schema schema = createSchemaOf(file, "root");
-
-    FileWriter writer = new FileWriter("complex_schema.avsc");
-    writer.write( schema.toString(true) );
-    writer.close();
 
     UtilsForTests.assertEquivalent(getExpectedComplexSchema(), schema);
   }

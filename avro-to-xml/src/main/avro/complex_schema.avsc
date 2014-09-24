@@ -1,0 +1,291 @@
+[ {
+  "type" : "record",
+  "name" : "realRoot",
+  "namespace" : "avro.complex_schema",
+  "fields" : [ {
+    "name" : "month",
+    "type" : "string"
+  }, {
+    "name" : "year",
+    "type" : "string"
+  }, {
+    "name" : "day",
+    "type" : "string"
+  }, {
+    "name" : "realRoot",
+    "type" : {
+      "type" : "array",
+      "items" : [ {
+        "type" : "record",
+        "name" : "backtrack",
+        "doc" : " This forces backtracking through the different schema options. Consider the following elements: <backtrack> <qName>avro:qName</qName> <avroEnum>avro</avroEnum> <xmlEnum>rest.li</xmlEnum> <xmlEnum>xml</xmlEnum> <unsignedLongList>18446744073709551615 1844674407370955 12579</unsignedLongList> <listOfUnion>true 18446744073709551616 false -2147483648 -1234.567 avro</listOfUnion> </backtrack> The first four elements in the list can match either the first choice group or the second sequence group, and by default the first branch will be taken. It is not until the last child element, <listOfUnion>, is reached, that it becomes clear the choice group should not be followed. ",
+        "fields" : [ {
+          "name" : "backtrack",
+          "type" : {
+            "type" : "array",
+            "items" : [ {
+              "type" : "record",
+              "name" : "qName",
+              "fields" : [ {
+                "name" : "qName",
+                "type" : {
+                  "type" : "record",
+                  "name" : "qName",
+                  "namespace" : "org.w3.www.2001.XMLSchema",
+                  "doc" : "Qualified Name",
+                  "fields" : [ {
+                    "name" : "namespace",
+                    "type" : "string",
+                    "doc" : "The namespace of this qualified name."
+                  }, {
+                    "name" : "localPart",
+                    "type" : "string",
+                    "doc" : "The local part of this qualified name."
+                  } ]
+                },
+                "doc" : "Simple type {http://www.w3.org/2001/XMLSchema}QName"
+              } ]
+            }, {
+              "type" : "record",
+              "name" : "avroEnum",
+              "fields" : [ {
+                "name" : "avroEnum",
+                "type" : {
+                  "type" : "enum",
+                  "name" : "avroEnum",
+                  "namespace" : "avro.complex_schema.enums",
+                  "doc" : "Enumeration of symbols in {urn:avro:complex_schema}avroEnum",
+                  "symbols" : [ "xml", "json", "avro", "thrift", "protobuf", "rest_li" ]
+                },
+                "doc" : "Simple type {http://www.w3.org/2001/XMLSchema}anyType"
+              } ]
+            }, {
+              "type" : "record",
+              "name" : "xmlEnum",
+              "fields" : [ {
+                "name" : "xmlEnum",
+                "type" : "string",
+                "doc" : "Simple type {http://www.w3.org/2001/XMLSchema}anyType"
+              } ]
+            }, {
+              "type" : "record",
+              "name" : "unsignedLongList",
+              "fields" : [ {
+                "name" : "unsignedLongList",
+                "type" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "bytes",
+                    "logicalType" : "decimal",
+                    "scale" : 0,
+                    "precision" : 34
+                  }
+                },
+                "doc" : "Simple type null"
+              } ]
+            }, {
+              "type" : "record",
+              "name" : "listOfUnion",
+              "fields" : [ {
+                "name" : "listOfUnion",
+                "type" : {
+                  "type" : "array",
+                  "items" : [ "boolean", "string", "int", {
+                    "type" : "bytes",
+                    "logicalType" : "decimal",
+                    "scale" : 0,
+                    "precision" : 34
+                  } ]
+                },
+                "doc" : "Simple type null"
+              } ]
+            } ]
+          },
+          "doc" : "Children of {urn:avro:complex_schema}backtrack"
+        } ]
+      }, {
+        "type" : "map",
+        "values" : {
+          "type" : "record",
+          "name" : "allTheThings",
+          "doc" : " This is a map containing a map of a union of firstMap and secondMap. The maps are generated as all three have a single required attribute of type ID. The inner two maps become a union because a union of two map types is not allowed. Likewise, the map itself must become a union of two other types. ",
+          "fields" : [ {
+            "name" : "truth",
+            "type" : "boolean"
+          }, {
+            "name" : "id",
+            "type" : "string"
+          }, {
+            "name" : "listOfNumbers",
+            "type" : {
+              "type" : "array",
+              "items" : [ "int", {
+                "type" : "bytes",
+                "logicalType" : "decimal",
+                "scale" : 0,
+                "precision" : 34
+              } ]
+            }
+          }, {
+            "name" : "allTheThings",
+            "type" : {
+              "type" : "array",
+              "items" : [ {
+                "type" : "map",
+                "values" : [ {
+                  "type" : "record",
+                  "name" : "firstMap",
+                  "fields" : [ {
+                    "name" : "id",
+                    "type" : "string"
+                  }, {
+                    "name" : "firstMap",
+                    "type" : {
+                      "type" : "array",
+                      "items" : [ {
+                        "type" : "record",
+                        "name" : "value",
+                        "fields" : [ {
+                          "name" : "value",
+                          "type" : [ {
+                            "type" : "bytes",
+                            "logicalType" : "decimal",
+                            "scale" : 0,
+                            "precision" : 34
+                          }, "null" ],
+                          "doc" : "Simple type {http://www.w3.org/2001/XMLSchema}decimal"
+                        } ]
+                      } ]
+                    },
+                    "doc" : "Children of {urn:avro:complex_schema}firstMap"
+                  } ]
+                }, {
+                  "type" : "record",
+                  "name" : "secondMap",
+                  "fields" : [ {
+                    "name" : "id",
+                    "type" : "string"
+                  }, {
+                    "name" : "value",
+                    "type" : "string"
+                  }, {
+                    "name" : "secondMap",
+                    "type" : "null",
+                    "doc" : "This element contains no attributes and no children."
+                  } ]
+                } ]
+              } ]
+            },
+            "doc" : "Children of {urn:avro:complex_schema}allTheThings"
+          } ]
+        }
+      }, {
+        "type" : "record",
+        "name" : "prohibit",
+        "fields" : [ {
+          "name" : "prohibit",
+          "type" : {
+            "type" : "array",
+            "items" : [ {
+              "type" : "record",
+              "name" : "fixed",
+              "fields" : [ {
+                "name" : "fixed",
+                "type" : {
+                  "type" : "bytes",
+                  "logicalType" : "decimal",
+                  "scale" : 0,
+                  "precision" : 34
+                },
+                "doc" : "Simple type {http://www.w3.org/2001/XMLSchema}decimal"
+              } ]
+            } ]
+          },
+          "doc" : "Children of {urn:avro:complex_schema}prohibit"
+        } ]
+      }, {
+        "type" : "record",
+        "name" : "anyAndFriends",
+        "fields" : [ {
+          "name" : "anyAndFriends",
+          "type" : "string",
+          "doc" : "Simple type null"
+        } ]
+      }, {
+        "type" : "record",
+        "name" : "simpleExtension",
+        "fields" : [ {
+          "name" : "default",
+          "type" : "string"
+        }, {
+          "name" : "fixed",
+          "type" : "int"
+        }, {
+          "name" : "simpleExtension",
+          "type" : [ "boolean", {
+            "type" : "bytes",
+            "logicalType" : "decimal",
+            "scale" : 0,
+            "precision" : 34
+          } ],
+          "doc" : "Simple type null"
+        } ]
+      }, {
+        "type" : "record",
+        "name" : "simpleRestriction",
+        "fields" : [ {
+          "name" : "default",
+          "type" : "string"
+        }, {
+          "name" : "fixed",
+          "type" : "int"
+        }, {
+          "name" : "simpleRestriction",
+          "type" : [ "boolean", {
+            "type" : "bytes",
+            "logicalType" : "decimal",
+            "scale" : 0,
+            "precision" : 34
+          } ],
+          "doc" : "Simple type null"
+        } ]
+      }, {
+        "type" : "record",
+        "name" : "complexExtension",
+        "fields" : [ {
+          "name" : "optional",
+          "type" : [ "string", "null" ]
+        }, {
+          "name" : "defaulted",
+          "type" : "string"
+        }, {
+          "name" : "complexExtension",
+          "type" : {
+            "type" : "array",
+            "items" : [ "fixed", "listOfUnion", "unsignedLongList" ]
+          },
+          "doc" : "Children of {urn:avro:complex_schema}complexExtension"
+        } ]
+      }, {
+        "type" : "record",
+        "name" : "mixedType",
+        "fields" : [ {
+          "name" : "mixedType",
+          "type" : {
+            "type" : "array",
+            "items" : [ "listOfUnion", "unsignedLongList", "string" ]
+          },
+          "doc" : "Children of {urn:avro:complex_schema}mixedType"
+        } ]
+      } ]
+    },
+    "doc" : "Children of {urn:avro:complex_schema}realRoot"
+  } ],
+  "xmlSchemas" : {
+    "files" : [ "C:\\Users\\Mike Pigott\\git\\xml-to-avro\\avro-to-xml\\src\\test\\resources\\complex_schema.xsd" ],
+    "rootTag" : {
+      "namespace" : "urn:avro:complex_schema",
+      "localPart" : "root"
+    }
+  }
+} ]
