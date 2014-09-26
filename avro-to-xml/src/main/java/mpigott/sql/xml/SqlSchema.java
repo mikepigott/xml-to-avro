@@ -16,6 +16,8 @@
 
 package mpigott.sql.xml;
 
+import java.util.List;
+
 /**
  * In-memory representation of an SQL schema.  This will be translated
  * to different relational database schemas using retargetable templates.
@@ -23,4 +25,5 @@ package mpigott.sql.xml;
  * @author  Mike Pigott
  */
 public class SqlSchema {
+  List<SqlTable> tables;
 }
