@@ -98,7 +98,7 @@ public class Main {
     XmlDatumReader reader = new XmlDatumReader();
     reader.setSchema(avroSchema);
 
-    final Document doc = reader.read(null, jd);
+    final Document doc = reader.read((Document) null, jd);
     inStream.close();
 
     TransformerFactory transformerFactory = TransformerFactory.newInstance();

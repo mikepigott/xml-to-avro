@@ -75,7 +75,7 @@ public class XmlDatumReader implements DatumReader<Document> {
   private Schema inputSchema;
   private XmlSchemaCollection xmlSchemaCollection;
   private HashMap<String, String> namespaceToLocationMapping;
-  private List<ContentHandler> contentHandlers;
+  private XmlSchemaPathFinder pathFinder;
   private DomBuilderFromSax domBuilder;
   private Map<AvroRecordName, XmlSchemaStateMachineNode> stateByAvroName;
   private XmlSchemaNamespaceContext nsContext;
@@ -377,7 +377,7 @@ public class XmlDatumReader implements DatumReader<Document> {
     inputSchema = null;
     xmlSchemaCollection = null;
     namespaceToLocationMapping = null;
-    contentHandlers = null;
+    pathFinder = null;
     domBuilder = null;
     bytesBuffer = null;
     nsContext = new XmlSchemaNamespaceContext();
@@ -559,10 +559,7 @@ public class XmlDatumReader implements DatumReader<Document> {
     domBuilder.setStateMachinesByQName(stateMachineNodesByQName);
 
     inputSchema = schema;
-
-	  contentHandlers = new ArrayList<ContentHandler>(2);
-	  contentHandlers.add( new XmlSchemaPathFinder(stateMachine) );
-	  contentHandlers.add(domBuilder);
+    pathFinder = new XmlSchemaPathFinder(stateMachine);
   }
 
   /**
@@ -574,15 +571,28 @@ public class XmlDatumReader implements DatumReader<Document> {
    */
   @Override
   public Document read(Document reuse, Decoder in) throws IOException {
+    read(domBuilder, in);
+    return domBuilder.getDocument();
+  }
+
+  public void read(ContentHandler saxContentHandler, Decoder in)
+      throws IOException {
+
     if ((inputSchema == null)
         || (xmlSchemaCollection == null)
         || (domBuilder == null)
-        || (contentHandlers == null)) {
+        || (pathFinder == null)) {
       throw new IllegalStateException(
           "The Avro and XML Schemas must be defined before reading from an "
           + "Avro Decoder.  Please call XmlDatumReader.setSchema(Schema) "
           + "before calling this function.");
     }
+
+    final List<ContentHandler> contentHandlers =
+        new ArrayList<ContentHandler>(2);
+
+    contentHandlers.add(pathFinder);
+    contentHandlers.add(saxContentHandler);
 
     final String[] prefixes = nsContext.getDeclaredPrefixes();
     try {
@@ -609,7 +619,7 @@ public class XmlDatumReader implements DatumReader<Document> {
       rootSchema = rootSchema.getTypes().get(unionIndex);
     }
 
-    processElement(rootSchema, in);
+    processElement(contentHandlers, rootSchema, in);
 
     try {
       for (ContentHandler contentHandler : contentHandlers) {
@@ -622,12 +632,12 @@ public class XmlDatumReader implements DatumReader<Document> {
     } catch (Exception e) {
       throw new IOException("Unable to create the new document.", e);
     }
-
-    return domBuilder.getDocument();
   }
 
-  private void processElement(Schema elemSchema, Decoder in)
-      throws IOException {
+  private void processElement(
+      List<ContentHandler> contentHandlers,
+      Schema elemSchema,
+      Decoder in) throws IOException {
 
     if ( !elemSchema.getType().equals(Schema.Type.RECORD) ) {
       throw new IllegalStateException(
@@ -756,11 +766,12 @@ public class XmlDatumReader implements DatumReader<Document> {
     case LIST:
     case UNION:
       {
-        processContent(content);
+        processContent(contentHandlers, content);
         break;
       }
     case COMPLEX:
       processComplexChildren(
+          contentHandlers,
           childField,
           stateMachine.getElement(),
           elemType,
@@ -845,7 +856,10 @@ public class XmlDatumReader implements DatumReader<Document> {
     return attribute;
   }
 
-  private void processContent(String content) throws IOException {
+  private void processContent(
+      List<ContentHandler> contentHandlers,
+      String content) throws IOException {
+
     if (content == null) {
       return;
     }
@@ -1129,6 +1143,7 @@ public class XmlDatumReader implements DatumReader<Document> {
   }
 
   private void processComplexChildren(
+      List<ContentHandler> contentHandlers,
       Schema.Field field,
       XmlSchemaElement element,
       XmlSchemaTypeInfo elemType,
@@ -1144,7 +1159,7 @@ public class XmlDatumReader implements DatumReader<Document> {
       break;
     case STRING:
       if ( elemType.isMixed() ) {
-        processContent( in.readString() );
+        processContent(contentHandlers, in.readString());
       } else {
         throw new IllegalStateException(
             element.getQName()
@@ -1180,11 +1195,12 @@ public class XmlDatumReader implements DatumReader<Document> {
                     // MAP of UNION of RECORD or MAP of RECORD
                     final Schema valueType = unionSchema.getValueType();
                     if ( valueType.getType().equals(Schema.Type.RECORD) ) {
-                      processElement(valueType, in);
+                      processElement(contentHandlers, valueType, in);
 
                     } else if (valueType.getType().equals(Schema.Type.UNION)) {
                       final int mapUnionIndex = in.readIndex();
                       processElement(
+                          contentHandlers,
                           valueType.getTypes().get(mapUnionIndex),
                           in);
 
@@ -1200,11 +1216,11 @@ public class XmlDatumReader implements DatumReader<Document> {
                 break;
               }
             case RECORD:
-              processElement(unionSchema, in);
+              processElement(contentHandlers, unionSchema, in);
               break;
             case STRING:
               if ( elemType.isMixed() ) {
-                processContent( in.readString() );
+                processContent(contentHandlers, in.readString());
               } else {
                 throw new IOException(
                     "Received a STRING for non-mixed type element "

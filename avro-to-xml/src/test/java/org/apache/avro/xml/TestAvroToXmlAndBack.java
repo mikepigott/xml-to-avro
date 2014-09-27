@@ -200,7 +200,7 @@ public class TestAvroToXmlAndBack {
     final XmlDatumReader reader = new XmlDatumReader();
     reader.setSchema(xmlToAvroSchema);
 
-    return reader.read(null, decoder);
+    return reader.read((Document) null, decoder);
   }
 
   private void runTest(XmlDatumConfig config, File xmlFile) throws Exception {
