@@ -18,9 +18,12 @@
 
 package org.apache.avro.xml;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -31,6 +34,9 @@ import javax.xml.bind.DatatypeConverter;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.Duration;
 import javax.xml.namespace.QName;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.avro.Schema;
@@ -1445,8 +1451,9 @@ public class XmlDatumWriter implements DatumWriter<Document> {
   @Override
   public void write(Document doc, Encoder out) throws IOException {
     // 1. Build the path through the schema that describes the document.
-    XmlSchemaPathFinder pathFinder = new XmlSchemaPathFinder(stateMachine);
-    SaxWalkerOverDom walker = new SaxWalkerOverDom(pathFinder);
+    final XmlSchemaPathFinder pathFinder =
+        new XmlSchemaPathFinder(stateMachine);
+    final SaxWalkerOverDom walker = new SaxWalkerOverDom(pathFinder);
     try {
       walker.walk(doc);
     } catch (Exception se) {
@@ -1467,6 +1474,102 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       walker.walk(doc);
     } catch (SAXException e) {
       throw new IOException("Unable to encode the document.", e);
+    }
+  }
+
+  /**
+   * Writes the XML in the provided {@link File} to the {@link Encoder} in
+   * accordance with the {@link Schema} set in {@link #setSchema(Schema)}.
+   *
+   * <p>
+   * If no {@link Schema} was provided, builds one from the {@link Document}
+   * and its {@link XmlSchemaCollection}.  The schema can then be retrieved
+   * from {@link #getSchema()}.
+   * </p>
+   */
+  public void write(File xmlFile, Encoder out)
+      throws IOException, ParserConfigurationException, SAXException {
+
+    final SAXParserFactory factory = SAXParserFactory.newInstance();
+    factory.setNamespaceAware(true);
+
+    // 1. Build the path through the schema that describes the document.
+    final SAXParser pathFindingParser = factory.newSAXParser();
+
+    final XmlSchemaPathFinder pathFinder =
+        new XmlSchemaPathFinder(stateMachine);
+    pathFindingParser.parse(xmlFile, pathFinder);
+
+    final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path =
+        pathFinder.getXmlSchemaTraversal();
+
+    // 2. Apply Avro schema metadata on top of the document. 
+    final AvroSchemaApplier applier = new AvroSchemaApplier(schema, false);
+    applier.apply(path);
+
+    // 3. Encode the document.
+    final SAXParser encodingParser = factory.newSAXParser();
+    encodingParser.parse(xmlFile, new Writer(path, out));
+  }
+
+  /**
+   * Writes the XML retrieved from the provided {@link URL} to the
+   * {@link Encoder} in accordance with the {@link Schema} set in
+   * {@link #setSchema(Schema)}.
+   *
+   * <p>
+   * If no {@link Schema} was provided, builds one from the {@link Document}
+   * and its {@link XmlSchemaCollection}.  The schema can then be retrieved
+   * from {@link #getSchema()}.
+   * </p>
+   */
+  public void write(URL xmlUrl, Encoder out)
+      throws IOException, ParserConfigurationException, SAXException {
+
+    final SAXParserFactory factory = SAXParserFactory.newInstance();
+    factory.setNamespaceAware(true);
+
+    // 1. Build the path through the schema that describes the document.
+    final SAXParser pathFindingParser = factory.newSAXParser();
+
+    final XmlSchemaPathFinder pathFinder =
+        new XmlSchemaPathFinder(stateMachine);
+
+    InputStream pathFindingStream = null;
+    try {
+      pathFindingStream = xmlUrl.openStream();
+      pathFindingParser.parse(pathFindingStream, pathFinder);
+    } finally {
+      if (pathFindingStream != null) {
+        try {
+          pathFindingStream.close();
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
+      }
+    }
+
+    final XmlSchemaPathNode<AvroRecordInfo, AvroPathNode> path =
+        pathFinder.getXmlSchemaTraversal();
+
+    // 2. Apply Avro schema metadata on top of the document. 
+    final AvroSchemaApplier applier = new AvroSchemaApplier(schema, false);
+    applier.apply(path);
+
+    // 3. Encode the document.
+    InputStream encodingStream = null;
+    try {
+      encodingStream = xmlUrl.openStream();
+      final SAXParser encodingParser = factory.newSAXParser();
+      encodingParser.parse(encodingStream, new Writer(path, out));
+    } finally {
+      if (encodingStream != null) {
+        try {
+          encodingStream.close();
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
+      }
     }
   }
 }

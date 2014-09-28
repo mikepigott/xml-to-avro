@@ -575,6 +575,14 @@ public class XmlDatumReader implements DatumReader<Document> {
     return domBuilder.getDocument();
   }
 
+  /**
+   * Reads the XML data from the input {@link Decoder} and feeds it through
+   * the provided <code>saxContentHandler</code>.
+   *
+   * @param saxContentHandler The content handler to feed SAX events to.
+   * @param in The decoder to read from.
+   * @throws IOException If the decoder could not be read from.
+   */
   public void read(ContentHandler saxContentHandler, Decoder in)
       throws IOException {
 
