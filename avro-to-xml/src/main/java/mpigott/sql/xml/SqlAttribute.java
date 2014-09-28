@@ -16,6 +16,7 @@
 
 package mpigott.sql.xml;
 
+import org.apache.ws.commons.schema.XmlSchemaAny;
 import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
 
 /**
@@ -30,6 +31,10 @@ public final class SqlAttribute {
   // Other nice things.
 
   SqlAttribute(String name, XmlSchemaTypeInfo type) {
-    
+    this.name = name;
+  }
+
+  SqlAttribute(XmlSchemaAny any) {
+    type = SqlType.SQLXML;
   }
 }

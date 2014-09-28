@@ -114,15 +114,18 @@ public class SqlSchemaGenerator {
       SqlTable parentTable,
       SqlRelationship relationshipToParent) {
 
+    final boolean newTableRequired =
+        (parentTable == null)
+        || (node
+              .getElementType()
+              .getType()
+              .equals(XmlSchemaTypeInfo.Type.COMPLEX))
+        || !relationshipToParent.equals(SqlRelationship.ONE_TO_ONE);
+
     switch (node.getNodeType()) {
     case ELEMENT:
       {
-        if ((parentTable == null)
-            || (node
-                  .getElementType()
-                  .getType()
-                  .equals(XmlSchemaTypeInfo.Type.COMPLEX))
-            || !relationshipToParent.equals(SqlRelationship.ONE_TO_ONE)) {
+        if (newTableRequired) {
           createTablesFor(schema, node, parentTable, relationshipToParent);
         } else {
           final SqlAttribute attr =
@@ -152,7 +155,11 @@ public class SqlSchemaGenerator {
       }
     case ANY:
       {
-        // TODO: These are SQLANY fields in the parent table.
+        if (newTableRequired) {
+          createTablesFor(schema, node, parentTable, relationshipToParent);
+        } else {
+          parentTable.addAttribute(new SqlAttribute(node.getAny()));
+        }
         break;
       }
     default:
