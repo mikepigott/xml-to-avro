@@ -47,7 +47,7 @@ public enum SqlType {
   LONGVARBINARY(Types.LONGVARBINARY, Constants.XSD_HEXBIN, Constants.XSD_BASE64),
   LONGVARCHAR(Types.LONGVARCHAR, Constants.XSD_STRING),
   OTHER(Types.OTHER),
-  REAL(Types.REAL, Constants.XSD_DOUBLE),
+  REAL(Types.REAL, Constants.XSD_FLOAT),
   REF(Types.REF),
   ROWID(Types.ROWID, Constants.XSD_ID),
   SMALLINT(Types.SMALLINT, Constants.XSD_SHORT),
