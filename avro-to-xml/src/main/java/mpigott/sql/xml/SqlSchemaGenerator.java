@@ -121,7 +121,8 @@ public class SqlSchemaGenerator {
             || (node
                   .getElementType()
                   .getType()
-                  .equals(XmlSchemaTypeInfo.Type.COMPLEX))) {
+                  .equals(XmlSchemaTypeInfo.Type.COMPLEX))
+            || !relationshipToParent.equals(SqlRelationship.ONE_TO_ONE)) {
           createTablesFor(schema, node, parentTable, relationshipToParent);
         } else {
           final SqlAttribute attr =
@@ -134,9 +135,26 @@ public class SqlSchemaGenerator {
       }
     case SUBSTITUTION_GROUP:
     case CHOICE:
+      {
+        /* TODO: These are one-to-many relationships,
+         *       unless there is only one choice.
+         */
+        break;
+      }
     case SEQUENCE:
     case ALL:
+      {
+        /* TODO: These are one-to-one relationships,
+         *       unless their children are of other
+         *       group types.
+         */
+        break;
+      }
     case ANY:
+      {
+        // TODO: These are SQLANY fields in the parent table.
+        break;
+      }
     default:
     }
   }

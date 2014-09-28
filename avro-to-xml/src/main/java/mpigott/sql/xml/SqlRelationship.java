@@ -22,9 +22,7 @@ package mpigott.sql.xml;
  * @author  Mike Pigott
  */
 public enum SqlRelationship {
-  ZERO_TO_ONE,
   ONE_TO_ONE,
   ONE_TO_MANY,
-  ZERO_TO_MANY,
   MANY_TO_MANY;
 }
