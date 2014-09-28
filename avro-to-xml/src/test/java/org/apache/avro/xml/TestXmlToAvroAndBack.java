@@ -203,6 +203,34 @@ public class TestXmlToAvroAndBack {
     return reader.read((Document) null, decoder);
   }
 
+  private static Document convertToAvroAndBack(
+      XmlDatumConfig config,
+      File xmlFile) throws Exception {
+
+    final XmlDatumWriter writer = new XmlDatumWriter(config);
+    final Schema xmlToAvroSchema = writer.getSchema();
+
+    final ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+
+    final JsonEncoder encoder =
+        avroEncoderFactory.jsonEncoder(xmlToAvroSchema, outStream, true);
+
+    writer.write(xmlFile, encoder);
+
+    encoder.flush();
+
+    final ByteArrayInputStream inStream =
+        new ByteArrayInputStream( outStream.toByteArray() );
+
+    final JsonDecoder decoder =
+        avroDecoderFactory.jsonDecoder(xmlToAvroSchema, inStream);
+
+    final XmlDatumReader reader = new XmlDatumReader();
+    reader.setSchema(xmlToAvroSchema);
+
+    return reader.read((Document) null, decoder);
+  }
+
   private void runTest(XmlDatumConfig config, File xmlFile) throws Exception {
     runTest(config, xmlFile, xmlFile);
   }
@@ -222,5 +250,9 @@ public class TestXmlToAvroAndBack {
     }
 
     UtilsForTests.assertEquivalent(expDoc, outDoc);
+
+    Document saxOut = convertToAvroAndBack(config, inXmlFile);
+
+    UtilsForTests.assertEquivalent(expDoc, saxOut);
   }
 }

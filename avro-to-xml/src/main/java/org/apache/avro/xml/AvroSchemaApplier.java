@@ -1114,6 +1114,20 @@ final class AvroSchemaApplier {
         }
       case CONTENT:
         {
+          if ((path.getNext() != null)
+              && path
+                   .getNext()
+                   .getDirection()
+                   .equals(XmlSchemaPathNode.Direction.CONTENT)) {
+
+            /* The writer only writes one content entry, after all of the
+             * individual content entries have been merged together.  So
+             * we should skip any content entries that are immediately
+             * followed by another content entry.
+             */
+            break;
+          }
+
           final StackEntry entry = docNodeStack.get(docNodeStack.size() - 1);
           final AvroRecordInfo recordInfo =
               entry.docNode.getUserDefinedContent();
@@ -1161,6 +1175,7 @@ final class AvroSchemaApplier {
                     + " is a mixed type, but its internal"
                     + " union does not have a STRING!");
               }
+
               recordInfo.incrementChildCount();
 
               final AvroPathNode pathNode = path.getUserDefinedContent();

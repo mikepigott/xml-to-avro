@@ -148,11 +148,8 @@ public class XmlDatumWriter implements DatumWriter<Document> {
       }
 
       final QName elemQName = new QName(uri, localName);
-      walkToElement(elemQName);
 
-      if ( elemQName.getLocalPart().equals("anyAndFriends") ) {
-        //log = true;
-      }
+      walkToElement(elemQName);
 
       if (!currLocation
             .getDirection()
