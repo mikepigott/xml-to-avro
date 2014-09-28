@@ -42,7 +42,7 @@ import org.w3c.dom.Document;
 /**
  * Tests converting an XML document to an Avro datum and back.
  */
-public class TestAvroToXmlAndBack {
+public class TestXmlToAvroAndBack {
 
   private static DocumentBuilderFactory dbf;
   private static EncoderFactory avroEncoderFactory;
