@@ -28,6 +28,7 @@ import org.apache.ws.commons.schema.XmlSchemaElement;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineGenerator;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineNode;
 import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
+import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
 import org.apache.ws.commons.schema.walker.XmlSchemaWalker;
 
 /**
@@ -98,27 +99,58 @@ public class SqlSchemaGenerator {
 
     if ((rootAttrs != null) && !rootAttrs.isEmpty()) {
       for (XmlSchemaStateMachineNode child : rootNode.getPossibleNextStates()) {
-        createTablesFor(sqlSchema, child, null);
+        createSchemaFor(sqlSchema, child, null, null);
       }
     } else {
-      createTablesFor(sqlSchema, rootNode, null);
+      createSchemaFor(sqlSchema, rootNode, null, null);
     }
 
-    return null;
+    return sqlSchema;
   }
 
-  private static void createTablesFor(
+  private void createSchemaFor(
       SqlSchema schema,
       XmlSchemaStateMachineNode node,
-      SqlTable parentTable) {
+      SqlTable parentTable,
+      SqlRelationship relationshipToParent) {
 
     switch (node.getNodeType()) {
     case ELEMENT:
       {
-        getSqlNameFor( node.getElement().getQName() );
+        if ((parentTable == null)
+            || (node
+                  .getElementType()
+                  .getType()
+                  .equals(XmlSchemaTypeInfo.Type.COMPLEX))) {
+          createTablesFor(schema, node, parentTable, relationshipToParent);
+        } else {
+          final SqlAttribute attr =
+              new SqlAttribute(
+                  getSqlNameFor(node.getElement().getQName()),
+                  node.getElementType());
+          parentTable.addAttribute(attr);
+        }
         break;
       }
+    case SUBSTITUTION_GROUP:
+    case CHOICE:
+    case SEQUENCE:
+    case ALL:
+    case ANY:
     default:
+    }
+  }
+
+  private void createTablesFor(SqlSchema schema,
+      XmlSchemaStateMachineNode node,
+      SqlTable parentTable,
+      SqlRelationship relationshipToParent) {
+
+    final SqlTable table =
+        new SqlTable(getSqlNameFor( node.getElement().getQName() ), null);
+
+    if (parentTable != null) {
+      parentTable.addRelationship(relationshipToParent, table);
     }
   }
 
@@ -136,4 +168,6 @@ public class SqlSchemaGenerator {
 
     return sqlName.toString();
   }
+
+  
 }

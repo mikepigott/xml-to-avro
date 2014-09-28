@@ -16,6 +16,8 @@
 
 package mpigott.sql.xml;
 
+import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
+
 /**
  * Represents an attribute in a relational database's table.
  *
@@ -26,4 +28,8 @@ public final class SqlAttribute {
   String name;
   boolean isNullable;
   // Other nice things.
+
+  SqlAttribute(String name, XmlSchemaTypeInfo type) {
+    
+  }
 }
