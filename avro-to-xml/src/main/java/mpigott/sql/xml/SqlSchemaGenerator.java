@@ -17,6 +17,7 @@
 package mpigott.sql.xml;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -99,10 +100,10 @@ public class SqlSchemaGenerator {
 
     if ((rootAttrs != null) && !rootAttrs.isEmpty()) {
       for (XmlSchemaStateMachineNode child : rootNode.getPossibleNextStates()) {
-        createSchemaFor(sqlSchema, child, null, null);
+        createSchemaFor(sqlSchema, child, null, null, null);
       }
     } else {
-      createSchemaFor(sqlSchema, rootNode, null, null);
+      createSchemaFor(sqlSchema, rootNode, null, null, null);
     }
 
     return sqlSchema;
@@ -112,21 +113,36 @@ public class SqlSchemaGenerator {
       SqlSchema schema,
       XmlSchemaStateMachineNode node,
       SqlTable parentTable,
-      SqlRelationship relationshipToParent) {
+      SqlRelationship relationshipToParent,
+      List<Integer> pathFromParent) {
+
+    final boolean isElement =
+        node.getNodeType().equals(XmlSchemaStateMachineNode.Type.ELEMENT);
+
+    final boolean isElementOrAny =
+        (isElement
+            || node.getNodeType().equals(XmlSchemaStateMachineNode.Type.ANY));
 
     final boolean newTableRequired =
-        (parentTable == null)
-        || (node
-              .getElementType()
-              .getType()
-              .equals(XmlSchemaTypeInfo.Type.COMPLEX))
-        || !relationshipToParent.equals(SqlRelationship.ONE_TO_ONE);
+        isElementOrAny
+        && ((parentTable == null)
+            || (isElement
+                && node
+                    .getElementType()
+                    .getType()
+                    .equals(XmlSchemaTypeInfo.Type.COMPLEX))
+            || !relationshipToParent.equals(SqlRelationship.ONE_TO_ONE));
 
     switch (node.getNodeType()) {
     case ELEMENT:
       {
         if (newTableRequired) {
-          createTablesFor(schema, node, parentTable, relationshipToParent);
+          createTablesFor(
+              schema,
+              node,
+              parentTable,
+              relationshipToParent,
+              pathFromParent);
         } else {
           final SqlAttribute attr =
               new SqlAttribute(
@@ -156,7 +172,12 @@ public class SqlSchemaGenerator {
     case ANY:
       {
         if (newTableRequired) {
-          createTablesFor(schema, node, parentTable, relationshipToParent);
+          createTablesFor(
+              schema,
+              node,
+              parentTable,
+              relationshipToParent,
+              pathFromParent);
         } else {
           parentTable.addAttribute(new SqlAttribute(node.getAny()));
         }
@@ -169,13 +190,36 @@ public class SqlSchemaGenerator {
   private void createTablesFor(SqlSchema schema,
       XmlSchemaStateMachineNode node,
       SqlTable parentTable,
-      SqlRelationship relationshipToParent) {
+      SqlRelationship relationshipToParent,
+      List<Integer> pathFromParent) {
+
+    // TODO: Handle ANYs.
 
     final SqlTable table =
-        new SqlTable(getSqlNameFor( node.getElement().getQName() ), null);
+        new SqlTable(
+            getSqlNameFor( node.getElement().getQName() ),
+            pathFromParent);
 
     if (parentTable != null) {
       parentTable.addRelationship(relationshipToParent, table);
+    }
+
+    final List<Integer> pathFromNewTable = new ArrayList<Integer>();
+
+    for (int nextPathIdx = 0;
+        nextPathIdx < node.getPossibleNextStates().size();
+        ++nextPathIdx) {
+
+      pathFromNewTable.add(nextPathIdx);
+
+      createSchemaFor(
+          schema,
+          node,
+          table,
+          SqlRelationship.ONE_TO_ONE,
+          pathFromNewTable);
+
+      pathFromNewTable.remove(pathFromNewTable.size() - 1);
     }
   }
 
