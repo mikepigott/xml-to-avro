@@ -55,6 +55,21 @@ public class Main {
   }
 
   public static void main(String[] args) throws Exception {
+    File xmlSchema = new File("C:\\Users\\Mike Pigott\\git\\xml-to-avro\\avro-to-xml\\src\\test\\resources\\complex_schema.xsd");
+
+    XmlDatumConfig config = new XmlDatumConfig(xmlSchema, "http://www.test.com/AvroTest", new QName("urn:avro:complex_schema", "root"));
+
+    XmlDatumWriter writer = new XmlDatumWriter(config);
+
+    Schema avroSchema = writer.getSchema();
+
+    FileWriter schemaWriter = new FileWriter("C:\\Users\\Mike Pigott\\git\\xml-to-avro\\avro-to-xml\\src\\main\\avro\\complex_schema.avsc");
+    schemaWriter.write( avroSchema.toString(true) );
+    schemaWriter.flush();
+    schemaWriter.close();
+  }
+
+  public static void realMain(String[] args) throws Exception {
     final XmlDatumConfig config = new XmlDatumConfig(new URL("http://xbrl.fasb.org/us-gaap/2012/elts/us-gaap-2012-01-31.xsd"), new QName("http://www.xbrl.org/2003/instance", "xbrl"));
     config.addSchemaUrl(new URL("http://www.sec.gov/Archives/edgar/data/1013237/000143774913004187/fds-20130228.xsd"));
     config.addSchemaUrl(new URL("http://xbrl.sec.gov/dei/2012/dei-2012-01-31.xsd"));

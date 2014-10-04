@@ -31,7 +31,7 @@
                 "type" : {
                   "type" : "record",
                   "name" : "qName",
-                  "namespace" : "org.w3.www.2001.XMLSchema",
+                  "namespace" : "org.w3.www._2001.xmlschema",
                   "doc" : "Qualified Name",
                   "fields" : [ {
                     "name" : "namespace",
@@ -283,6 +283,7 @@
   } ],
   "xmlSchemas" : {
     "files" : [ "C:\\Users\\Mike Pigott\\git\\xml-to-avro\\avro-to-xml\\src\\test\\resources\\complex_schema.xsd" ],
+    "baseUri" : "http://www.test.com/AvroTest",
     "rootTag" : {
       "namespace" : "urn:avro:complex_schema",
       "localPart" : "root"
