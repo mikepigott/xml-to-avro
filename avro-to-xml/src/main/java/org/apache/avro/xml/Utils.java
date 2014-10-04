@@ -454,7 +454,13 @@ class Utils {
 	    String[] hostParts = host.split("\\.");
 	    for (int hpIdx = hostParts.length - 1; hpIdx >= 0; --hpIdx) {
 		    if ( !hostParts[hpIdx].isEmpty() ) {
-		      components.add(hostParts[hpIdx]);
+		      try {
+		        // Java packages can't have numeric components.
+		        Long.parseLong(hostParts[hpIdx]);
+		        components.add("_" + hostParts[hpIdx]);
+		      } catch (NumberFormatException nfe) {
+		        components.add(hostParts[hpIdx]);
+		      }
 		    }
 	    }
 	  }
@@ -465,8 +471,14 @@ class Utils {
 	    final String[] pathParts = path.split("/");
 	    for (String pathPart : pathParts) {
 		    if ( !pathPart.isEmpty() ) {
-		      components.add(pathPart);
-		    }
+          try {
+            // Java packages can't have numeric components.
+            Long.parseLong(pathPart);
+            components.add("_" + pathPart);
+          } catch (NumberFormatException nfe) {
+            components.add(pathPart);
+          }
+        }
 	    }
 	  }
 

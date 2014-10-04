@@ -890,7 +890,7 @@ public class TestAvroSchemaGenerator {
         Schema.createRecord(
             "qName",
             "Qualified Name",
-            "org.w3.www.2001.XMLSchema",
+            "org.w3.www._2001.XMLSchema",
             false);
 
     List<Schema.Field> qNameFields = new ArrayList<Schema.Field>(2);

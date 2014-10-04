@@ -15,7 +15,7 @@
     "string" : "Name"
   },
   "qname" : {
-    "org.w3.www.2001.XMLSchema.qName" : {
+    "org.w3.www._2001.XMLSchema.qName" : {
       "namespace" : "",
       "localPart" : "QName"
     }

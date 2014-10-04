@@ -47,7 +47,7 @@ public class TestUtils {
       + "fds-20130228.xsd";
 
   private static String EXPECTED_RESULT =
-      "gov.sec.www.Archives.edgar.data.1013237.000143774913004187."
+      "gov.sec.www.Archives.edgar.data._1013237._000143774913004187."
       + "fds_20130228.xsd";
 
   private static ArrayList<QName> avroUnrecognizedTypes;
