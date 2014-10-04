@@ -44,11 +44,11 @@
   "unsignedByte" : null,
   "integer" : null,
   "root" : [ {
-    "org.apache.avro.AvroTest.primitive" : {
+    "org.apache.avro.avrotest.primitive" : {
       "primitive" : "decimal"
     }
   }, {
-    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+    "org.apache.avro.avrotest.nonNullPrimitive" : {
       "nonNullPrimitive" : "int"
     }
   }, {
@@ -56,11 +56,11 @@
       "id1" : {
         "id" : "id1",
         "map" : [ {
-          "org.apache.avro.AvroTest.primitive" : {
+          "org.apache.avro.avrotest.primitive" : {
             "primitive" : "double"
           }
         }, {
-          "org.apache.avro.AvroTest.nonNullPrimitive" : {
+          "org.apache.avro.avrotest.nonNullPrimitive" : {
             "nonNullPrimitive" : "float"
           }
         } ]
@@ -68,16 +68,16 @@
       "id2" : {
         "id" : "id2",
         "map" : [ {
-          "org.apache.avro.AvroTest.primitive" : {
+          "org.apache.avro.avrotest.primitive" : {
             "primitive" : "null"
           }
         } ]
       }
     }
   }, {
-    "org.apache.avro.AvroTest.record" : {
+    "org.apache.avro.avrotest.record" : {
       "record" : [ {
-        "org.apache.avro.AvroTest.nonNullPrimitive" : {
+        "org.apache.avro.avrotest.nonNullPrimitive" : {
           "nonNullPrimitive" : "decimal"
         }
       } ]
@@ -87,7 +87,7 @@
       "id3" : {
         "id" : "id3",
         "map" : [ {
-          "org.apache.avro.AvroTest.primitive" : {
+          "org.apache.avro.avrotest.primitive" : {
             "primitive" : "string"
           }
         }, {
@@ -95,7 +95,7 @@
             "id4" : {
               "id" : "id4",
               "map" : [ {
-                "org.apache.avro.AvroTest.nonNullPrimitive" : {
+                "org.apache.avro.avrotest.nonNullPrimitive" : {
                   "nonNullPrimitive" : "string"
                 }
               } ]
@@ -103,7 +103,7 @@
             "id5" : {
               "id" : "id5",
               "map" : [ {
-                "org.apache.avro.AvroTest.primitive" : {
+                "org.apache.avro.avrotest.primitive" : {
                   "primitive" : "long"
                 }
               } ]
@@ -113,11 +113,11 @@
       }
     }
   }, {
-    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+    "org.apache.avro.avrotest.nonNullPrimitive" : {
       "nonNullPrimitive" : "long"
     }
   }, {
-    "org.apache.avro.AvroTest.nonNullPrimitive" : {
+    "org.apache.avro.avrotest.nonNullPrimitive" : {
       "nonNullPrimitive" : "boolean"
     }
   } ]

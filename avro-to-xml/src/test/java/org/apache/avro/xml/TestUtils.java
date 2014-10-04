@@ -47,7 +47,7 @@ public class TestUtils {
       + "fds-20130228.xsd";
 
   private static String EXPECTED_RESULT =
-      "gov.sec.www.Archives.edgar.data._1013237._000143774913004187."
+      "gov.sec.www.archives.edgar.data._1013237._000143774913004187."
       + "fds_20130228.xsd";
 
   private static ArrayList<QName> avroUnrecognizedTypes;
@@ -81,7 +81,7 @@ public class TestUtils {
                 + "ApplicationResponse-2");
     
     Assert.assertEquals(
-        "oasis.names.specification.ubl.schema.xsd.ApplicationResponse_2",
+        "oasis.names.specification.ubl.schema.xsd.applicationresponse_2",
         Utils.getAvroNamespaceFor(uri));
   }
 

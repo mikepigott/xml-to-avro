@@ -459,7 +459,7 @@ class Utils {
 		        Long.parseLong(hostParts[hpIdx]);
 		        components.add("_" + hostParts[hpIdx]);
 		      } catch (NumberFormatException nfe) {
-		        components.add(hostParts[hpIdx]);
+		        components.add(hostParts[hpIdx].toLowerCase());
 		      }
 		    }
 	    }
@@ -476,7 +476,7 @@ class Utils {
             Long.parseLong(pathPart);
             components.add("_" + pathPart);
           } catch (NumberFormatException nfe) {
-            components.add(pathPart);
+            components.add(pathPart.toLowerCase());
           }
         }
 	    }
@@ -491,7 +491,13 @@ class Utils {
 
 	    for (String schemePart : schemeParts) {
 	      if ( !schemePart.isEmpty() ) {
-	        components.add(schemePart);
+          try {
+            // Java packages can't have numeric components.
+            Long.parseLong(schemePart);
+            components.add("_" + schemePart);
+          } catch (NumberFormatException nfe) {
+            components.add(schemePart.toLowerCase());
+          }
 	      }
 	    }
 	  }
