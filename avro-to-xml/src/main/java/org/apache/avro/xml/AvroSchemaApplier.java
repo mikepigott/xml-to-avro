@@ -713,13 +713,7 @@ final class AvroSchemaApplier {
           }
         }
       }
-      if (readerType.getTypes().size() == numFound) {
-        // We were able to find equivalents for all of the reader types.
-        return true;
-      } else {
-        // We could not find equivalents for all of the reader types.
-        return false;
-      }
+      return (readerType.getTypes().size() == numFound);
     }
 
     if ( conversionCache.containsKey(writerType.getType()) ) {

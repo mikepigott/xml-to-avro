@@ -401,93 +401,93 @@ public class XmlDatumReader implements DatumReader<Document> {
    */
   @Override
   public void setSchema(Schema schema) {
-	  if (schema == null) {
-	    throw new IllegalArgumentException("Input schema cannot be null.");
-	  }
+    if (schema == null) {
+      throw new IllegalArgumentException("Input schema cannot be null.");
+    }
 
-	  JsonNode xmlSchemasNode = schema.getJsonProp("xmlSchemas");
+    JsonNode xmlSchemasNode = schema.getJsonProp("xmlSchemas");
 
-	  if ((xmlSchemasNode == null)
-	      && schema.getType().equals(Schema.Type.UNION)) {
-	    /* The root node is a substitution group; the
-	     * xmlSchemasNode was stored with its first child. 
-	     */
-	    xmlSchemasNode = schema.getTypes().get(0).getJsonProp("xmlSchemas");
-	  }
+    if ((xmlSchemasNode == null)
+        && schema.getType().equals(Schema.Type.UNION)) {
+      /* The root node is a substitution group; the
+       * xmlSchemasNode was stored with its first child. 
+       */
+      xmlSchemasNode = schema.getTypes().get(0).getJsonProp("xmlSchemas");
+    }
 
-	  if (xmlSchemasNode == null) {
-	    throw new IllegalArgumentException(
-	        "Avro schema must be created by XmlDatumWriter for it to be used"
-	        + " with XmlDatumReader.");
-	  }
+    if (xmlSchemasNode == null) {
+      throw new IllegalArgumentException(
+          "Avro schema must be created by XmlDatumWriter for it to be used"
+          + " with XmlDatumReader.");
+    }
 
     nsContext.clear();
     currNsNum = 0;
 
     final JsonNode baseUriNode = xmlSchemasNode.get("baseUri");
-	  final JsonNode urlsNode    = xmlSchemasNode.get("urls");
-	  final JsonNode filesNode   = xmlSchemasNode.get("files");
-	  final JsonNode rootTagNode = xmlSchemasNode.get("rootTag");
+    final JsonNode urlsNode    = xmlSchemasNode.get("urls");
+    final JsonNode filesNode   = xmlSchemasNode.get("files");
+    final JsonNode rootTagNode = xmlSchemasNode.get("rootTag");
 
-	  XmlDatumConfig config = null;
+    XmlDatumConfig config = null;
 
-	  // 1. Build the root tag QName.
-	  QName rootTagQName = buildQNameFrom(rootTagNode);
+    // 1. Build the root tag QName.
+    QName rootTagQName = buildQNameFrom(rootTagNode);
 
-	  // 2. Build the list of schema files.
-	  if (filesNode != null) {
-	    String baseUri = null;
-	    if (baseUriNode != null) {
-	      baseUri = baseUriNode.getTextValue();
-	    }
-	    if (baseUri == null) {
+    // 2. Build the list of schema files.
+    if (filesNode != null) {
+      String baseUri = null;
+      if (baseUriNode != null) {
+        baseUri = baseUriNode.getTextValue();
+      }
+      if (baseUri == null) {
         throw new IllegalArgumentException(
             "When building an XML Schema from files, a Base URI is "
             + "required and must be in a text JSON node.");
-	    }
+      }
 
-	    final List<File> files = buildFileListFrom(filesNode);
-	    if ( !files.isEmpty() ) {
-	      config = new XmlDatumConfig(files.get(0), baseUri, rootTagQName);
+      final List<File> files = buildFileListFrom(filesNode);
+      if ( !files.isEmpty() ) {
+        config = new XmlDatumConfig(files.get(0), baseUri, rootTagQName);
 
-	      for (int fileIndex = 1; fileIndex < files.size(); ++fileIndex) {
-	        config.addSchemaFile( files.get(fileIndex) );
-	      }
-	    }
-	  }
+        for (int fileIndex = 1; fileIndex < files.size(); ++fileIndex) {
+          config.addSchemaFile( files.get(fileIndex) );
+        }
+      }
+    }
 
-	  // 3. Build the list of schema URLs.
-	  if (urlsNode != null) {
-	    List<URL> urls = buildUrlListFrom(urlsNode);
+    // 3. Build the list of schema URLs.
+    if (urlsNode != null) {
+      List<URL> urls = buildUrlListFrom(urlsNode);
 
-	    if ( !urls.isEmpty() ) {
-  	    int startIndex = 0;
-  	    if (config == null) {
-  	      startIndex = 1;
-  	      config = new XmlDatumConfig(urls.get(0), rootTagQName);
-  	    }
+      if ( !urls.isEmpty() ) {
+        int startIndex = 0;
+        if (config == null) {
+          startIndex = 1;
+          config = new XmlDatumConfig(urls.get(0), rootTagQName);
+        }
 
-  	    for (int urlIndex = startIndex; urlIndex < urls.size(); ++urlIndex) {
-  	      config.addSchemaUrl( urls.get(urlIndex) );
-  	    }
-	    }
-	  }
+        for (int urlIndex = startIndex; urlIndex < urls.size(); ++urlIndex) {
+          config.addSchemaUrl( urls.get(urlIndex) );
+        }
+      }
+    }
 
-	  if (config == null) {
-	    throw new IllegalArgumentException(
-	        "At least one XML Schema file or URL must be defined in the "
-	        + "xmlSchemas property.");
-	  }
+    if (config == null) {
+      throw new IllegalArgumentException(
+          "At least one XML Schema file or URL must be defined in the "
+          + "xmlSchemas property.");
+    }
 
-	  // 4. Build the xmlSchemaCollection and its namespace -> location mapping.
+    // 4. Build the xmlSchemaCollection and its namespace -> location mapping.
 
-	  if (namespaceToLocationMapping == null) {
-	    namespaceToLocationMapping = new HashMap<String, String>();
-	  } else {
-	    namespaceToLocationMapping.clear();
-	  }
+    if (namespaceToLocationMapping == null) {
+      namespaceToLocationMapping = new HashMap<String, String>();
+    } else {
+      namespaceToLocationMapping.clear();
+    }
 
-	  xmlSchemaCollection = new XmlSchemaCollection();
+    xmlSchemaCollection = new XmlSchemaCollection();
     xmlSchemaCollection.setBaseUri(config.getBaseUri());
     try {
       for (StreamSource source : config.getSources()) {

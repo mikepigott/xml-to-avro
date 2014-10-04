@@ -47,11 +47,11 @@ public class XmlDatumConfig {
   private QName baseTagName;
 
   private XmlDatumConfig(QName rootTagName) {
-		baseTagName = rootTagName;
-		schemaUrls = null;
-		schemaFiles = null;
-		baseUri = null;
-	}
+    baseTagName = rootTagName;
+    schemaUrls = null;
+    schemaFiles = null;
+    baseUri = null;
+  }
 
   /**
    * Creates a new <code>XmlDatumConfig</code> from the {@link java.net.URL}
@@ -61,12 +61,12 @@ public class XmlDatumConfig {
    * @param schema      The URL of the XML Schema to read.
    * @param rootTagName The <code>QName</code> of the root element.
    */
-	public XmlDatumConfig(URL schema, QName rootTagName) {
-		this(rootTagName);
-		schemaUrls = new ArrayList<URL>(1);
-		schemaUrls.add(schema);
-		baseUri = getBaseUriFor(schema);
-	}
+  public XmlDatumConfig(URL schema, QName rootTagName) {
+    this(rootTagName);
+    schemaUrls = new ArrayList<URL>(1);
+    schemaUrls.add(schema);
+    baseUri = getBaseUriFor(schema);
+  }
 
   /**
    * Creates a new <code>XmlDatumConfig</code> from a local {@link File}
@@ -81,77 +81,77 @@ public class XmlDatumConfig {
    *
    * @param rootTagName   The <code>QName</code> of the root element.
    */
-	public XmlDatumConfig(File schema, String schemaBaseUri, QName rootTagName) {
-		this(rootTagName);
+  public XmlDatumConfig(File schema, String schemaBaseUri, QName rootTagName) {
+    this(rootTagName);
 
-		schemaFiles = new ArrayList<File>(1);
-		schemaFiles.add(schema);
-		baseUri = schemaBaseUri;
-	}
+    schemaFiles = new ArrayList<File>(1);
+    schemaFiles.add(schema);
+    baseUri = schemaBaseUri;
+  }
 
-	/**
-	 * <p>
-	 * The base URI.  If this <code>XmlDatumConfig</code> was created with a
-	 * URL, the base URI is the URL up to, but not including the schema file
-	 * name.
-	 * </p>
-	 * <p>
-	 * If the <code>XmlDatumConfig</code> was created with a <code>File</code>,
-	 * this is the <code>schemaBaseUri</code> provided in that constructor.
-	 * </p>
-	 */
-	public String getBaseUri() {
-		return baseUri;
-	}
+  /**
+   * <p>
+   * The base URI.  If this <code>XmlDatumConfig</code> was created with a
+   * URL, the base URI is the URL up to, but not including the schema file
+   * name.
+   * </p>
+   * <p>
+   * If the <code>XmlDatumConfig</code> was created with a <code>File</code>,
+   * this is the <code>schemaBaseUri</code> provided in that constructor.
+   * </p>
+   */
+  public String getBaseUri() {
+    return baseUri;
+  }
 
-	/**
-	 * The list of XML Schema URLs provided via
-	 * {@link #XmlDatumConfig(URL, QName)} and
-	 * any subsequent calls to
-	 * {@link #addSchemaUrl(URL)}.
-	 */
-	public List<URL> getSchemaUrls() {
-	  return schemaUrls;
-	}
+  /**
+   * The list of XML Schema URLs provided via
+   * {@link #XmlDatumConfig(URL, QName)} and
+   * any subsequent calls to
+   * {@link #addSchemaUrl(URL)}.
+   */
+  public List<URL> getSchemaUrls() {
+    return schemaUrls;
+  }
 
-	/**
-	 * The list of XML Schema files provided via
-	 * {@link #XmlDatumConfig(File, String, QName)}
-	 * and any subsequent calls to
-	 * {@link #addSchemaFile(File)}.
-	 */
-	public List<File> getSchemaFiles() {
-	  return schemaFiles;
-	}
+  /**
+   * The list of XML Schema files provided via
+   * {@link #XmlDatumConfig(File, String, QName)}
+   * and any subsequent calls to
+   * {@link #addSchemaFile(File)}.
+   */
+  public List<File> getSchemaFiles() {
+    return schemaFiles;
+  }
 
-	/**
-	 * The XML Schema's root tag passed into the constructor.
-	 */
-	public QName getRootTagName() {
-		return baseTagName;
-	}
+  /**
+   * The XML Schema's root tag passed into the constructor.
+   */
+  public QName getRootTagName() {
+    return baseTagName;
+  }
 
-	/**
-	 * Adds a URL to an XML Schema to include when generating Avro.
-	 */
-	public void addSchemaUrl(URL schemaUrl) {
-	  if (schemaUrls == null) {
-	    schemaUrls = new ArrayList<URL>(1);
-	  }
-	  schemaUrls.add(schemaUrl);
-	}
+  /**
+   * Adds a URL to an XML Schema to include when generating Avro.
+   */
+  public void addSchemaUrl(URL schemaUrl) {
+    if (schemaUrls == null) {
+      schemaUrls = new ArrayList<URL>(1);
+    }
+    schemaUrls.add(schemaUrl);
+  }
 
   /**
    * Adds a file path to an XML Schema to include when generating Avro.
    */
-	public void addSchemaFile(File file) {
-	  if (schemaFiles == null) {
-	    schemaFiles = new ArrayList<File>(1);
-	  }
-	  schemaFiles.add(file);
-	}
+  public void addSchemaFile(File file) {
+    if (schemaFiles == null) {
+      schemaFiles = new ArrayList<File>(1);
+    }
+    schemaFiles.add(file);
+  }
 
-	@SuppressWarnings("resource")
+  @SuppressWarnings("resource")
   List<StreamSource> getSources() throws IOException {
     final ArrayList<StreamSource> sources =
         new ArrayList<StreamSource>( getArraySize() );
@@ -191,7 +191,7 @@ public class XmlDatumConfig {
     return sources;
   }
 
-	private int getArraySize() {
+  private int getArraySize() {
     int count = 0;
     if (schemaUrls != null) {
       count += schemaUrls.size();
@@ -200,9 +200,9 @@ public class XmlDatumConfig {
       count += schemaFiles.size();
     }
     return count;
-	}
+  }
 
-	private static String getBaseUriFor(URL url) {
+  private static String getBaseUriFor(URL url) {
     StringBuilder namespace = new StringBuilder( url.getProtocol() );
     namespace.append("://").append( url.getHost() );
     if (url.getPort() != -1) {

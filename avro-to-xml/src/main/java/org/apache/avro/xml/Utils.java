@@ -448,29 +448,29 @@ class Utils {
   static String getAvroNamespaceFor(java.net.URI uri) {
     final ArrayList<String> components = new ArrayList<String>();
 
-	  // xsd.example.org -> org.example.xsd
-	  final String host = uri.getHost();
-	  if (host != null) {
-	    String[] hostParts = host.split("\\.");
-	    for (int hpIdx = hostParts.length - 1; hpIdx >= 0; --hpIdx) {
-		    if ( !hostParts[hpIdx].isEmpty() ) {
-		      try {
-		        // Java packages can't have numeric components.
-		        Long.parseLong(hostParts[hpIdx]);
-		        components.add("_" + hostParts[hpIdx]);
-		      } catch (NumberFormatException nfe) {
-		        components.add(hostParts[hpIdx].toLowerCase());
-		      }
-		    }
-	    }
-	  }
+    // xsd.example.org -> org.example.xsd
+    final String host = uri.getHost();
+    if (host != null) {
+      String[] hostParts = host.split("\\.");
+      for (int hpIdx = hostParts.length - 1; hpIdx >= 0; --hpIdx) {
+        if ( !hostParts[hpIdx].isEmpty() ) {
+          try {
+            // Java packages can't have numeric components.
+            Long.parseLong(hostParts[hpIdx]);
+            components.add("_" + hostParts[hpIdx]);
+          } catch (NumberFormatException nfe) {
+            components.add(hostParts[hpIdx].toLowerCase());
+          }
+        }
+      }
+    }
 
-	  // path/to/schema.xsd -> path.to.schema.xsd
-	  final String path = uri.getPath();
-	  if (path != null) {
-	    final String[] pathParts = path.split("/");
-	    for (String pathPart : pathParts) {
-		    if ( !pathPart.isEmpty() ) {
+    // path/to/schema.xsd -> path.to.schema.xsd
+    final String path = uri.getPath();
+    if (path != null) {
+      final String[] pathParts = path.split("/");
+      for (String pathPart : pathParts) {
+        if ( !pathPart.isEmpty() ) {
           try {
             // Java packages can't have numeric components.
             Long.parseLong(pathPart);
@@ -479,18 +479,18 @@ class Utils {
             components.add(pathPart.toLowerCase());
           }
         }
-	    }
-	  }
+      }
+    }
 
-	  /* This URI is of the form a:b:c:d:e.
-	   * We can convert that to a.b.c.d.e.
-	   */
-	  if ( components.isEmpty() ) {
-	    final String schemeSpecificPart = uri.getSchemeSpecificPart();
-	    final String[] schemeParts = schemeSpecificPart.split("\\:");
+    /* This URI is of the form a:b:c:d:e.
+     * We can convert that to a.b.c.d.e.
+     */
+    if ( components.isEmpty() ) {
+      final String schemeSpecificPart = uri.getSchemeSpecificPart();
+      final String[] schemeParts = schemeSpecificPart.split("\\:");
 
-	    for (String schemePart : schemeParts) {
-	      if ( !schemePart.isEmpty() ) {
+      for (String schemePart : schemeParts) {
+        if ( !schemePart.isEmpty() ) {
           try {
             // Java packages can't have numeric components.
             Long.parseLong(schemePart);
@@ -498,22 +498,22 @@ class Utils {
           } catch (NumberFormatException nfe) {
             components.add(schemePart.toLowerCase());
           }
-	      }
-	    }
-	  }
+        }
+      }
+    }
 
-	  if ( components.isEmpty() ) {
-	    throw new IllegalArgumentException(
-	        "URI \"" + uri.toString()
-	        + "\" does not have enough content to create a namespace for it.");
-	  }
+    if ( components.isEmpty() ) {
+      throw new IllegalArgumentException(
+          "URI \"" + uri.toString()
+          + "\" does not have enough content to create a namespace for it.");
+    }
 
-	  StringBuilder namespace = new StringBuilder(components.get(0));
-	  for (int c = 1; c < components.size(); ++c) {
-	    namespace.append('.').append( createValidName( components.get(c) ) );
-	  }
+    StringBuilder namespace = new StringBuilder(components.get(0));
+    for (int c = 1; c < components.size(); ++c) {
+      namespace.append('.').append( createValidName( components.get(c) ) );
+    }
 
-	  return namespace.toString();
+    return namespace.toString();
   }
 
   private static String createValidName(String component) {
