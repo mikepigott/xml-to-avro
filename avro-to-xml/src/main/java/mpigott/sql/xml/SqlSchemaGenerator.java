@@ -26,6 +26,7 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.apache.ws.commons.schema.XmlSchemaCollection;
 import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.XmlSchemaUse;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineGenerator;
 import org.apache.ws.commons.schema.docpath.XmlSchemaStateMachineNode;
 import org.apache.ws.commons.schema.walker.XmlSchemaAttrInfo;
@@ -75,6 +76,8 @@ public class SqlSchemaGenerator {
 
     XmlSchemaWalker walker =
         new XmlSchemaWalker(xmlSchemaCollection, stateMachineGen);
+
+    walker.setUserRecognizedTypes(SqlType.getRecognizedTypes());
 
     XmlSchemaElement rootElem =
         xmlSchemaCollection.getElementByQName(config.getRootTagName());
@@ -238,5 +241,134 @@ public class SqlSchemaGenerator {
     return sqlName.toString();
   }
 
-  
+  private static void validateXmlTypeForSqlAttribute(
+      XmlSchemaTypeInfo xmlTypeInfo) {
+
+    switch(xmlTypeInfo.getType()) {
+    case COMPLEX:
+      throw new IllegalArgumentException(
+          "Cannot create an SqlAttribute from a complex element.");
+    case UNION:
+      throw new IllegalArgumentException(
+          "Cannot create an SqlAttribute from a union of types.");
+    case LIST:
+      {
+        final XmlSchemaTypeInfo.Type listType =
+            xmlTypeInfo.getChildTypes().get(0).getType();
+        if (listType.equals(XmlSchemaTypeInfo.Type.UNION)) {
+          throw new IllegalArgumentException(
+              "Cannot create an SqlAttribute from "
+              + "a list of union of types.");
+        }
+      }
+      /* falls through */
+    default:
+      /* falls through */
+    }
+  }
+
+  private static SqlAttribute createAttribute(
+      XmlSchemaStateMachineNode stateMachine) {
+
+    if ((stateMachine.getMinOccurs() < 0L)
+        || (stateMachine.getMinOccurs() > stateMachine.getMaxOccurs())) {
+      throw new IllegalStateException(
+          "Min occurs ("
+          + stateMachine.getMinOccurs()
+          + ") must be greater than zero and less-than-or-equal-to max occurs ("
+          + stateMachine.getMaxOccurs()
+          + ").");
+    }
+
+    if (stateMachine.getMaxOccurs() > 1L) {
+      throw new IllegalArgumentException(
+          "Cannot create an SqlAttribute from an element or any with a "
+          + "max-occurs greater than one.");
+    }
+
+    // Sanity checks.
+    switch (stateMachine.getNodeType()) {
+    case ANY:
+      {
+        // This will just be an SQLXML type, only minor checking required.
+        return new SqlAttribute(
+            "any",
+            SqlType.SQLXML,
+            false,
+            (stateMachine.getMinOccurs() == 0));
+      }
+    case ELEMENT:
+      {
+        // Must not be complex, and must not have any attributes.
+        if ((stateMachine.getAttributes() != null)
+            && !stateMachine.getAttributes().isEmpty()) {
+          throw new IllegalArgumentException(
+              "Cannot create an SqlAttribute from an element with attributes.");
+        }
+
+        break;
+      }
+    default:
+      throw new IllegalArgumentException(
+          "Cannot create an SqlAttribute from a " + stateMachine.getNodeType());
+    }
+
+    // Now build the attribute from the element.
+    return createAttribute(
+        getSqlNameFor(stateMachine.getElement().getQName()),
+        stateMachine.getElementType(),
+        stateMachine.getMinOccurs() == 0);
+  }
+
+  private static SqlAttribute createAttribute(XmlSchemaAttrInfo attribute) {
+    final XmlSchemaUse attrUse =
+        attribute.getAttribute().getUse();
+
+    switch (attrUse) {
+    case PROHIBITED:
+      throw new IllegalArgumentException(
+          "Cannot create an SqlAttribute for a prohibited XML attribute");
+    case NONE:
+      throw new IllegalArgumentException(
+          "Cannot create an SqlAttribute for an "
+          + "XML attribute with no known use.");
+    default:
+      /* falls through */
+    }
+
+    return createAttribute(
+        getSqlNameFor(attribute.getAttribute().getQName()),
+        attribute.getType(),
+        attrUse.equals(XmlSchemaUse.OPTIONAL));
+  }
+
+  private static SqlAttribute createAttribute(
+      String name,
+      XmlSchemaTypeInfo xmlTypeInfo,
+      boolean isOptional) {
+
+    validateXmlTypeForSqlAttribute(xmlTypeInfo);
+
+    final boolean isArray =
+        xmlTypeInfo
+          .getType()
+          .equals(XmlSchemaTypeInfo.Type.LIST);
+
+    QName xmlTypeToConvert = xmlTypeInfo.getUserRecognizedType();
+    if (isArray) {
+      xmlTypeToConvert =
+          xmlTypeInfo
+            .getChildTypes()
+            .get(0)
+            .getUserRecognizedType();
+    }
+
+    final SqlType sqlType = SqlType.getSqlTypeFor(xmlTypeToConvert);
+
+    return new SqlAttribute(
+        name,
+        sqlType,
+        isArray,
+        isOptional);
+  }
 }

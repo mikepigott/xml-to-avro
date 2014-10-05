@@ -17,6 +17,8 @@
 package mpigott.sql.xml;
 
 import java.sql.Types;
+import java.util.HashMap;
+import java.util.Set;
 
 import javax.xml.namespace.QName;
 
@@ -58,8 +60,41 @@ public enum SqlType {
   VARBINARY(Types.VARBINARY, Constants.XSD_BASE64, Constants.XSD_HEXBIN),
   VARCHAR(Types.VARCHAR, Constants.XSD_STRING);
 
+  private static HashMap<QName, SqlType> sqlTypesByQName =
+      new HashMap<QName, SqlType>();
+
   private final int jdbcType;
   private final QName[] xmlTypes;
+
+  static {
+    sqlTypesByQName.put(Constants.XSD_ANYURI, DATALINK);
+    sqlTypesByQName.put(Constants.XSD_ANYTYPE, SQLXML);
+    sqlTypesByQName.put(Constants.XSD_BASE64, BLOB);
+    sqlTypesByQName.put(Constants.XSD_BOOLEAN, BIT);
+    sqlTypesByQName.put(Constants.XSD_BYTE, TINYINT);
+    sqlTypesByQName.put(Constants.XSD_DATE, DATE);
+    sqlTypesByQName.put(Constants.XSD_DECIMAL, DECIMAL);
+    sqlTypesByQName.put(Constants.XSD_DOUBLE, DOUBLE);
+    sqlTypesByQName.put(Constants.XSD_FLOAT, FLOAT);
+    sqlTypesByQName.put(Constants.XSD_HEXBIN, BLOB);
+    sqlTypesByQName.put(Constants.XSD_ID, ROWID);
+    sqlTypesByQName.put(Constants.XSD_INT, INTEGER);
+    sqlTypesByQName.put(Constants.XSD_LONG, BIGINT);
+    sqlTypesByQName.put(Constants.XSD_SHORT, SMALLINT);
+    sqlTypesByQName.put(Constants.XSD_STRING, VARCHAR);
+    sqlTypesByQName.put(Constants.XSD_TIME, TIME);
+    sqlTypesByQName.put(Constants.XSD_UNSIGNEDBYTE, SMALLINT);
+    sqlTypesByQName.put(Constants.XSD_UNSIGNEDINT, BIGINT);
+    sqlTypesByQName.put(Constants.XSD_UNSIGNEDSHORT, INTEGER);
+  }
+
+  public static Set<QName> getRecognizedTypes() {
+    return sqlTypesByQName.keySet();
+  }
+
+  public static SqlType getSqlTypeFor(QName qName) {
+    return sqlTypesByQName.get(qName);
+  }
 
   private SqlType(int jdbcType, QName... xmlTypes) {
     this.jdbcType = jdbcType;

@@ -26,6 +26,7 @@ import org.apache.ws.commons.schema.walker.XmlSchemaTypeInfo;
  */
 public final class SqlAttribute {
   SqlType type;
+  SqlType arrayType;
   String name;
   boolean isNullable;
   // Other nice things.
@@ -36,5 +37,18 @@ public final class SqlAttribute {
 
   SqlAttribute(XmlSchemaAny any) {
     type = SqlType.SQLXML;
+  }
+
+  SqlAttribute(String name, SqlType type, boolean isArray, boolean isNullable) {
+    this.name = name;
+    this.isNullable = isNullable;
+
+    if (isArray) {
+      this.type = SqlType.ARRAY;
+      this.arrayType = type;
+    } else {
+      this.type = type;
+      this.arrayType = null;
+    }
   }
 }
